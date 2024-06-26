@@ -121,7 +121,7 @@ export function ApplicationLayout({
                 <SparklesIcon />
                 <SidebarLabel>Explore</SidebarLabel>
               </SidebarItem>
-              <SidebarItem href="/events" current={pathname.startsWith('/events')}>
+              <SidebarItem href="/compose" current={pathname.startsWith('/events')}>
                 <ClockIcon />
                 <SidebarLabel>Compose</SidebarLabel>
               </SidebarItem>
