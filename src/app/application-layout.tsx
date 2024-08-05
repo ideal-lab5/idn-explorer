@@ -125,10 +125,6 @@ export function ApplicationLayout({
                 <ClockIcon />
                 <SidebarLabel>Compose</SidebarLabel>
               </SidebarItem>
-              <SidebarItem href="/orders" current={pathname.startsWith('/orders')}>
-                <BuildingLibraryIcon />
-                <SidebarLabel>Docs</SidebarLabel>
-              </SidebarItem>
             </SidebarSection>
 
             <SidebarSection className="max-lg:hidden">
@@ -150,18 +146,18 @@ export function ApplicationLayout({
                 <RocketLaunchIcon />
                 <SidebarLabel>Recent events </SidebarLabel>
               </SidebarItem>
-              <SidebarItem href={"#"}>
+              <SidebarItem href={"/compose/12345"}>
                 <SidebarLabel><Badge color="purple">Contract call</Badge> 0x91c...32541</SidebarLabel>
               </SidebarItem>
-              <SidebarItem href={"#"}>
+              <SidebarItem href={"/compose/12346"}>
                 <SidebarLabel><Badge color="purple">Extrinsic call</Badge> 0x93c...32540</SidebarLabel>
               </SidebarItem>
             </SidebarSection>
             <SidebarSpacer />
             <SidebarSection>
-              <SidebarItem href="#">
+              <SidebarItem href="https://docs.idealabs.network/docs/intro" target='blank'>
                 <QuestionMarkCircleIcon />
-                <SidebarLabel>Support</SidebarLabel>
+                <SidebarLabel>Documentation</SidebarLabel>
               </SidebarItem>
             </SidebarSection>
           </SidebarBody>

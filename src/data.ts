@@ -10,52 +10,61 @@ export async function getMyExecutedTransactions() {
   return (await getExecutedTransactions()).slice(0, 3)
 }
 
+export async function getExecutedTransaction(id: string) {
+  return (await getExecutedTransactions()).find((transaction) => transaction.cid === id)!
+}
+
 export async function getExecutedTransactions() {
   return [
     {
-      cid: "12345 ",
+      cid: "12345",
       block: "1000004",
       owner: "0x1234...5678",
       operation: "Contract call",
-      url:"#",
+      url:"/compose/12345",
       status: "Confirmed",
-      imgUrl: "ideal/original-original.png"
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
     },
     {
       cid: "12346",
       block: "1000003",
       owner: "0x1234...5678",
       operation: "Extrinsic call",
-      url:"#",
+      url:"/compose/12346",
       status: "Failed",
-      imgUrl: "ideal/original-original.png"
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
     },
     {
       cid: "12347",
       block: "1000002",
       owner: "0x1234...5678",
       operation: "Contract call",
-      url:"#",
+      url:"/compose/12347",
       status: "Confirmed",
-      imgUrl: "ideal/original-original.png"
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
     },
     {
       cid: "12348",
       block: "1000001",
       owner: "0x1234...5678",
       operation: "Balance Transfer",
-      url:"#",
+      url:"/compose/12348",
       status: "Failed",
-      imgUrl: "ideal/original-original.png"
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
     },
     {
       cid: "12349",
       block: "1000000",
       owner: "0x1234...5678",
       operation: "Contract call",
-      url:"#",
+      url:"/compose/12349",
       status: "Confirmed",
-      imgUrl: "ideal/original-original.png"
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
     },
   ]
 }

@@ -6,16 +6,16 @@ import { Heading } from '@/components/heading'
 import { Input, InputGroup } from '@/components/input'
 import { Link } from '@/components/link'
 import { Select } from '@/components/select'
-import { getEvents, getMyExecutedTransactions } from '@/data'
+import { getMyExecutedTransactions } from '@/data'
 import { EllipsisVerticalIcon, MagnifyingGlassIcon } from '@heroicons/react/16/solid'
 import type { Metadata } from 'next'
+import { ScheduleTransaction } from './schedule'
 
 export const metadata: Metadata = {
-  title: 'Events',
+  title: 'Compose Transactions',
 }
 
-export default async function Events() {
-  let events = await getEvents()
+export default async function Compose() {
   let executedTransactions = await getMyExecutedTransactions()
 
   return (
@@ -38,7 +38,9 @@ export default async function Events() {
             </div>
           </div>
         </div>
-        <Button>Schedule Transaction</Button>
+        <ScheduleTransaction outline>
+          Schedule Transaction
+        </ScheduleTransaction>
       </div>
       <ul className="mt-10">
         {executedTransactions.map((transaction, index) => (
@@ -47,13 +49,13 @@ export default async function Events() {
             <div className="flex items-center justify-between">
               <div key={transaction.cid} className="flex gap-6 py-3">
                 <div className="w-32 shrink-0">
-                  <Link href={transaction.url} aria-hidden="true">
+                  <Link href={`${transaction.url}/compose`} aria-hidden="true">
                     <img className="size-10/12 rounded-lg shadow" src={transaction.imgUrl} alt="" />
                   </Link>
                 </div>
                 <div className="space-y-1.5">
                   <div className="text-base/6 font-semibold">
-                    <Link href={transaction.url}>{transaction.cid}</Link>
+                    <Link href={`${transaction.url}/compose`}>{transaction.cid}</Link>
                   </div>
                   <div className="text-xs/6 text-zinc-500">
                     Block: {transaction.block}
@@ -72,7 +74,7 @@ export default async function Events() {
                     <EllipsisVerticalIcon />
                   </DropdownButton>
                   <DropdownMenu anchor="bottom end">
-                    <DropdownItem href={transaction.url}>View</DropdownItem>
+                    <DropdownItem href={`${transaction.url}/compose`}>View</DropdownItem>
                   </DropdownMenu>
                 </Dropdown>
               </div>
