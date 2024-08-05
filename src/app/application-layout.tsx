@@ -23,7 +23,6 @@ import {
   SidebarSpacer,
 } from '@/components/sidebar'
 import { SidebarLayout } from '@/components/sidebar-layout'
-import { getEvents } from '@/data'
 import {
   ArrowRightStartOnRectangleIcon,
   ChevronDownIcon,
@@ -57,10 +56,8 @@ function AccountDropdownMenu({ anchor, onDisconnect }: { readonly anchor: 'top s
 }
 
 export function ApplicationLayout({
-  events,
   children,
 }: {
-  events: Awaited<ReturnType<typeof getEvents>>
   children: React.ReactNode
 }) {
   let pathname = usePathname()
@@ -148,7 +145,7 @@ export function ApplicationLayout({
                 <SparklesIcon />
                 <SidebarLabel>Explore</SidebarLabel>
               </SidebarItem>
-              <SidebarItem href="/compose" current={pathname.startsWith('/events')}>
+              <SidebarItem href="/compose" current={pathname.startsWith('/compose')}>
                 <ClockIcon />
                 <SidebarLabel>Compose</SidebarLabel>
               </SidebarItem>
