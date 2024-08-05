@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { getEvents } from '@/data'
 import '@/styles/tailwind.css'
 import type { Metadata } from 'next'

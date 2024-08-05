@@ -9,7 +9,7 @@ import { Select } from '@/components/select'
 import { useState } from 'react'
 
 export function ScheduleTransaction({ ...props }: { } & React.ComponentPropsWithoutRef<typeof Button>) {
-  let [isOpen, setIsOpen] = useState(false)
+  let [isOpen, setIsOpen] = useState(false);
 
   return (
     <>

@@ -10,12 +10,16 @@ import { getMyExecutedTransactions } from '@/data'
 import { EllipsisVerticalIcon, MagnifyingGlassIcon } from '@heroicons/react/16/solid'
 import type { Metadata } from 'next'
 import { ScheduleTransaction } from './schedule'
+import { container } from "tsyringe";
+import { ExplorerService } from '@/services/ExplorerService'
 
 export const metadata: Metadata = {
   title: 'Compose Transactions',
 }
 
 export default async function Compose() {
+  //get the service instance
+  const explorerServiceInstance = container.resolve(ExplorerService);
   let executedTransactions = await getMyExecutedTransactions()
 
   return (

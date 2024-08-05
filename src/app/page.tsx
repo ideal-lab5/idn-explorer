@@ -1,12 +1,10 @@
-import { Avatar } from '@/components/avatar'
 import { Badge } from '@/components/badge'
 import { Divider } from '@/components/divider'
 import { Heading, Subheading } from '@/components/heading'
 import { Input, InputGroup } from '@/components/input'
 import { Navbar, NavbarItem, NavbarSection } from '@/components/navbar'
-import { Select } from '@/components/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table'
-import { getExecutedTransactions, getRecentOrders } from '@/data'
+import { getExecutedTransactions } from '@/data'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 
 export function Stat({ title, value, change, helpText }: { title: string; value: string; change: string; helpText?: string }) {
@@ -24,7 +22,6 @@ export function Stat({ title, value, change, helpText }: { title: string; value:
 }
 
 export default async function Home() {
-  let orders = await getRecentOrders()
   let executedTransactions = await getExecutedTransactions()
 
   return (
