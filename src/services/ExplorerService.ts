@@ -9,10 +9,7 @@ export class ExplorerService implements IExplorerService {
 
     api: any;
     CUSTOM_TYPES: any;
-    // chainSpec: any;
     abi: any;
-    // etf_spec: string = "./etf_spec/dev/etf_spec.json"
-
     constructor() {
         console.log("ExplorerService constructor");
         this.getEtfApi().then(() => {
