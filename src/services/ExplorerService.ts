@@ -1,6 +1,7 @@
 import { singleton } from "tsyringe";
 import { IExplorerService } from "./IExplorerService";
 import { cryptoWaitReady } from '@polkadot/util-crypto';
+import chainSpec from "../etf_spec/dev/etf_spec.json"
 import {Etf} from "@ideallabs/etf.js";
 
 @singleton()
@@ -8,8 +9,9 @@ export class ExplorerService implements IExplorerService {
 
     api: any;
     CUSTOM_TYPES: any;
-    chainSpec: any;
+    // chainSpec: any;
     abi: any;
+    // etf_spec: string = "./etf_spec/dev/etf_spec.json"
 
     constructor() {
         console.log("ExplorerService constructor");
@@ -37,7 +39,7 @@ export class ExplorerService implements IExplorerService {
             // const etfjs = await import('@ideallabs/etf.js');
             let api = new Etf(process.env.NEXT_PUBLIC_NODE_DETAILS, true);
             console.log("Connecting to ETF chain");
-            await api.init(JSON.stringify(this.chainSpec), this.CUSTOM_TYPES);
+            await api.init(JSON.stringify(chainSpec), this.CUSTOM_TYPES);
             this.api = api;
             //Loading proxy contract
             // this.contract = new ContractPromise(this.api.api, this.abi, process.env.NEXT_PUBLIC_CONTRACT_ADDRESS);
