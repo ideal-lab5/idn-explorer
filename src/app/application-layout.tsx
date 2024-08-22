@@ -42,6 +42,10 @@ import { Button } from "../components/button";
 import { Dialog, DialogTitle } from "@/components/dialog";
 import { Text } from "@/components/text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
+import { ExplorerService } from "@/services/ExplorerService";
+import {container} from "tsyringe";
+
+const etfApi = container.resolve(ExplorerService);
 
 function AccountDropdownMenu({ anchor, onDisconnect }: { readonly anchor: 'top start' | 'bottom end', onDisconnect: () => void }) {
   console.log("disconnect: ", onDisconnect);
@@ -66,6 +70,7 @@ export function ApplicationLayout({
   const [showWalletSelection, setShowWalletSelection] = useState(false)
   const [signer, setSigner] = useState<any>(null);
   const [signerAddress, setSignerAddress] = useState<string>("");
+  const [signerBalance, setSignerBalance] = useState<string>("");
   const [availableAccounts, setAvailableAccounts] = useState<any>([]);
 
   async function connect() {
@@ -84,11 +89,19 @@ export function ApplicationLayout({
     setShowWalletSelection(true);
   }
 
-  const handleSelectWallet = (address: string) => async () => {
+  const handleSelectWallet = (account: any) => async () => {
     const ext = await import("@polkadot/extension-dapp");
+    console.log("connecting account");
+    console.log(account);
+    let address = account.address
+    // let balance = etfApi.api.query.system.account(address);
+    let balance = "100";
     // finds an injector for an address
     const injector = await ext.web3FromAddress(address);
     setSigner({ signer: injector.signer, address });
+    // console.log("balance");
+    // console.log(balance);
+    setSignerBalance(balance);
     setSignerAddress(address);
     setIsConnected(true);
     setShowWalletSelection(false);
@@ -193,6 +206,7 @@ export function ApplicationLayout({
                   <Avatar src="/ideal/sticker-vertical.png" className="size-10" square alt="" />
                   <span className="min-w-0">
                     <span className="block truncate text-sm/5 font-medium text-zinc-950 dark:text-white">Connected</span>
+                    <span className="block truncate text-xs/5 font-normal text-green-500 dark:text-green-500">Balance: {signerBalance} IDN</span>
                     <span className="block truncate text-xs/5 font-normal text-zinc-500 dark:text-zinc-400">
                       {`${signerAddress.substring(0, 4)}...${signerAddress.substring(signerAddress.length - 4, signerAddress.length)}`}
                     </span>
@@ -231,7 +245,7 @@ export function ApplicationLayout({
                       <TableCell>
                         <Button
                           color="cyan"
-                          onClick={handleSelectWallet(account.address)}
+                          onClick={handleSelectWallet(account)}
                         >
                           Connect
                         </Button>

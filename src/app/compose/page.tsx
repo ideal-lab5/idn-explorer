@@ -20,8 +20,7 @@ export const metadata: Metadata = {
 export default async function Compose() {
   //get the service instance
   const explorerServiceInstance = container.resolve(ExplorerService);
-  let executedTransactions = await getMyExecutedTransactions()
-
+  let executedTransactions = await getMyExecutedTransactions();
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">

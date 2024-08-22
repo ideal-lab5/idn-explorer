@@ -10,7 +10,7 @@ export class ExplorerService implements IExplorerService {
     api: any;
     CUSTOM_TYPES: any;
     abi: any;
-    node_env = "ws://127.0.0.1:9944";
+    node_dev = "ws://127.0.0.1:9944";
     constructor() {
         this.getEtfApi().then(() => {
           console.log("ETF.js API is ready.");
@@ -20,17 +20,18 @@ export class ExplorerService implements IExplorerService {
     async getEtfApi(signer = undefined): Promise<any> {
         // ensure params are defined
         if (process.env.NEXT_PUBLIC_NODE_WS === undefined) {
-          console.error("Provide a valid value for NEXT_PUBLIC_NODE_DETAILS");
-          return Promise.resolve(null);
+          console.error("Provide a valid value for NEXT_PUBLIC_NODE_DETAILS. Using fallback");
+          process.env.NEXT_PUBLIC_NODE_WS = this.node_dev;
+          // return Promise.resolve(null);
         }
 
         if (!this.api) {
 
           try {
             await cryptoWaitReady();
-            let api = new Etf(this.node_env, false);
+            let api = new Etf(process.env.NEXT_PUBLIC_NODE_WS, false);
             console.log("Connecting to ETF chain");
-            await api.init(JSON.stringify(chainSpec), this.CUSTOM_TYPES);
+            await api.init(JSON.stringify(chainSpec));
             this.api = api;
           } catch (_e) {
             // TODO: next will try to fetch the wasm blob but it doesn't need to
