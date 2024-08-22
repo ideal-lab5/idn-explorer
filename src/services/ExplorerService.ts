@@ -10,15 +10,16 @@ export class ExplorerService implements IExplorerService {
     api: any;
     CUSTOM_TYPES: any;
     abi: any;
+    node_env = "ws://127.0.0.1:9944";
     constructor() {
         this.getEtfApi().then(() => {
           console.log("ETF.js API is ready.");
         });
-    };
+    }; 
 
     async getEtfApi(signer = undefined): Promise<any> {
         // ensure params are defined
-        if (process.env.NEXT_PUBLIC_NODE_DETAILS === undefined) {
+        if (process.env.NEXT_PUBLIC_NODE_WS === undefined) {
           console.error("Provide a valid value for NEXT_PUBLIC_NODE_DETAILS");
           return Promise.resolve(null);
         }
@@ -27,7 +28,7 @@ export class ExplorerService implements IExplorerService {
 
           try {
             await cryptoWaitReady();
-            let api = new Etf(process.env.NEXT_PUBLIC_NODE_DETAILS, true);
+            let api = new Etf(this.node_env, false);
             console.log("Connecting to ETF chain");
             await api.init(JSON.stringify(chainSpec), this.CUSTOM_TYPES);
             this.api = api;
