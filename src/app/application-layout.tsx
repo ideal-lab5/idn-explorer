@@ -91,11 +91,10 @@ export function ApplicationLayout({
 
   const handleSelectWallet = (account: any) => async () => {
     const ext = await import("@polkadot/extension-dapp");
-    console.log("connecting account");
-    console.log(account);
     let address = account.address
-    // let balance = etfApi.api.query.system.account(address);
-    let balance = "100";
+    let accountInfo = await etfApi.api.api.query.system.account(address);
+    let balance = accountInfo.data.free.toHuman();
+
     // finds an injector for an address
     const injector = await ext.web3FromAddress(address);
     setSigner({ signer: injector.signer, address });
