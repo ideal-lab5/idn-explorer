@@ -5,12 +5,12 @@ const etfApi = container.resolve(ExplorerService);
 @singleton()
 export class AccountService{
 
-    address: any;
+    address: string = "";
     accountInfo: any;
 
     constructor() {}; 
 
-    async startService(address: any): Promise<any> {
+    async startService(address: string): Promise<any> {
 
         this.address = address;
 
@@ -31,6 +31,11 @@ export class AccountService{
         }
 
         return balance
+    }
+
+    freeService() {
+        this.address = "";
+        this.accountInfo = undefined;
     }
 
 }
