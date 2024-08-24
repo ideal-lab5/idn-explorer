@@ -1,6 +1,4 @@
-import { Avatar } from '@/components/avatar'
 import { Badge } from '@/components/badge'
-import { Button } from '@/components/button'
 import { DescriptionDetails, DescriptionList, DescriptionTerm } from '@/components/description-list'
 import { Divider } from '@/components/divider'
 import { Heading, Subheading } from '@/components/heading'

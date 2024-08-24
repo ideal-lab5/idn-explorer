@@ -1,19 +1,19 @@
 export async function getMyExecutedTransactions() {
-  return (await getExecutedTransactions()).slice(0, 3)
+  return (getExecutedTransactions()).slice(0, 3)
 }
 
 export async function getExecutedTransaction(id: string) {
-  return (await getExecutedTransactions()).find((transaction) => transaction.cid === id)!
+  return (getExecutedTransactions()).find((transaction) => transaction.cid === id)!
 }
 
-export async function getExecutedTransactions() {
+export function getExecutedTransactions() {
   return [
     {
       cid: "12345",
       block: "1000004",
       owner: "0x1234...5678",
       operation: "Contract call",
-      url:"/compose/12345",
+      url: "/compose/12345",
       status: "Confirmed",
       imgUrl: "ideal/original-original.png",
       fee: "1.0",
@@ -23,7 +23,7 @@ export async function getExecutedTransactions() {
       block: "1000003",
       owner: "0x1234...5678",
       operation: "Extrinsic call",
-      url:"/compose/12346",
+      url: "/compose/12346",
       status: "Failed",
       imgUrl: "ideal/original-original.png",
       fee: "1.0",
@@ -33,7 +33,7 @@ export async function getExecutedTransactions() {
       block: "1000002",
       owner: "0x1234...5678",
       operation: "Contract call",
-      url:"/compose/12347",
+      url: "/compose/12347",
       status: "Confirmed",
       imgUrl: "ideal/original-original.png",
       fee: "1.0",
@@ -43,7 +43,7 @@ export async function getExecutedTransactions() {
       block: "1000001",
       owner: "0x1234...5678",
       operation: "Balance Transfer",
-      url:"/compose/12348",
+      url: "/compose/12348",
       status: "Failed",
       imgUrl: "ideal/original-original.png",
       fee: "1.0",
@@ -53,10 +53,93 @@ export async function getExecutedTransactions() {
       block: "1000000",
       owner: "0x1234...5678",
       operation: "Contract call",
-      url:"/compose/12349",
+      url: "/compose/12349",
       status: "Confirmed",
       imgUrl: "ideal/original-original.png",
       fee: "1.0",
+    },
+  ]
+}
+
+export function getScheduledTransactions() {
+  return [
+    {
+      cid: "22345",
+      block: "1000004",
+      deadLineBlock: "1000100",
+      owner: "0x1234...5678",
+      operation: "Contract call",
+      url: "/compose/22345",
+      status: "Scheduled",
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
+    },
+    {
+      cid: "22346",
+      block: "1000003",
+      deadLineBlock: "1000200",
+      owner: "0x1234...5678",
+      operation: "Extrinsic call",
+      url: "/compose/22346",
+      status: "Scheduled",
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
+    },
+    {
+      cid: "22347",
+      block: "1000002",
+      deadLineBlock: "1000100",
+      owner: "0x1234...5678",
+      operation: "Contract call",
+      url: "/compose/22347",
+      status: "Scheduled",
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
+    },
+    {
+      cid: "22348",
+      block: "1000001",
+      deadLineBlock: "1001000",
+      owner: "0x1234...5678",
+      operation: "Balance Transfer",
+      url: "/compose/22348",
+      status: "Scheduled",
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
+    },
+    {
+      cid: "22349",
+      block: "1000000",
+      deadLineBlock: "1002000",
+      owner: "0x1234...5678",
+      operation: "Contract call",
+      url: "/compose/22349",
+      status: "Scheduled",
+      imgUrl: "ideal/original-original.png",
+      fee: "1.0",
+    },
+  ]
+}
+
+export function getGeneratedRandomness() {
+  return [
+    {
+      cid: "32345",
+      block: "1000004",
+      randomness: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      status: "Generated",
+    },
+    {
+      cid: "32346",
+      block: "1000004",
+      randomness: "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
+      status: "Generated",
+    },
+    {
+      cid: "32347",
+      block: "1000003",
+      randomness: "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+      status: "Generated",
     },
   ]
 }

@@ -9,7 +9,6 @@ import { Select } from '@/components/select'
 import { getMyExecutedTransactions } from '@/data'
 import { EllipsisVerticalIcon, MagnifyingGlassIcon } from '@heroicons/react/16/solid'
 import type { Metadata } from 'next'
-import { ScheduleTransaction } from './schedule'
 import { container } from "tsyringe";
 import { ExplorerService } from '@/services/ExplorerService'
 
@@ -41,9 +40,9 @@ export default async function Compose() {
             </div>
           </div>
         </div>
-        <ScheduleTransaction outline>
-          Schedule Transaction
-        </ScheduleTransaction>
+        <Link href={`/compose/schedule`} aria-hidden="true">
+          <Button type="button" className="relative top-0 right-0 cursor-pointer" outline>Schedule Transaction</Button>
+        </Link>
       </div>
       <ul className="mt-10">
         {executedTransactions.map((transaction, index) => (
@@ -73,7 +72,7 @@ export default async function Compose() {
                   {transaction.status}
                 </Badge>
                 <Dropdown>
-                  <DropdownButton plain aria-label="More options">
+                  <DropdownButton className="cursor-pointer" plain aria-label="More options">
                     <EllipsisVerticalIcon />
                   </DropdownButton>
                   <DropdownMenu anchor="bottom end">
