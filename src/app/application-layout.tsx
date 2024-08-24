@@ -44,6 +44,7 @@ import { Text } from "@/components/text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { ExplorerService } from "@/services/ExplorerService";
 import {container} from "tsyringe";
+import { Account } from "@/services/polkadot/Account";
 
 const etfApi = container.resolve(ExplorerService);
 
@@ -92,8 +93,9 @@ export function ApplicationLayout({
   const handleSelectWallet = (account: any) => async () => {
     const ext = await import("@polkadot/extension-dapp");
     let address = account.address
-    let accountInfo = await etfApi.api.api.query.system.account(address);
-    let balance = accountInfo.data.free.toHuman();
+    let userAccount = new Account(address);
+    await userAccount.initialize();
+    let balance = userAccount.getFreeBalance(true);
 
     // finds an injector for an address
     const injector = await ext.web3FromAddress(address);

@@ -15,7 +15,7 @@ export class ExplorerService implements IExplorerService {
         this.getEtfApi().then(() => {
           console.log("ETF.js API is ready.");
         });
-    }; 
+    };
 
     async getEtfApi(signer = undefined): Promise<any> {
         // ensure params are defined
