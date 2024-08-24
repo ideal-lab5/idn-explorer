@@ -44,9 +44,10 @@ import { Text } from "@/components/text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { ExplorerService } from "@/services/ExplorerService";
 import {container} from "tsyringe";
-import { Account } from "@/services/polkadot/Account";
+import { AccountService } from "@/services/polkadot/AccountService";
 
 const etfApi = container.resolve(ExplorerService);
+const userAccount = container.resolve(AccountService);
 
 function AccountDropdownMenu({ anchor, onDisconnect }: { readonly anchor: 'top start' | 'bottom end', onDisconnect: () => void }) {
   console.log("disconnect: ", onDisconnect);
@@ -93,8 +94,7 @@ export function ApplicationLayout({
   const handleSelectWallet = (account: any) => async () => {
     const ext = await import("@polkadot/extension-dapp");
     let address = account.address
-    let userAccount = new Account(address);
-    await userAccount.initialize();
+    await userAccount.startService(address);
     let balance = userAccount.getFreeBalance(true);
 
     // finds an injector for an address

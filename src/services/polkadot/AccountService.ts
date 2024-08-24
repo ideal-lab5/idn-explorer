@@ -1,26 +1,20 @@
-import {container} from "tsyringe";
+import {singleton, container} from "tsyringe";
 import { ExplorerService} from "../ExplorerService";
 
 const etfApi = container.resolve(ExplorerService);
-
-export class Account{
+@singleton()
+export class AccountService{
 
     address: any;
     accountInfo: any;
-    
-    
 
-    constructor(address: any) {
+    constructor() {}; 
+
+    async startService(address: any): Promise<any> {
+
         this.address = address;
-    }; 
 
-    async initialize(): Promise<any> {
-
-        if (!this.accountInfo) {
-
-            this.accountInfo = await etfApi.api.api.query.system.account(this.address);
-
-        }
+        this.accountInfo = await etfApi.api.api.query.system.account(this.address);
 
         return Promise.resolve(this.accountInfo);
 

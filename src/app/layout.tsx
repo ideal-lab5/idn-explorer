@@ -6,7 +6,7 @@ import { ApplicationLayout } from './application-layout'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s - Catalyst',
+    template: '%s - Ideal Labs',
     default: 'Ideal Network Explorer',
   },
   description: '',
