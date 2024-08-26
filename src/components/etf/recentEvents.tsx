@@ -68,9 +68,6 @@ export const LatestEvents: React.FC = () => {
 
                     // Combine new events with previous events and remove duplicates
                     const updatedEvents = [...newEvents, ...prevEvents];
-                    // .filter((v, i, a) => a.findIndex(t => (t.blockNumber === v.blockNumber && t.event === v.event)) === i)
-                    // .sort((a, b) => b.blockNumber - a.blockNumber);
-
                     // Keep only the most recent 5 events
                     return updatedEvents.slice(0, 5);
                 });
