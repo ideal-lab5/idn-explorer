@@ -22,7 +22,7 @@ export const BlockHeaders: React.FC = () => {
         let unsubscribe: () => void;
 
         async function subscribeHeaders() {
-            const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_CHAIN_URL || 'wss://rpc.polkadot.io');
+            const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io');
             const api = await ApiPromise.create({ provider: wsProvider });
 
             unsubscribe = await api.rpc.chain.subscribeNewHeads((lastHeader) => {

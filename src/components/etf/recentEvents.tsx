@@ -23,7 +23,7 @@ export const LatestEvents: React.FC = () => {
         let unsubscribe: () => void;
 
         async function subscribeEvents() {
-            const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_CHAIN_URL || 'wss://rpc.polkadot.io');
+            const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io');
             const api = await ApiPromise.create({ provider: wsProvider });
 
             // Get the current block number from the chain
