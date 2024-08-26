@@ -2,6 +2,8 @@
 import "reflect-metadata";
 import { Avatar } from '@/components/avatar'
 import { Badge } from '@/components/badge'
+import { BlockHeaders } from '@/components/etf/BlockHeaders'
+import { LatestEvents } from '@/components/etf/LatestEvents'
 import {
   Dropdown,
   DropdownButton,
@@ -43,7 +45,7 @@ import { Dialog, DialogTitle } from "@/components/dialog";
 import { Text } from "@/components/text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { ExplorerService } from "@/services/ExplorerService";
-import {container} from "tsyringe";
+import { container } from "tsyringe";
 import { AccountService } from "@/services/polkadot/AccountService";
 
 const etfApi = container.resolve(ExplorerService);
@@ -171,7 +173,8 @@ export function ApplicationLayout({
                 <CubeIcon />
                 <SidebarLabel>Recent blocks </SidebarLabel>
               </SidebarItem>
-              <SidebarItem href={"#"}>
+              <BlockHeaders />
+              {/* <SidebarItem href={"#"}>
                 <SidebarLabel><Badge color="lime">21,380,010</Badge> 0x91c...32541</SidebarLabel>
               </SidebarItem>
               <SidebarItem href={"#"}>
@@ -179,17 +182,12 @@ export function ApplicationLayout({
               </SidebarItem>
               <SidebarItem href={"#"}>
                 <SidebarLabel><Badge color="lime">21,380,008</Badge> 0x93c...32547</SidebarLabel>
-              </SidebarItem>
+              </SidebarItem> */}
               <SidebarItem href={"#"}>
                 <RocketLaunchIcon />
                 <SidebarLabel>Recent events </SidebarLabel>
               </SidebarItem>
-              <SidebarItem href={"/compose/12345"}>
-                <SidebarLabel><Badge color="purple">Contract call</Badge> 0x91c...32541</SidebarLabel>
-              </SidebarItem>
-              <SidebarItem href={"/compose/12346"}>
-                <SidebarLabel><Badge color="purple">Extrinsic call</Badge> 0x93c...32540</SidebarLabel>
-              </SidebarItem>
+              <LatestEvents />
             </SidebarSection>
             <SidebarSpacer />
             <SidebarSection>
@@ -215,7 +213,7 @@ export function ApplicationLayout({
                 </span>
                 <ChevronUpIcon />
               </DropdownButton>
-              <AccountDropdownMenu anchor="top start" onDisconnect={disconnect}  />
+              <AccountDropdownMenu anchor="top start" onDisconnect={disconnect} />
             </Dropdown> : <Button onClick={(e: any) => { e.preventDefault(); handleConnect(); }} color="cyan">Connect</Button>}
           </SidebarFooter>
           <Dialog
