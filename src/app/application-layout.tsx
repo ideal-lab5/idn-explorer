@@ -1,9 +1,8 @@
 'use client'
 import "reflect-metadata";
 import { Avatar } from '@/components/avatar'
-import { Badge } from '@/components/badge'
-import { BlockHeaders } from '@/components/etf/BlockHeaders'
-import { LatestEvents } from '@/components/etf/LatestEvents'
+import { BlockHeaders } from '@/components/etf/blockHeaders'
+import { LatestEvents } from '@/components/etf/latestEvents'
 import {
   Dropdown,
   DropdownButton,
