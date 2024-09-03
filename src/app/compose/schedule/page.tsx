@@ -45,17 +45,17 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
             </div>
             <div className="space-y-1">
               <Subheading>Pallet / Extrinsic / Arguments</Subheading>
-              <Text>Choose the pallet and the extrinsic you'd like to use to submit your delayed transaction.</Text>
+              <Text>Select the pallet, extrinsic, and provide all necessary arguments to compose your delayed transaction.</Text>
             </div>
             <div>
               <DynamicExtrinsicForm />
             </div>
           </section>
 
-            <section className="grid gap-x-8 gap-y-2 sm:grid-cols-2 mt-5">
-              <div className="space-y-1"></div>
-              <Button disabled={true} className="relative top-0 right-0 cursor-pointer" type="button">Schedule Tx</Button>
-            </section>
+          <section className="grid gap-x-8 gap-y-2 sm:grid-cols-2 mt-5">
+            <div className="space-y-1"></div>
+            <Button disabled={true} className="relative top-0 right-0 cursor-pointer" type="button">Schedule Tx</Button>
+          </section>
         </Fieldset>
       </div >
     </>
