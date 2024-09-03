@@ -1,20 +1,16 @@
 'use client'
 
 import { Button } from '@/components/button'
-import { Field, FieldGroup, Label, Fieldset, Legend } from '@/components/fieldset'
+import { Field, Label, Fieldset } from '@/components/fieldset'
 import { Text } from '@/components/text'
 import { Badge } from '@/components/badge'
 import { Link } from '@/components/link'
 import { Input } from '@/components/input'
-import { Select } from '@/components/select'
 import { Heading, Subheading } from '@/components/heading'
 import { ChevronDoubleLeftIcon } from '@heroicons/react/16/solid'
-import { DynamicExtrinsicForm } from '@/components/etf/DynamicExtrinsicForm'
-import { useState } from 'react'
+import { DynamicExtrinsicForm } from '@/components/etf/dynamicExtrinsicForm'
 
 export default function ScheduleTransaction({ ...props }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
-
-  const [selectedTransanctionType, setSelectedTransactionType] = useState<string>("");
 
   return (
     <>
