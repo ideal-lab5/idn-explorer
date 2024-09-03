@@ -1,8 +1,6 @@
 'use client'
 
 import { Button } from '@/components/button'
-import { DescriptionDetails } from '@/components/description-list'
-import { Dialog, DialogActions, DialogBody, DialogDescription, DialogTitle } from '@/components/dialog'
 import { Field, FieldGroup, Label, Fieldset, Legend } from '@/components/fieldset'
 import { Text } from '@/components/text'
 import { Badge } from '@/components/badge'
@@ -10,10 +8,13 @@ import { Link } from '@/components/link'
 import { Input } from '@/components/input'
 import { Select } from '@/components/select'
 import { Heading, Subheading } from '@/components/heading'
-import { useState } from 'react'
 import { ChevronDoubleLeftIcon } from '@heroicons/react/16/solid'
+import { DynamicExtrinsicForm } from '@/components/etf/DynamicExtrinsicForm'
+import { useState } from 'react'
 
 export default function ScheduleTransaction({ ...props }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
+
+  const [selectedTransanctionType, setSelectedTransactionType] = useState<string>("");
 
   return (
     <>
@@ -31,30 +32,30 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
       </div>
       <div className="mt-6 relative">
         <Fieldset>
-          <Legend>Transaction details</Legend>
-          <Text>Below you can provide all the deatils about your transaction such future block number to schedule it, transaction type, and transaction inputs. The transaction will be executed at the specified block in the future.</Text>
-          <FieldGroup>
-            <Field>
-              <Label>Block</Label>
-              <Input name="block" placeholder="Future Block Number" autoFocus />
-            </Field>
-            <Field>
-              <Label>Transaction</Label>
-              <Select name="reason" defaultValue="">
-                <option value="" disabled>
-                  Select a transaction type&hellip;
-                </option>
-                <option value="balanceTransfer">Balance Transfer</option>
-                <option value="encrypt">Encrypt</option>
-                <option value="extrinsicCall">Extrinsic Call</option>
-                <option value="contractCall">Contract Call</option>
-              </Select>
-            </Field>
-            <Field>
-              <DescriptionDetails>{"ToDo: display specific transaction inputs based on the transaction type"}</DescriptionDetails>
-            </Field>
-          </FieldGroup>
-          <Button className="relative top-0 right-0 cursor-pointer" type="button">Schedule</Button>
+          <section className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Subheading>Future Block</Subheading>
+              <Text>Specify the future block number at which you want the transaction to be executed.</Text>
+            </div>
+            <div>
+              <Field>
+                <Label>Block</Label>
+                <Input name="block" placeholder="Future Block Number" autoFocus />
+              </Field>
+            </div>
+            <div className="space-y-1">
+              <Subheading>Pallet / Extrinsic / Arguments</Subheading>
+              <Text>Choose the pallet and the extrinsic you'd like to use to submit your delayed transaction.</Text>
+            </div>
+            <div>
+              <DynamicExtrinsicForm />
+            </div>
+          </section>
+
+            <section className="grid gap-x-8 gap-y-2 sm:grid-cols-2 mt-5">
+              <div className="space-y-1"></div>
+              <Button disabled={true} className="relative top-0 right-0 cursor-pointer" type="button">Schedule Tx</Button>
+            </section>
         </Fieldset>
       </div >
     </>
