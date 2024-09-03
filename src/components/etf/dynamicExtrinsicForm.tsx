@@ -11,11 +11,18 @@ interface PalletOption {
     text: string;
     value: string;
 }
+
+interface MethodArgument {
+    argType: string;
+    argTypeName: string;
+    name: string;
+}
+
 export const DynamicExtrinsicForm: React.FC = () => {
     const [api, setApi] = useState<ApiPromise | null>(null)
     const [pallets, setPallets] = useState<PalletOption[]>([])
     const [extrinsics, setExtrinsics] = useState<string[]>([])
-    const [parameters, setParameters] = useState<string[]>([])
+    const [parameters, setParameters] = useState<MethodArgument[]>([])
     const [selectedPallet, setSelectedPallet] = useState<string>("")
     const [selectedExtrinsic, setSelectedExtrinsic] = useState<string>("")
 
@@ -63,7 +70,11 @@ export const DynamicExtrinsicForm: React.FC = () => {
         setSelectedExtrinsic(selectedExtrinsic);
         if (api && selectedPallet && selectedExtrinsic) {
             const extrinsicMeta = api.tx[selectedPallet][selectedExtrinsic].meta
-            const paramTypes = extrinsicMeta.args.map((arg) => arg.type.toString())
+            const paramTypes = extrinsicMeta.args.map((arg): { argType: string; argTypeName: string; name: string } => ({
+                argType: arg.type.toString(),
+                argTypeName: arg.typeName.unwrapOrDefault().toString(),
+                name: arg.name.toString()
+            }));
             setParameters(paramTypes)
         }
     }
@@ -98,8 +109,8 @@ export const DynamicExtrinsicForm: React.FC = () => {
                 <>
                     {parameters.map((param, index) => (
                         <Field key={index}>
-                            <Label>{param}</Label>
-                            <Input type="text" name={`input_${param}`} placeholder={"Enter value"} autoFocus />
+                            <Label>{`${param.name}: ${param.argType}`}</Label>
+                            <Input type="text" name={`input_${param}`} placeholder={`${param.argTypeName}`} autoFocus />
                         </Field>
                     ))}
                 </>
