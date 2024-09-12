@@ -24,7 +24,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
       </head>
       <body>
-        <ApplicationLayout>{children}</ApplicationLayout>
+        <ApplicationLayout>
+          {children}
+        </ApplicationLayout>
       </body>
     </html>
   )

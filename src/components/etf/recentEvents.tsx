@@ -20,7 +20,6 @@ export const LatestEvents: React.FC = () => {
     const [events, setEvents] = useState<BlockchainEvent[]>([]);
 
     useEffect(() => {
-        let unsubscribe: () => void;
 
         async function subscribeEvents() {
             const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io');
@@ -30,7 +29,7 @@ export const LatestEvents: React.FC = () => {
             const latestHeader = await api.rpc.chain.getHeader();
             let currentBlockNumber = latestHeader.number.toNumber();
 
-            unsubscribe = api.query.system.events((records: EventRecord[]) => {
+            api.query.system.events((records: EventRecord[]) => {
 
                 setEvents((prevEvents) => {
                     // Extracting event details
@@ -81,9 +80,6 @@ export const LatestEvents: React.FC = () => {
         subscribeEvents();
 
         return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
         };
     }, []);
 
