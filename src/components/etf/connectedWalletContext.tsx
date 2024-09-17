@@ -10,6 +10,8 @@ interface ConnectedWalletContextType {
     setSignerAddress: React.Dispatch<React.SetStateAction<string>>;
     signerBalance: string;
     setSignerBalance: React.Dispatch<React.SetStateAction<string>>;
+    latestBlock: number;
+    setLatestBlock: React.Dispatch<React.SetStateAction<number>>;
 }
 
 // Create the context with default values
@@ -21,6 +23,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     const [isConnected, setIsConnected] = useState(false);
     const [signerAddress, setSignerAddress] = useState<string>("");
     const [signerBalance, setSignerBalance] = useState<string>("");
+    const [latestBlock, setLatestBlock] = useState<number>(-1);
 
     return (
         <ConnectedWalletContext.Provider
@@ -33,6 +36,8 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                 setSignerAddress,
                 signerBalance,
                 setSignerBalance,
+                latestBlock,
+                setLatestBlock
             }}
         >
             {children}

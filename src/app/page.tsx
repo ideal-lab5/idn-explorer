@@ -16,6 +16,7 @@ import { ApiPromise, WsProvider } from '@polkadot/api'
 import { formatNumber } from '@polkadot/util'
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction'
 import { DelayedTransaction } from '@/domain/DelayedTransaction'
+import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
 
 export function Stat({ title, value, change, helpText }: { title: string; value: string; change: string; helpText?: string }) {
   return (
@@ -33,17 +34,16 @@ export function Stat({ title, value, change, helpText }: { title: string; value:
 
 export default function Home() {
   const explorerServiceInstance = container.resolve(ExplorerService);
-  let [executedTransactions, setExecutedTransactions] = useState<ExecutedTransaction[]>([]);
-  let [scheduledTransactions, setScheduledTransactions] = useState<DelayedTransaction[]>([]);
-  let [generatedRandomness, setGeneratedRandomness] = useState<Randomness[]>([]);
-  let [latestBlock, setLatestBlock] = useState<number>(-1);
-  let [selectedTab, setSelectedTab] = useState(0);
-
+  const [executedTransactions, setExecutedTransactions] = useState<ExecutedTransaction[]>([]);
+  const [scheduledTransactions, setScheduledTransactions] = useState<DelayedTransaction[]>([]);
+  const [generatedRandomness, setGeneratedRandomness] = useState<Randomness[]>([]);
+  const [selectedTab, setSelectedTab] = useState(0);
   const [epochIndex, setEpochIndex] = useState<number | null>(null);
   const [sessionProgress, setSessionProgress] = useState<number | null>(null);
   const [sessionLength, setSessionLength] = useState<number | null>(null);
   const [eraProgress, setEraProgress] = useState<number | null>(null);
   const [sessionsPerEra, setSessionsPerEra] = useState<number | null>(null);
+  const { latestBlock, setLatestBlock } = useConnectedWallet();
 
   useEffect(() => {
 

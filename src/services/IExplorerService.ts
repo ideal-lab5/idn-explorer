@@ -1,4 +1,5 @@
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
+import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { Randomness } from "@/domain/Randomness";
 
@@ -7,4 +8,5 @@ export interface IExplorerService {
     getRandomness: (blockNumber: number, size: number) => Promise<Randomness[]>;
     getScheduledTransactions: () => Promise<DelayedTransaction[]>;
     queryHistoricalEvents: (startBlock: number, endBlock: number) => Promise<ExecutedTransaction[]>;
+    scheduleTransaction: (signer: any, transactionDetails: DelayedTransactionDetails) => Promise<void>;
 }

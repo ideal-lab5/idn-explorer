@@ -7,6 +7,7 @@ import { Pulse } from "@ideallabs/etf.js/dist/types";
 import { Randomness } from "@/domain/Randomness";
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
+import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
 
 @singleton()
 export class ExplorerService implements IExplorerService {
@@ -72,14 +73,29 @@ export class ExplorerService implements IExplorerService {
     return Promise.resolve(listOfGeneratedRandomness);
   }
 
+  async scheduleTransaction(signer: any, transactionDetails: DelayedTransactionDetails): Promise<void> {
+    let api = await this.getEtfApi(signer.signer);
+    let innerCall = api.api.tx.balances
+      .transferKeepAlive('5CMHXGNmDzSpQotcBUUPXyR8jRqfKttXuU87QraJrydrMdcz', 100);
+    let deadline = transactionDetails.block;
+    let outerCall = await api.delay(innerCall, 127, deadline);
+    await outerCall.signAndSend(signer.address, (result: any) => {
+      if (result.status.isInBlock) {
+        console.log('in block')
+      }
+    });
+  }
+
   async getScheduledTransactions(): Promise<DelayedTransaction[]> {
     let api = await this.getEtfApi();
     let listOfTransactions: DelayedTransaction[] = [];
     let entries = await api.api.query.scheduler.agenda.entries();
-    console.log("scheduled transactions: " + entries.length);
-    entries.forEach(([key, value]) => {
+    console.log("scheduled group of transactions: ", entries.length);
+    entries.forEach(([key, value]: [any, any]) => {
       console.log(key);
-      console.log(value.toHuman());
+      for (let i = 0; i < value.length; i++) {
+        console.log(`Value ${i}: `, value[i].toHuman());
+      }
     });
     //TODO: get upcoming txs
     return Promise.resolve(listOfTransactions);
@@ -129,7 +145,7 @@ export class ExplorerService implements IExplorerService {
         }
       });
     }
-    return Promise.resolve(listOfEvents);
+    return Promise.resolve(listOfEvents.reverse());
   }
 
 }

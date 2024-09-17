@@ -1,10 +1,10 @@
 'use client'
 import { Field, Label } from '@/components/fieldset'
-import { Subheading } from '@/components/heading'
 import { Select } from '@/components/select'
 import { Input } from '@/components/input'
 import { ApiPromise, WsProvider } from '@polkadot/api'
 import React, { useEffect, useState } from 'react'
+import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
 
 
 interface PalletOption {
@@ -16,9 +16,10 @@ interface MethodArgument {
     argType: string;
     argTypeName: string;
     name: string;
+    value: any;
 }
 
-export const DynamicExtrinsicForm: React.FC = () => {
+export const DynamicExtrinsicForm: React.FC<{ block: number, setExtrinsicData: React.Dispatch<React.SetStateAction<DelayedTransactionDetails | null>> }> = ({ block, setExtrinsicData }) => {
     const [api, setApi] = useState<ApiPromise | null>(null)
     const [pallets, setPallets] = useState<PalletOption[]>([])
     const [extrinsics, setExtrinsics] = useState<string[]>([])
@@ -46,11 +47,12 @@ export const DynamicExtrinsicForm: React.FC = () => {
             setPallets(availablePallets)
         }
 
-        connect()
+        connect();
     }, [])
 
     function handlePalletChange(selectedPallet: string) {
         setSelectedPallet(selectedPallet);
+        setSelectedExtrinsic("");
         if (api && selectedPallet) {
             // Safely access the pallet
             const pallet = api.tx[selectedPallet as keyof typeof api.tx];
@@ -70,52 +72,82 @@ export const DynamicExtrinsicForm: React.FC = () => {
         setSelectedExtrinsic(selectedExtrinsic);
         if (api && selectedPallet && selectedExtrinsic) {
             const extrinsicMeta = api.tx[selectedPallet][selectedExtrinsic].meta
-            const paramTypes = extrinsicMeta.args.map((arg): { argType: string; argTypeName: string; name: string } => ({
+            const paramTypes = extrinsicMeta.args.map((arg): MethodArgument => ({
                 argType: arg.type.toString(),
                 argTypeName: arg.typeName.unwrapOrDefault().toString(),
-                name: arg.name.toString()
+                name: arg.name.toString(),
+                value: null
             }));
-            setParameters(paramTypes)
+            setParameters(paramTypes);
         }
     }
 
+    function handleParameterChange(paramIndex: number, value: any) {
+        const updatedParams = [...parameters];
+        updatedParams[paramIndex].value = value;
+        setParameters(updatedParams);
+    }
+
+    useEffect(() => {
+        async function isReady() {
+            if (selectedPallet && selectedExtrinsic && parameters.reduce((acc, param) => acc && param.value, true)) {
+                setExtrinsicData(new DelayedTransactionDetails(
+                    block,
+                    selectedPallet,
+                    selectedExtrinsic,
+                    parameters.map((param) => ({
+                        name: param.name,
+                        type: param.argType,
+                        value: param.value
+                    }))
+                ))
+            } else {
+                setExtrinsicData(null)
+            }
+        }
+
+        isReady();
+    }, [selectedPallet, selectedExtrinsic, parameters])
+
     return (
-        <div className="grid grid-cols-2 gap-6">
-            <Field>
-                <Label>Pallet</Label>
-                <Select name="pallet" value={selectedPallet} onChange={(e) => handlePalletChange(e.target.value)}>
-                    <option value="" disabled>Select Pallet</option>
-                    {pallets.map((pallet, index) => (
-                        <option key={index} value={pallet.value}>
-                            {pallet.text}
-                        </option>
-                    ))}
-                </Select>
-            </Field>
-            {extrinsics.length > 0 && (
+        <>
+            <div className="grid grid-cols-2 gap-6">
                 <Field>
-                    <Label>Extrinsic</Label>
-                    <Select name="extrinsic" value={selectedExtrinsic} onChange={(e) => handleExtrinsicChange(e.target.value)}>
-                        <option value="" disabled>Select Extrinsic</option>
-                        {extrinsics.map((extrinsic, index) => (
-                            <option key={index} value={extrinsic}>
-                                {extrinsic}
+                    <Label>Pallet</Label>
+                    <Select name="pallet" value={selectedPallet} onChange={(e) => handlePalletChange(e.target.value)}>
+                        <option value="" disabled>Select Pallet</option>
+                        {pallets.map((pallet, index) => (
+                            <option key={index} value={pallet.value}>
+                                {pallet.text}
                             </option>
                         ))}
                     </Select>
-                </Field>)}
+                </Field>
+                {extrinsics.length > 0 && (
+                    <Field>
+                        <Label>Extrinsic</Label>
+                        <Select name="extrinsic" value={selectedExtrinsic} onChange={(e) => handleExtrinsicChange(e.target.value)}>
+                            <option value="" disabled>Select Extrinsic</option>
+                            {extrinsics.map((extrinsic, index) => (
+                                <option key={index} value={extrinsic}>
+                                    {extrinsic}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>)}
 
-            {parameters.length > 0 && (
-                <>
-                    {parameters.map((param, index) => (
-                        <Field key={index}>
-                            <Label>{`${param.name}: ${param.argType}`}</Label>
-                            <Input type="text" name={`input_${param}`} placeholder={`${param.argTypeName}`} autoFocus />
-                        </Field>
-                    ))}
-                </>
-            )
-            }
-        </div>
+                {parameters.length > 0 && (
+                    <>
+                        {parameters.map((param, index) => (
+                            <Field key={`${selectedExtrinsic}_${param.name}_${index}`}>
+                                <Label>{`${param.name}: ${param.argType}`}</Label>
+                                <Input type="text" name={`input_${selectedExtrinsic}_${param.name}_${index}`} placeholder={`${param.argTypeName}`} onChange={(e) => handleParameterChange(index, e.target.value)} autoFocus />
+                            </Field>
+                        ))}
+                    </>
+                )
+                }
+            </div>
+        </>
     )
 }

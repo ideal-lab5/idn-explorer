@@ -1,4 +1,5 @@
 'use client'
+
 import { Badge } from '@/components/badge'
 import { Button } from '@/components/button'
 import { Divider } from '@/components/divider'
@@ -12,12 +13,13 @@ import { container } from "tsyringe";
 import { ExplorerService } from '@/services/ExplorerService'
 import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
 import { ConnectWallet } from '@/components/etf/connectWallet'
+import { ExecutedTransaction } from '@/domain/ExecutedTransaction'
 
 export default function Compose() {
   const { signer, isConnected } = useConnectedWallet();
   //get the service instance
   const explorerServiceInstance = container.resolve(ExplorerService);
-  let executedTransactions = []; //await getMyExecutedTransactions();
+  let executedTransactions: ExecutedTransaction[] = []; //await getMyExecutedTransactions();
   return (
     signer && isConnected ?
       <>
