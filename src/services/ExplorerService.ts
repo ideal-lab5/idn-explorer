@@ -3,7 +3,6 @@ import { IExplorerService } from "./IExplorerService";
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import chainSpec from "../etf_spec/dev/etf_spec.json"
 import { Etf } from "@ideallabs/etf.js";
-import { Pulse } from "@ideallabs/etf.js/dist/types";
 import { Randomness } from "@/domain/Randomness";
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
@@ -90,11 +89,21 @@ export class ExplorerService implements IExplorerService {
     let api = await this.getEtfApi();
     let listOfTransactions: DelayedTransaction[] = [];
     let entries = await api.api.query.scheduler.agenda.entries();
-    console.log("scheduled group of transactions: ", entries.length);
     entries.forEach(([key, value]: [any, any]) => {
-      console.log(key);
       for (let i = 0; i < value.length; i++) {
-        console.log(`Value ${i}: `, value[i].toHuman());
+        const humanValue = value[i].toHuman();
+        //console.log(`Value ${i}: `, key.toHuman(), JSON.stringify(humanValue));
+        //we are only interested on those txs scheduled to be executed in the future
+        if (humanValue.maybeCiphertext) {
+          const delayedTx = new DelayedTransaction(
+            "NA",
+            humanValue.maybeId,
+            humanValue.origin.system.Signed,
+            "Extrinsinc Call",
+            key.toHuman()[0]
+          );
+          listOfTransactions.push(delayedTx);
+        }
       }
     });
     //TODO: get upcoming txs
@@ -112,7 +121,7 @@ export class ExplorerService implements IExplorerService {
       const block = await api.api.rpc.chain.getBlock(blockHash);
       // Get the events for the block
       const events = await api.api.query.system.events.at(blockHash);
-      events.forEach(({ event, phase }) => {
+      events.forEach(({ event, phase }: { event: any, phase: any }) => {
         const { section, method, data } = event;
 
         if (phase.isApplyExtrinsic) {

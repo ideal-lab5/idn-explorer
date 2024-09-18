@@ -17,6 +17,15 @@ import { formatNumber } from '@polkadot/util'
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction'
 import { DelayedTransaction } from '@/domain/DelayedTransaction'
 import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
+import { useSearchParams } from 'next/navigation'
+import {
+  Pagination,
+  PaginationGap,
+  PaginationList,
+  PaginationNext,
+  PaginationPage,
+  PaginationPrevious,
+} from '@/components/pagination'
 
 export function Stat({ title, value, change, helpText }: { title: string; value: string; change: string; helpText?: string }) {
   return (
@@ -32,6 +41,10 @@ export function Stat({ title, value, change, helpText }: { title: string; value:
   )
 }
 
+const PAGE_SIZE = 8;
+const NUMBER_BLOCKS_EXECUTED = 50;
+const RAMDOMNESS_SAMPLE = 33;
+
 export default function Home() {
   const explorerServiceInstance = container.resolve(ExplorerService);
   const [executedTransactions, setExecutedTransactions] = useState<ExecutedTransaction[]>([]);
@@ -44,6 +57,31 @@ export default function Home() {
   const [eraProgress, setEraProgress] = useState<number | null>(null);
   const [sessionsPerEra, setSessionsPerEra] = useState<number | null>(null);
   const { latestBlock, setLatestBlock } = useConnectedWallet();
+  const [executedTxPage, setExecutedTxPage] = useState<number>(0);
+  const [scheduledTxPage, setScheduledTxPage] = useState<number>(0);
+  const [randomnessPage, setRandomnessPage] = useState<number>(0);
+  const searchParams = useSearchParams()
+
+
+  useEffect(() => {
+
+    async function processParam(paramName: any, setFunction: any, itemsSize: number) {
+      try {
+        const pExecutedTxPage = searchParams.get(paramName) && parseInt(searchParams.get(paramName) as string) || 0;
+        if (pExecutedTxPage * PAGE_SIZE < itemsSize)
+          setFunction(pExecutedTxPage * PAGE_SIZE < executedTransactions.length ? pExecutedTxPage : 0);
+        else if (pExecutedTxPage < 0)
+          setFunction(0);
+      } catch (e) {
+        setFunction(0);
+      }
+    };
+    processParam("executedTxPage", setExecutedTxPage, executedTransactions.length);
+    processParam("scheduledTxPage", setScheduledTxPage, scheduledTransactions.length);
+    processParam("randomnessPage", setRandomnessPage, generatedRandomness.length);
+    processParam("tab", setSelectedTab, 3);
+
+  }, [searchParams]);
 
   useEffect(() => {
 
@@ -64,17 +102,13 @@ export default function Home() {
         setEraProgress(progress.eraProgress.toNumber());
         setSessionsPerEra(progress.sessionsPerEra.toNumber());
         setEpochIndex(epochInfo.toNumber());
-
         const blockNumber = lastHeader.number.toNumber();
         const blockHash = lastHeader.hash.toHex();
-        // Set block number and hash in state
         setLatestBlock(blockNumber);
-        const sizeRandomness: number = 13;
-        explorerServiceInstance.getRandomness(blockNumber, sizeRandomness).then((result) => {
+        explorerServiceInstance.getRandomness(blockNumber, RAMDOMNESS_SAMPLE).then((result) => {
           setGeneratedRandomness(result);
         });
-        const sizeEvents: number = 50;
-        explorerServiceInstance.queryHistoricalEvents(blockNumber > sizeEvents ? blockNumber - sizeEvents : 0, blockNumber).then((result) => {
+        explorerServiceInstance.queryHistoricalEvents(blockNumber > NUMBER_BLOCKS_EXECUTED ? blockNumber - NUMBER_BLOCKS_EXECUTED : 0, blockNumber).then((result) => {
           setExecutedTransactions(result);
         });
         explorerServiceInstance.getScheduledTransactions().then((result) => {
@@ -100,15 +134,15 @@ export default function Home() {
       <div className="mt-4 grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
         <Stat title="Last Block" value={latestBlock >= 0 ? `#${formatNumber(latestBlock)}` : "..."} change="1.2s" helpText="target 6s" />
         <Stat title="Epoch" value={`${sessionProgress && sessionLength ? formatNumber((sessionProgress / sessionLength) * 100) + "%" : "..."}`} change="4h 48m 36s" />
-        <Stat title="Executed" value="100" change="+4.5%" />
-        <Stat title="Scheduled" value="148" change="+21.2%" />
+        <Stat title="Executed" value={formatNumber(executedTransactions.length)} change={`Last ${NUMBER_BLOCKS_EXECUTED} blocks`} helpText="" />
+        <Stat title="Scheduled" value={formatNumber(scheduledTransactions.length)} change="Upcoming txs" helpText="" />
       </div>
       {/* <div>
         <h2>Epoch Information</h2>
         <p>Current Epoch: {epochIndex}</p>
         <p>Era Progress: {eraProgress}/{sessionsPerEra}</p>
       </div> */}
-      <Subheading className="mt-10"><Badge color="lime">Transactions</Badge></Subheading>
+      <Subheading className="mt-5"><Badge color="lime">Transactions</Badge></Subheading>
       <div>
         <Navbar>
           <NavbarSection>
@@ -136,7 +170,7 @@ export default function Home() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {executedTransactions.map((transaction, index) => (
+            {executedTransactions.slice(executedTxPage * PAGE_SIZE, (executedTxPage + 1) * PAGE_SIZE).map((transaction, index) => (
               <TableRow key={index} href={`/compose/${transaction.id}`} title={`Transaction #${transaction.id}`}>
                 <TableCell>{transaction.block}</TableCell>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
@@ -146,7 +180,10 @@ export default function Home() {
               </TableRow>
             ))}
           </TableBody>
-        </Table></>}
+        </Table>{executedTransactions.length > PAGE_SIZE && <Pagination>
+          <PaginationPrevious href={executedTxPage === 0 ? `?executedTxPage=0&tab=0` : `?executedTxPage=${executedTxPage - 1}&tab=0`} />
+          <PaginationNext href={`?executedTxPage=${executedTxPage + 1}&tab=0`} />
+        </Pagination>}</>}
       {selectedTab === 1 && <>
         <div className="mt-4 grid xl:grid-cols-2 sm:grid-cols-2">
           <InputGroup>
@@ -157,7 +194,6 @@ export default function Home() {
         <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
           <TableHead>
             <TableRow>
-              <TableHeader>Scheduled Block</TableHeader>
               <TableHeader>Id</TableHeader>
               <TableHeader>Owner</TableHeader>
               <TableHeader>Operation</TableHeader>
@@ -165,17 +201,19 @@ export default function Home() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {scheduledTransactions.map((transaction) => (
-              <TableRow key={transaction.cid} href={transaction.url} title={`Transaction #${transaction.cid}`}>
-                <TableCell>{transaction.block}</TableCell>
-                <TableCell className="text-zinc-500">{transaction.cid}</TableCell>
-                <TableCell>{transaction.owner}</TableCell>
+            {scheduledTransactions.slice(scheduledTxPage * PAGE_SIZE, (scheduledTxPage + 1) * PAGE_SIZE).map((transaction) => (
+              <TableRow key={transaction.id} href={`#`} title={`Transaction #${transaction.id}`}>
+                <TableCell className="text-zinc-500">{transaction.id}</TableCell>
+                <TableCell>{formatHash(transaction.owner)}</TableCell>
                 <TableCell>{transaction.operation}</TableCell>
-                <TableCell className="text-right"><Badge color={"purple"}>{transaction.deadLineBlock}</Badge></TableCell>
+                <TableCell className="text-right"><Badge color={"purple"}>{transaction.deadlineBlock}</Badge></TableCell>
               </TableRow>
             ))}
           </TableBody>
-        </Table></>}
+        </Table>{scheduledTransactions.length > PAGE_SIZE && <Pagination>
+          <PaginationPrevious href={scheduledTxPage === 0 ? `?scheduledTxPage=0&tab=1` : `?scheduledTxPage=${scheduledTxPage - 1}&tab=1`} />
+          <PaginationNext href={`?scheduledTxPage=${scheduledTxPage + 1}&tab=1`} />
+        </Pagination>}</>}
       {selectedTab === 2 && <>
         <div className="mt-4 grid xl:grid-cols-2 sm:grid-cols-2">
           <InputGroup>
@@ -193,7 +231,7 @@ export default function Home() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {generatedRandomness.map((transaction: Randomness, index: number) => (
+            {generatedRandomness.slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE).map((transaction: Randomness, index: number) => (
               <TableRow key={index} href={"#"} title={`Transaction #${index}`}>
                 <TableCell>{transaction.block}</TableCell>
                 {/* <TableCell className="text-zinc-500 truncate">{`${formatHash(transaction.signature)}`}</TableCell> */}
@@ -202,7 +240,10 @@ export default function Home() {
               </TableRow>
             ))}
           </TableBody>
-        </Table></>}
+        </Table>{generatedRandomness.length > PAGE_SIZE && <Pagination>
+          <PaginationPrevious href={randomnessPage === 0 ? `?randomnessPage=0&tab=2` : `?randomnessPage=${randomnessPage - 1}&tab=2`} />
+          <PaginationNext href={`?randomnessPage=${randomnessPage + 1}&tab=2`} />
+        </Pagination>}</>}
     </>
   )
 }

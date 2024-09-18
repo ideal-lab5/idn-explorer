@@ -2,18 +2,18 @@
  * This is the DelayedTransaction domain class.
 */
 export class DelayedTransaction {
-    scheduledBlock: number;
+    scheduledBlock: string;
     id: string;
     owner: string;
     operation: string;
-    deadlineBlock: number;
+    deadlineBlock: string;
 
     constructor(
-        scheduledBlock: number,
+        scheduledBlock: string,
         id: string,
         owner: string,
         operation: string,
-        deadlineBlock: number
+        deadlineBlock: string
     ) {
         this.scheduledBlock = scheduledBlock;
         this.id = id;
