@@ -42,7 +42,7 @@ export function Stat({ title, value, change, helpText }: { title: string; value:
 }
 
 const PAGE_SIZE = 8;
-const NUMBER_BLOCKS_EXECUTED = 50;
+const NUMBER_BLOCKS_EXECUTED = 100;
 const RAMDOMNESS_SAMPLE = 33;
 
 export default function Home() {
@@ -172,7 +172,7 @@ export default function Home() {
           <TableBody>
             {executedTransactions.slice(executedTxPage * PAGE_SIZE, (executedTxPage + 1) * PAGE_SIZE).map((transaction, index) => (
               <TableRow key={index} href={`/compose/${transaction.id}`} title={`Transaction #${transaction.id}`}>
-                <TableCell>{transaction.block}</TableCell>
+                <TableCell>{formatNumber(transaction.block)}</TableCell>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
                 <TableCell>{formatHash(transaction.owner)}</TableCell>
                 <TableCell>{transaction.operation}</TableCell>
@@ -233,7 +233,7 @@ export default function Home() {
           <TableBody>
             {generatedRandomness.slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE).map((transaction: Randomness, index: number) => (
               <TableRow key={index} href={"#"} title={`Transaction #${index}`}>
-                <TableCell>{transaction.block}</TableCell>
+                <TableCell>{formatNumber(transaction.block)}</TableCell>
                 {/* <TableCell className="text-zinc-500 truncate">{`${formatHash(transaction.signature)}`}</TableCell> */}
                 <TableCell className="text-wrap"><p>{transaction.randomness}</p></TableCell>
                 {/* <TableCell className="text-right"><Badge color={"lime"}>{transaction.status}</Badge></TableCell> */}
