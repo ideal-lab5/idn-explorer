@@ -45,24 +45,24 @@ export const LatestEvents: React.FC = () => {
                             index: event.index,
                             data: event.data.map((data) => data.toString()),
                         };
-                    }).filter(({ method, section }) =>
-                        section !== 'system' &&
-                        (
-                            !['balances', 'treasury'].includes(section) ||
-                            !['Deposit', 'UpdatedInactive', 'Withdraw'].includes(method)
-                        ) &&
-                        (
-                            !['transactionPayment'].includes(section) ||
-                            !['TransactionFeePaid'].includes(method)
-                        ) &&
-                        (
-                            !['paraInclusion', 'parasInclusion', 'inclusion'].includes(section) ||
-                            !['CandidateBacked', 'CandidateIncluded'].includes(method)
-                        ) &&
-                        (
-                            !['relayChainInfo'].includes(section) ||
-                            !['CurrentBlockNumbers'].includes(method)
-                        )
+                    }).filter(({ method, section }) => section !== 'system' 
+                        // &&
+                        // (
+                        //     !['balances', 'treasury'].includes(section) ||
+                        //     !['Deposit', 'UpdatedInactive', 'Withdraw'].includes(method)
+                        // ) &&
+                        // (
+                        //     !['transactionPayment'].includes(section) ||
+                        //     !['TransactionFeePaid'].includes(method)
+                        // ) &&
+                        // (
+                        //     !['paraInclusion', 'parasInclusion', 'inclusion'].includes(section) ||
+                        //     !['CandidateBacked', 'CandidateIncluded'].includes(method)
+                        // ) &&
+                        // (
+                        //     !['relayChainInfo'].includes(section) ||
+                        //     !['CurrentBlockNumbers'].includes(method)
+                        // )
                     ).reverse();
 
                     // Combine new events with previous events and remove duplicates

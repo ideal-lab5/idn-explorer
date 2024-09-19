@@ -9,14 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { useEffect, useState } from 'react'
 import "reflect-metadata";
-import { container } from "tsyringe";
-import { ExplorerService } from '@/services/ExplorerService'
 import { Randomness } from '@/domain/Randomness'
-import { ApiPromise, WsProvider } from '@polkadot/api'
 import { formatNumber } from '@polkadot/util'
-import { ExecutedTransaction } from '@/domain/ExecutedTransaction'
-import { DelayedTransaction } from '@/domain/DelayedTransaction'
-import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
+import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
 import { useSearchParams } from 'next/navigation'
 import {
   Pagination,
@@ -42,21 +37,17 @@ export function Stat({ title, value, change, helpText }: { title: string; value:
 }
 
 const PAGE_SIZE = 8;
-const NUMBER_BLOCKS_EXECUTED = 100;
-const RAMDOMNESS_SAMPLE = 33;
 
 export default function Home() {
-  const explorerServiceInstance = container.resolve(ExplorerService);
-  const [executedTransactions, setExecutedTransactions] = useState<ExecutedTransaction[]>([]);
-  const [scheduledTransactions, setScheduledTransactions] = useState<DelayedTransaction[]>([]);
-  const [generatedRandomness, setGeneratedRandomness] = useState<Randomness[]>([]);
   const [selectedTab, setSelectedTab] = useState(0);
-  const [epochIndex, setEpochIndex] = useState<number | null>(null);
-  const [sessionProgress, setSessionProgress] = useState<number | null>(null);
-  const [sessionLength, setSessionLength] = useState<number | null>(null);
-  const [eraProgress, setEraProgress] = useState<number | null>(null);
-  const [sessionsPerEra, setSessionsPerEra] = useState<number | null>(null);
-  const { latestBlock, setLatestBlock } = useConnectedWallet();
+  const { latestBlock,
+    executedTransactions,
+    scheduledTransactions,
+    generatedRandomness,
+    epochIndex, sessionProgress,
+    sessionLength, eraProgress,
+    sessionsPerEra
+  } = useConnectedWallet();
   const [executedTxPage, setExecutedTxPage] = useState<number>(0);
   const [scheduledTxPage, setScheduledTxPage] = useState<number>(0);
   const [randomnessPage, setRandomnessPage] = useState<number>(0);
@@ -82,44 +73,6 @@ export default function Home() {
     processParam("tab", setSelectedTab, 3);
 
   }, [searchParams]);
-
-  useEffect(() => {
-
-    async function subscribeToLatestBlock() {
-      const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io');
-      const api = await ApiPromise.create({ provider: wsProvider });
-      await api.isReady;
-
-      // Subscribe to new block headers
-      await api.rpc.chain.subscribeNewHeads(async (lastHeader) => {
-
-        // Get the current epoch index
-        const epochInfo = await api.query.babe.epochIndex();
-        const progress = await api.derive.session.progress();
-        // Get session and era progress
-        setSessionProgress(progress.sessionProgress.toNumber());
-        setSessionLength(progress.sessionLength.toNumber());
-        setEraProgress(progress.eraProgress.toNumber());
-        setSessionsPerEra(progress.sessionsPerEra.toNumber());
-        setEpochIndex(epochInfo.toNumber());
-        const blockNumber = lastHeader.number.toNumber();
-        const blockHash = lastHeader.hash.toHex();
-        setLatestBlock(blockNumber);
-        explorerServiceInstance.getRandomness(blockNumber, RAMDOMNESS_SAMPLE).then((result) => {
-          setGeneratedRandomness(result);
-        });
-        explorerServiceInstance.queryHistoricalEvents(blockNumber > NUMBER_BLOCKS_EXECUTED ? blockNumber - NUMBER_BLOCKS_EXECUTED : 0, blockNumber).then((result) => {
-          setExecutedTransactions(result);
-        });
-        explorerServiceInstance.getScheduledTransactions().then((result) => {
-          setScheduledTransactions(result);
-        });
-      });
-    }
-
-    subscribeToLatestBlock();
-
-  }, []);
 
   // Helper function to format the blockHash
   const formatHash = (hash: string) => {
@@ -215,12 +168,6 @@ export default function Home() {
           <PaginationNext href={`?scheduledTxPage=${scheduledTxPage + 1}&tab=1`} />
         </Pagination>}</>}
       {selectedTab === 2 && <>
-        <div className="mt-4 grid xl:grid-cols-2 sm:grid-cols-2">
-          <InputGroup>
-            <MagnifyingGlassIcon />
-            <Input name="searchRandomness" id="searchRandomness" placeholder="Search on-chain randomness" aria-label="Search" />
-          </InputGroup>
-        </div>
         <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
           <TableHead>
             <TableRow>

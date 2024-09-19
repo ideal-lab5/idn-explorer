@@ -124,7 +124,7 @@ export class ExplorerService implements IExplorerService {
       events.forEach(({ event, phase }: { event: any, phase: any }) => {
         const { section, method, data } = event;
 
-        if (phase.isApplyExtrinsic) {
+        if (phase.isApplyExtrinsic && section !== 'system') {
           const extrinsicIndex = phase.asApplyExtrinsic.toNumber();
           const extrinsic = block.block.extrinsics[extrinsicIndex];
 
@@ -136,7 +136,7 @@ export class ExplorerService implements IExplorerService {
           // Check for status (Success or Failed)
           const isSuccess = api.api.events.system.ExtrinsicSuccess.is(event);
           const isFailed = api.api.events.system.ExtrinsicFailed.is(event);
-          const status = isSuccess ? 'Confirmed' : isFailed ? 'Failed' : 'Unknown';
+          const status = isSuccess ? 'Confirmed' : isFailed ? 'Failed' : 'Confirmed';
 
           // Format data to be more human-readable
           const eventData = data.map((item: any) => item.toString());

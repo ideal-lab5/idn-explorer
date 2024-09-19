@@ -45,8 +45,8 @@ export const BlockHeaders: React.FC = () => {
                         (a, b) => b.blockNumber - a.blockNumber
                     );
 
-                    // Keep only the most recent 5 headers
-                    return updatedHeaders.slice(0, 5);
+                    // Keep only the most recent 4 headers
+                    return updatedHeaders.slice(0, 4);
                 });
             });
         }

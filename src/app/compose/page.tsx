@@ -9,17 +9,23 @@ import { Input, InputGroup } from '@/components/input'
 import { Link } from '@/components/link'
 import { Select } from '@/components/select'
 import { EllipsisVerticalIcon, MagnifyingGlassIcon } from '@heroicons/react/16/solid'
-import { container } from "tsyringe";
-import { ExplorerService } from '@/services/ExplorerService'
 import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
 import { ConnectWallet } from '@/components/etf/connectWallet'
-import { ExecutedTransaction } from '@/domain/ExecutedTransaction'
+import { useState } from 'react'
+import { ExclamationTriangleIcon } from '@heroicons/react/20/solid'
 
 export default function Compose() {
-  const { signer, isConnected } = useConnectedWallet();
-  //get the service instance
-  const explorerServiceInstance = container.resolve(ExplorerService);
-  let executedTransactions: ExecutedTransaction[] = []; //await getMyExecutedTransactions();
+
+  const [selectedTab, setSelectedTab] = useState<string>("scheduled");
+
+  const { latestBlock, signer, isConnected,
+    executedTransactions,
+    scheduledTransactions,
+    epochIndex, sessionProgress,
+    sessionLength, eraProgress,
+    sessionsPerEra
+  } = useConnectedWallet();
+
   return (
     signer && isConnected ?
       <>
@@ -34,9 +40,9 @@ export default function Compose() {
                 </InputGroup>
               </div>
               <div>
-                <Select name="sort_by">
-                  <option value="date">My Executed</option>
-                  <option value="name">My Scheduled</option>
+                <Select name="sort_by" onChange={(e) => setSelectedTab(e.target.value)}>
+                  <option value="scheduled">My Scheduled</option>
+                  <option value="executed">My Executed</option>
                 </Select>
               </div>
             </div>
@@ -46,19 +52,19 @@ export default function Compose() {
           </Link>
         </div>
         <ul className="mt-10">
-          {executedTransactions.map((transaction, index) => (
-            <li key={transaction.cid}>
+          {selectedTab === "executed" && executedTransactions.filter((transaction) => transaction.owner === signer.address).map((transaction, index) => (
+            <li key={transaction.id}>
               <Divider soft={index > 0} />
               <div className="flex items-center justify-between">
-                <div key={transaction.cid} className="flex gap-6 py-3">
+                <div key={transaction.id} className="flex gap-6 py-3">
                   <div className="w-32 shrink-0">
-                    <Link href={`${transaction.url}/compose`} aria-hidden="true">
-                      <img className="size-10/12 rounded-lg shadow" src={transaction.imgUrl} alt="" />
+                    <Link href={"#"} aria-hidden="true">
+                      <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
                     </Link>
                   </div>
                   <div className="space-y-1.5">
                     <div className="text-base/6 font-semibold">
-                      <Link href={`${transaction.url}/compose`}>{transaction.cid}</Link>
+                      <Link href={"#"}>{transaction.id}</Link>
                     </div>
                     <div className="text-xs/6 text-zinc-500">
                       Block: {transaction.block}
@@ -77,13 +83,83 @@ export default function Compose() {
                       <EllipsisVerticalIcon />
                     </DropdownButton>
                     <DropdownMenu anchor="bottom end">
-                      <DropdownItem href={`${transaction.url}/compose`}>View</DropdownItem>
+                      <DropdownItem href={"#"}>View</DropdownItem>
                     </DropdownMenu>
                   </Dropdown>
                 </div>
               </div>
             </li>
           ))}
+          {selectedTab === "scheduled" && scheduledTransactions.filter((transaction) => transaction.owner === signer.address).map((transaction, index) => (
+            <li key={transaction.id}>
+              <Divider soft={index > 0} />
+              <div className="flex items-center justify-between">
+                <div key={transaction.id} className="flex gap-6 py-3">
+                  <div className="w-32 shrink-0">
+                    <Link href={"#"} aria-hidden="true">
+                      <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
+                    </Link>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="text-base/6 font-semibold">
+                      <Link href={"#"}>{transaction.id}</Link>
+                    </div>
+                    <div className="text-xs/6 text-zinc-500">
+                      Deadline: {transaction.deadlineBlock}
+                    </div>
+                    <div className="text-xs/6 text-zinc-600">
+                      <Badge>{transaction.operation}</Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Badge className="max-sm:hidden" color={'lime'}>
+                    {"Scheduled"}
+                  </Badge>
+                  <Dropdown>
+                    <DropdownButton className="cursor-pointer" plain aria-label="More options">
+                      <EllipsisVerticalIcon />
+                    </DropdownButton>
+                    <DropdownMenu anchor="bottom end">
+                      <DropdownItem href={"#"}>View</DropdownItem>
+                    </DropdownMenu>
+                  </Dropdown>
+                </div>
+              </div>
+            </li>
+          ))}
+          {selectedTab === "executed" && !executedTransactions.filter((transaction) => transaction.owner === signer.address).length &&
+            <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    You have no executed transactions.{' '}
+                    <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-yellow-700 underline hover:text-yellow-600">
+                      Schedule a new transaction.
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </div>}
+          {selectedTab === "scheduled" && !scheduledTransactions.filter((transaction) => transaction.owner === signer.address).length &&
+            <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    You have no up coming transactions scheduled.{' '}
+                    <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-yellow-700 underline hover:text-yellow-600">
+                      Schedule a new transaction.
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </div>}
         </ul>
       </> : <div className="flex items-center justify-center pt-20">
         <Heading>Please connect your wallet <ConnectWallet buttonOnly={true} /></Heading>

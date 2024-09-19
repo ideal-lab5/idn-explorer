@@ -15,15 +15,19 @@ import { useState } from 'react'
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
 import { ExplorerService } from '@/services/ExplorerService'
 import { container } from 'tsyringe'
+import { XCircleIcon } from '@heroicons/react/20/solid'
+import { useRouter } from 'next/navigation'
 
 const FUTURE_BLOCK_DEFAULT_START: number = 100;
 
 export default function ScheduleTransaction({ ...props }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
 
+  const router = useRouter()
   const { latestBlock, signer, isConnected } = useConnectedWallet();
   const [block, setBlock] = useState<number>(latestBlock + FUTURE_BLOCK_DEFAULT_START);
   const [extrinsicData, setExtrinsicData] = useState<DelayedTransactionDetails | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const explorerServiceInstance = container.resolve(ExplorerService);
 
@@ -36,10 +40,12 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
     setIsProcessing(true);
 
     if (extrinsicData) {
+      setLastError(null);
       try {
         await explorerServiceInstance.scheduleTransaction(signer, extrinsicData);
-      } catch (error) {
-        console.error(error);
+        router.push(`/compose`)
+      } catch (error: any) {
+        setLastError(error.message);
       }
     }
 
@@ -83,7 +89,7 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
               </div>
             </section>
 
-            <section className="grid gap-x-8 gap-y-2 sm:grid-cols-2 mt-5">
+            <section className="grid gap-x-8 gap-y-2 sm:grid-cols-2 mt-5 mb-5">
               <div className="space-y-1"></div>
               <Button disabled={extrinsicData === null || isProcessing}
                 className="relative top-0 right-0 cursor-pointer"
@@ -92,6 +98,22 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
               </Button>
             </section>
           </Fieldset>
+          {lastError &&
+            <div className="border-l-4 border-rose-400 bg-rose-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <XCircleIcon aria-hidden="true" className="h-5 w-5 text-rose-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-rose-800">There was an error with your submission</h3>
+                  <div className="mt-2 text-sm text-rose-700">
+                    <ul role="list" className="list-disc space-y-1 pl-5">
+                      <li>{lastError}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>}
         </div >
       </> : <div className="flex items-center justify-center pt-20">
         <Heading>Please connect your wallet <ConnectWallet buttonOnly={true} /></Heading>
