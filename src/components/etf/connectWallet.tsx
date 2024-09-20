@@ -87,26 +87,24 @@ export const ConnectWallet: React.FC<{ buttonOnly: boolean }> = ({ buttonOnly = 
         <>
             {buttonOnly ?
                 <Button onClick={(e: any) => { e.preventDefault(); handleConnect(); }} color="cyan" className="cursor-pointer">Connect</Button>
-                : <>
-                    <SidebarFooter className="max-lg:hidden">
-                        {isConnected ? <Dropdown>
-                            <DropdownButton as={SidebarItem}>
-                                <span className="flex min-w-0 items-center gap-3">
-                                    <Avatar src="/ideal/sticker-vertical.png" className="size-10" square alt="" />
-                                    <span className="min-w-0">
-                                        <span className="block truncate text-sm/5 font-medium text-zinc-950 dark:text-white">Connected</span>
-                                        <span className="block truncate text-xs/5 font-normal text-green-500 dark:text-green-500">Balance: {signerBalance} IDN</span>
-                                        <span className="block truncate text-xs/5 font-normal text-zinc-500 dark:text-zinc-400">
-                                            {`${signerAddress.substring(0, 4)}...${signerAddress.substring(signerAddress.length - 4, signerAddress.length)}`}
-                                        </span>
+                : <SidebarFooter className="max-lg:hidden">
+                    {isConnected ? <Dropdown>
+                        <DropdownButton as={SidebarItem}>
+                            <span className="flex min-w-0 items-center gap-3">
+                                <Avatar src="/ideal/sticker-vertical.png" className="size-10" square alt="" />
+                                <span className="min-w-0">
+                                    <span className="block truncate text-sm/5 font-medium text-zinc-950 dark:text-white">Connected</span>
+                                    <span className="block truncate text-xs/5 font-normal text-green-500 dark:text-green-500">Balance: {signerBalance} IDN</span>
+                                    <span className="block truncate text-xs/5 font-normal text-zinc-500 dark:text-zinc-400">
+                                        {`${signerAddress.substring(0, 4)}...${signerAddress.substring(signerAddress.length - 4, signerAddress.length)}`}
                                     </span>
                                 </span>
-                                <ChevronUpIcon />
-                            </DropdownButton>
-                            <AccountDropdownMenu anchor="top start" />
-                        </Dropdown> : <Button onClick={(e: any) => { e.preventDefault(); handleConnect(); }} color="cyan" className="cursor-pointer">Connect</Button>}
-                    </SidebarFooter>
-                </>}
+                            </span>
+                            <ChevronUpIcon />
+                        </DropdownButton>
+                        <AccountDropdownMenu anchor="top start" />
+                    </Dropdown> : <Button onClick={(e: any) => { e.preventDefault(); handleConnect(); }} color="cyan" className="cursor-pointer">Connect</Button>}
+                </SidebarFooter>}
             <Dialog
                 open={showWalletSelection}
                 onClose={() => setShowWalletSelection(false)}

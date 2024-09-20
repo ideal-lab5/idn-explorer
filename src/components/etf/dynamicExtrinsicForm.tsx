@@ -110,44 +110,36 @@ export const DynamicExtrinsicForm: React.FC<{ block: number, setExtrinsicData: R
     }, [selectedPallet, selectedExtrinsic, parameters])
 
     return (
-        <>
-            <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-6">
+            <Field>
+                <Label>Pallet</Label>
+                <Select name="pallet" value={selectedPallet} onChange={(e) => handlePalletChange(e.target.value)}>
+                    <option value="" disabled>Select Pallet</option>
+                    {pallets.map((pallet, index) => (
+                        <option key={index} value={pallet.value}>
+                            {pallet.text}
+                        </option>
+                    ))}
+                </Select>
+            </Field>
+            {extrinsics.length > 0 && (
                 <Field>
-                    <Label>Pallet</Label>
-                    <Select name="pallet" value={selectedPallet} onChange={(e) => handlePalletChange(e.target.value)}>
-                        <option value="" disabled>Select Pallet</option>
-                        {pallets.map((pallet, index) => (
-                            <option key={index} value={pallet.value}>
-                                {pallet.text}
+                    <Label>Extrinsic</Label>
+                    <Select name="extrinsic" value={selectedExtrinsic} onChange={(e) => handleExtrinsicChange(e.target.value)}>
+                        <option value="" disabled>Select Extrinsic</option>
+                        {extrinsics.map((extrinsic, index) => (
+                            <option key={index} value={extrinsic}>
+                                {extrinsic}
                             </option>
                         ))}
                     </Select>
+                </Field>)}
+            {parameters.length > 0 && parameters.map((param, index) => (
+                <Field key={`${selectedExtrinsic}_${param.name}_${index}`}>
+                    <Label>{`${param.name}: ${param.argType}`}</Label>
+                    <Input type="text" name={`input_${selectedExtrinsic}_${param.name}_${index}`} placeholder={`${param.argTypeName}`} onChange={(e) => handleParameterChange(index, e.target.value)} autoFocus />
                 </Field>
-                {extrinsics.length > 0 && (
-                    <Field>
-                        <Label>Extrinsic</Label>
-                        <Select name="extrinsic" value={selectedExtrinsic} onChange={(e) => handleExtrinsicChange(e.target.value)}>
-                            <option value="" disabled>Select Extrinsic</option>
-                            {extrinsics.map((extrinsic, index) => (
-                                <option key={index} value={extrinsic}>
-                                    {extrinsic}
-                                </option>
-                            ))}
-                        </Select>
-                    </Field>)}
-
-                {parameters.length > 0 && (
-                    <>
-                        {parameters.map((param, index) => (
-                            <Field key={`${selectedExtrinsic}_${param.name}_${index}`}>
-                                <Label>{`${param.name}: ${param.argType}`}</Label>
-                                <Input type="text" name={`input_${selectedExtrinsic}_${param.name}_${index}`} placeholder={`${param.argTypeName}`} onChange={(e) => handleParameterChange(index, e.target.value)} autoFocus />
-                            </Field>
-                        ))}
-                    </>
-                )
-                }
-            </div>
-        </>
+            ))}
+        </div>
     )
-}
+};
