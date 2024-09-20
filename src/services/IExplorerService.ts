@@ -9,4 +9,5 @@ export interface IExplorerService {
     getScheduledTransactions: () => Promise<DelayedTransaction[]>;
     queryHistoricalEvents: (startBlock: number, endBlock: number) => Promise<ExecutedTransaction[]>;
     scheduleTransaction: (signer: any, transactionDetails: DelayedTransactionDetails) => Promise<void>;
+    getFreeBalance: (signer: any) => Promise<string>;
 }

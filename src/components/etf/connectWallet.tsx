@@ -24,9 +24,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useConnectedWallet } from "@/components/etf/ConnectedWalletContext";
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/20/solid";
 import { container } from "tsyringe";
-import { AccountService } from "@/services/polkadot/AccountService";
+import { ExplorerService } from "@/services/ExplorerService";
 
-const userAccount = container.resolve(AccountService);
+const explorerServiceInstance = container.resolve(ExplorerService);
 
 export function AccountDropdownMenu({ anchor }: { readonly anchor: 'top start' | 'bottom end' }) {
     const { setSignerAddress, setSigner, setIsConnected } = useConnectedWallet();
@@ -73,12 +73,11 @@ export const ConnectWallet: React.FC<{ buttonOnly: boolean }> = ({ buttonOnly = 
     const handleSelectWallet = (account: any) => async () => {
         const ext = await import("@polkadot/extension-dapp");
         let address = account.address
-        await userAccount.startService(address);
-        let balance = userAccount.getFreeBalance(true);
         // finds an injector for an address
         const injector = await ext.web3FromAddress(address);
-        setSigner({ signer: injector.signer, address });
-        setSignerBalance(balance);
+        const accountDetails = { signer: injector.signer, address };
+        setSigner(accountDetails);
+        setSignerBalance(await explorerServiceInstance.getFreeBalance(accountDetails));
         setSignerAddress(address);
         setIsConnected(true);
         setShowWalletSelection(false);

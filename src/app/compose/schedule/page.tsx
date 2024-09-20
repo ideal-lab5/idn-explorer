@@ -19,6 +19,7 @@ import { XCircleIcon } from '@heroicons/react/20/solid'
 import { useRouter } from 'next/navigation'
 
 const FUTURE_BLOCK_DEFAULT_START: number = 100;
+const explorerServiceInstance = container.resolve(ExplorerService);
 
 export default function ScheduleTransaction({ ...props }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
 
@@ -28,8 +29,6 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
   const [extrinsicData, setExtrinsicData] = useState<DelayedTransactionDetails | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [lastError, setLastError] = useState<string | null>(null);
-
-  const explorerServiceInstance = container.resolve(ExplorerService);
 
   async function handleScheduleTransaction() {
 

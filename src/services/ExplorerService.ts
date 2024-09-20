@@ -12,9 +12,8 @@ import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
 export class ExplorerService implements IExplorerService {
 
   api: any;
-  CUSTOM_TYPES: any;
-  abi: any;
-  node_dev = "ws://127.0.0.1:9944";
+  node_dev: string = "ws://127.0.0.1:9944";
+
   constructor() {
     this.getEtfApi().then(() => {
       console.log("ETF.js API is ready.");
@@ -22,14 +21,13 @@ export class ExplorerService implements IExplorerService {
   };
 
   async getEtfApi(signer = undefined): Promise<any> {
-    // ensure params are defined
-    if (process.env.NEXT_PUBLIC_NODE_WS === undefined) {
-      console.error("Provide a valid value for NEXT_PUBLIC_NODE_DETAILS. Using fallback");
-      process.env.NEXT_PUBLIC_NODE_WS = this.node_dev;
-      // return Promise.resolve(null);
-    }
 
     if (!this.api) {
+      // ensure params are defined
+      if (process.env.NEXT_PUBLIC_NODE_WS === undefined) {
+        console.error("Provide a valid value for NEXT_PUBLIC_NODE_DETAILS. Using fallback");
+        process.env.NEXT_PUBLIC_NODE_WS = this.node_dev;
+      }
 
       try {
         await cryptoWaitReady();
@@ -90,9 +88,8 @@ export class ExplorerService implements IExplorerService {
     let listOfTransactions: DelayedTransaction[] = [];
     let entries = await api.api.query.scheduler.agenda.entries();
     entries.forEach(([key, value]: [any, any]) => {
-      for (let i = 0; i < value.length; i++) {
-        const humanValue = value[i].toHuman();
-        //console.log(`Value ${i}: `, key.toHuman(), JSON.stringify(humanValue));
+      for (const humanValue of value.map((v: any) => v.toHuman())) {
+        //console.log(`Value: `, key.toHuman(), JSON.stringify(humanValue));
         //we are only interested on those txs scheduled to be executed in the future
         if (humanValue.maybeCiphertext) {
           const delayedTx = new DelayedTransaction(
@@ -127,17 +124,12 @@ export class ExplorerService implements IExplorerService {
         if (phase.isApplyExtrinsic && section !== 'system') {
           const extrinsicIndex = phase.asApplyExtrinsic.toNumber();
           const extrinsic = block.block.extrinsics[extrinsicIndex];
-
           // Compute the extrinsic hash
           const extrinsicHash = extrinsic.hash.toHex();
           // Extract the signer (who sent the extrinsic)
           const signer = extrinsic.signer.toString();
-
-          // Check for status (Success or Failed)
-          const isSuccess = api.api.events.system.ExtrinsicSuccess.is(event);
           const isFailed = api.api.events.system.ExtrinsicFailed.is(event);
-          const status = isSuccess ? 'Confirmed' : isFailed ? 'Failed' : 'Confirmed';
-
+          const status = isFailed ? 'Failed' : 'Confirmed';
           // Format data to be more human-readable
           const eventData = data.map((item: any) => item.toString());
           // Build the result object
@@ -154,7 +146,14 @@ export class ExplorerService implements IExplorerService {
         }
       });
     }
-    return Promise.resolve(listOfEvents.reverse());
+    listOfEvents.reverse()
+    return Promise.resolve(listOfEvents);
+  }
+
+  async getFreeBalance(signer: any): Promise<string> {
+    const api = await this.getEtfApi(signer);
+    const accountInfo = await api.api.query.system.account(signer.address);
+    return Promise.resolve(accountInfo.data.free.toHuman());
   }
 
 }
