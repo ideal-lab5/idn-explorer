@@ -41,7 +41,7 @@ const ConnectedWalletContext = createContext<ConnectedWalletContextType | undefi
 
 export const NUMBER_BLOCKS_EXECUTED = 200;
 export const RAMDOMNESS_SAMPLE = 33;
-
+const explorerServiceInstance = container.resolve(ExplorerService);
 // Create a provider component
 export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [signer, setSigner] = useState<any>(undefined); // The state variable
@@ -49,7 +49,6 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     const [signerAddress, setSignerAddress] = useState<string>("");
     const [signerBalance, setSignerBalance] = useState<string>("");
     const [latestBlock, setLatestBlock] = useState<number>(-1);
-    const explorerServiceInstance = container.resolve(ExplorerService);
     const [executedTransactions, setExecutedTransactions] = useState<ExecutedTransaction[]>([]);
     const [scheduledTransactions, setScheduledTransactions] = useState<DelayedTransaction[]>([]);
     const [generatedRandomness, setGeneratedRandomness] = useState<Randomness[]>([]);
