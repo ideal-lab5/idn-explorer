@@ -1,10 +1,9 @@
+import { explorerClient } from '@/app/explorerClient';
 import { DelayedTransaction } from '@/domain/DelayedTransaction';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
-import { ExplorerService } from '@/services/ExplorerService';
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { container } from 'tsyringe';
 
 // Define the shape of the context
 interface ConnectedWalletContextType {
@@ -41,7 +40,6 @@ const ConnectedWalletContext = createContext<ConnectedWalletContextType | undefi
 
 export const NUMBER_BLOCKS_EXECUTED = 200;
 export const RAMDOMNESS_SAMPLE = 33;
-const explorerServiceInstance = container.resolve(ExplorerService);
 // Create a provider component
 export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [signer, setSigner] = useState<any>(undefined); // The state variable
@@ -80,13 +78,13 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                 const blockNumber = lastHeader.number.toNumber();
                 const blockHash = lastHeader.hash.toHex();
                 setLatestBlock(blockNumber);
-                explorerServiceInstance.getRandomness(blockNumber, RAMDOMNESS_SAMPLE).then((result) => {
+                explorerClient.getRandomness(blockNumber, RAMDOMNESS_SAMPLE).then((result) => {
                     setGeneratedRandomness(result);
                 });
-                explorerServiceInstance.queryHistoricalEvents(blockNumber > NUMBER_BLOCKS_EXECUTED ? blockNumber - NUMBER_BLOCKS_EXECUTED : 0, blockNumber).then((result) => {
+                explorerClient.queryHistoricalEvents(blockNumber > NUMBER_BLOCKS_EXECUTED ? blockNumber - NUMBER_BLOCKS_EXECUTED : 0, blockNumber).then((result) => {
                     setExecutedTransactions(result);
                 });
-                explorerServiceInstance.getScheduledTransactions().then((result) => {
+                explorerClient.getScheduledTransactions().then((result) => {
                     setScheduledTransactions(result);
                 });
             });

@@ -13,13 +13,11 @@ import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
 import { ConnectWallet } from '@/components/etf/connectWallet'
 import { useState } from 'react'
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
-import { ExplorerService } from '@/services/ExplorerService'
-import { container } from 'tsyringe'
 import { XCircleIcon } from '@heroicons/react/20/solid'
 import { useRouter } from 'next/navigation'
+import { explorerClient } from '@/app/explorerClient'
 
 const FUTURE_BLOCK_DEFAULT_START: number = 100;
-const explorerServiceInstance = container.resolve(ExplorerService);
 
 export default function ScheduleTransaction({ ...props }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
 
@@ -41,7 +39,7 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
     if (extrinsicData) {
       setLastError(null);
       try {
-        await explorerServiceInstance.scheduleTransaction(signer, extrinsicData);
+        await explorerClient.scheduleTransaction(signer, extrinsicData);
         router.push(`/compose`)
       } catch (error: any) {
         setLastError(error.message);
@@ -106,7 +104,7 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-rose-800">There was an error with your submission</h3>
                   <div className="mt-2 text-sm text-rose-700">
-                    <ul role="list" className="list-disc space-y-1 pl-5">
+                    <ul className="list-disc space-y-1 pl-5">
                       <li>{lastError}</li>
                     </ul>
                   </div>

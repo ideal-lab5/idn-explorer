@@ -23,10 +23,7 @@ import { Text } from "@/components/text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { useConnectedWallet } from "@/components/etf/ConnectedWalletContext";
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/20/solid";
-import { container } from "tsyringe";
-import { ExplorerService } from "@/services/ExplorerService";
-
-const explorerServiceInstance = container.resolve(ExplorerService);
+import { explorerClient } from "@/app/explorerClient";
 
 export function AccountDropdownMenu({ anchor }: { readonly anchor: 'top start' | 'bottom end' }) {
     const { setSignerAddress, setSigner, setIsConnected } = useConnectedWallet();
@@ -77,7 +74,7 @@ export const ConnectWallet: React.FC<{ buttonOnly: boolean }> = ({ buttonOnly = 
         const injector = await ext.web3FromAddress(address);
         const accountDetails = { signer: injector.signer, address };
         setSigner(accountDetails);
-        setSignerBalance(await explorerServiceInstance.getFreeBalance(accountDetails));
+        setSignerBalance(await explorerClient.getFreeBalance(accountDetails));
         setSignerAddress(address);
         setIsConnected(true);
         setShowWalletSelection(false);
