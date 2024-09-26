@@ -5,7 +5,7 @@
 export interface Parameter {
     name: string;
     type: string;
-    value: string;
+    value: any;
 }
 
 export class DelayedTransactionDetails {

@@ -35,6 +35,7 @@ export class ExplorerService implements IExplorerService {
         console.log("Connecting to ETF chain");
         await api.init(JSON.stringify(chainSpec));
         this.api = api;
+        console.log("api initialized")
       } catch (_e) {
         // TODO: next will try to fetch the wasm blob but it doesn't need to
         // since the transitive dependency is built with the desired wasm already
@@ -45,12 +46,11 @@ export class ExplorerService implements IExplorerService {
     if (signer) {
       this.api.api.setSigner(signer);
     }
-    console.log("api initialized")
     return Promise.resolve(this.api);
   };
 
   async getRandomness(blockNumber: number, size: number = 10): Promise<Randomness[]> {
-    let api = await this.getEtfApi();
+    const api = await this.getEtfApi();
     let listOfGeneratedRandomness: Randomness[] = [];
     let i: number = 0;
     while (i < size && (blockNumber - i >= 0)) {
@@ -71,9 +71,24 @@ export class ExplorerService implements IExplorerService {
   }
 
   async scheduleTransaction(signer: any, transactionDetails: DelayedTransactionDetails): Promise<void> {
-    let api = await this.getEtfApi(signer.signer);
-    let innerCall = api.api.tx.balances
-      .transferKeepAlive('5CMHXGNmDzSpQotcBUUPXyR8jRqfKttXuU87QraJrydrMdcz', 100);
+    const api = await this.getEtfApi(signer.signer);
+    let extrinsicPath = `api.api.tx.${transactionDetails.pallet}.${transactionDetails.extrinsic}`;
+    let parametersPath = "(";
+    if (transactionDetails.params.length > 0) {
+      transactionDetails.params.forEach((param: any) => {
+        if (isNaN(param.value) && param.value != "true" && param.value != "false") {
+          parametersPath += `"${param.value}", `;
+        }
+        else {
+          parametersPath += `${param.value}, `;
+        }
+      });
+      parametersPath = parametersPath.slice(0, -2);
+    }
+    parametersPath += ")";
+    extrinsicPath += parametersPath;
+    console.log(`scheduleTransaction: ${extrinsicPath}`);
+    let innerCall = eval(extrinsicPath);
     let deadline = transactionDetails.block;
     let outerCall = await api.delay(innerCall, 127, deadline);
     await outerCall.signAndSend(signer.address, (result: any) => {
@@ -81,10 +96,11 @@ export class ExplorerService implements IExplorerService {
         console.log('in block')
       }
     });
+    return Promise.resolve();
   }
 
   async getScheduledTransactions(): Promise<DelayedTransaction[]> {
-    let api = await this.getEtfApi();
+    const api = await this.getEtfApi();
     let listOfTransactions: DelayedTransaction[] = [];
     let entries = await api.api.query.scheduler.agenda.entries();
     entries.forEach(([key, value]: [any, any]) => {
@@ -121,7 +137,7 @@ export class ExplorerService implements IExplorerService {
       events.forEach(({ event, phase }: { event: any, phase: any }) => {
         const { section, method, data } = event;
 
-        if (phase.isApplyExtrinsic && section !== 'system') {
+        if (phase.isApplyExtrinsic) {
           const extrinsicIndex = phase.asApplyExtrinsic.toNumber();
           const extrinsic = block.block.extrinsics[extrinsicIndex];
           // Compute the extrinsic hash

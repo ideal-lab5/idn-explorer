@@ -8,7 +8,6 @@ import { Navbar, NavbarItem, NavbarSection } from '@/components/navbar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { useEffect, useState } from 'react'
-import "reflect-metadata";
 import { Randomness } from '@/domain/Randomness'
 import { formatNumber } from '@polkadot/util'
 import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
@@ -124,7 +123,7 @@ export default function Home() {
           </TableHead>
           <TableBody>
             {executedTransactions.slice(executedTxPage * PAGE_SIZE, (executedTxPage + 1) * PAGE_SIZE).map((transaction, index) => (
-              <TableRow key={index} href={`/compose/${transaction.id}`} title={`Transaction #${transaction.id}`}>
+              <TableRow key={index+"_"+transaction.id+"_"+transaction.operation} href={`/compose/${transaction.id}`} title={`Transaction #${transaction.id}`}>
                 <TableCell>{formatNumber(transaction.block)}</TableCell>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
                 <TableCell>{formatHash(transaction.owner)}</TableCell>

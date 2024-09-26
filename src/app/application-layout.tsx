@@ -1,5 +1,4 @@
 'use client'
-import "reflect-metadata";
 import { Avatar } from '@/components/avatar'
 import { BlockHeaders } from '@/components/etf/latestBlocks'
 import { LatestEvents } from '@/components/etf/recentEvents'

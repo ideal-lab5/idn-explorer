@@ -1,5 +1,4 @@
 'use client'
-import "reflect-metadata";
 import { Avatar } from '@/components/avatar'
 import {
     Dropdown,
