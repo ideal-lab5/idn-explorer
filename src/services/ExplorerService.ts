@@ -7,6 +7,7 @@ import { Randomness } from "@/domain/Randomness";
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
+import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
 
 @singleton()
 export class ExplorerService implements IExplorerService {
@@ -130,38 +131,170 @@ export class ExplorerService implements IExplorerService {
     for (let blockNumber = startBlock; blockNumber <= endBlock; blockNumber++) {
       // Get the block hash
       const blockHash = await api.api.rpc.chain.getBlockHash(blockNumber);
+      const signedBlock: SignedBlock = await api.api.rpc.chain.getBlock(blockHash);
       // Get the block to fetch extrinsics
       const block = await api.api.rpc.chain.getBlock(blockHash);
       // Get the events for the block
       const events = await api.api.query.system.events.at(blockHash);
-      events.forEach(({ event, phase }: { event: any, phase: any }) => {
-        const { section, method, data } = event;
+      // events.forEach(({ event, phase }: { event: any, phase: any }) => {
+      //   const { section, method, data } = event;
 
-        if (phase.isApplyExtrinsic) {
-          const extrinsicIndex = phase.asApplyExtrinsic.toNumber();
-          const extrinsic = block.block.extrinsics[extrinsicIndex];
-          // Compute the extrinsic hash
-          const extrinsicHash = extrinsic.hash.toHex();
-          // Extract the signer (who sent the extrinsic)
-          const signer = extrinsic.signer.toString();
-          const isFailed = api.api.events.system.ExtrinsicFailed.is(event);
-          const status = isFailed ? 'Failed' : 'Confirmed';
-          // Format data to be more human-readable
-          const eventData = data.map((item: any) => item.toString());
-          // Build the result object
-          const result: ExecutedTransaction = new ExecutedTransaction(
-            blockNumber,
-            extrinsicHash,
-            signer,
-            `${section}.${method}`,
-            status,
-            eventData
-          )
-          // Push the result to the list
-          listOfEvents.push(result);
+      //   if (phase.isApplyExtrinsic) {
+      //     const extrinsicIndex = phase.asApplyExtrinsic.toNumber();
+      //     const extrinsic = block.block.extrinsics[extrinsicIndex];
+      //     // Compute the extrinsic hash
+      //     const extrinsicHash = extrinsic.hash.toHex();
+      //     // Extract the signer (who sent the extrinsic)
+      //     const signer = extrinsic.signer.toString();
+      //     const isFailed = api.api.events.system.ExtrinsicFailed.is(event);
+      //     const status = isFailed ? 'Failed' : 'Confirmed';
+      //     // Format data to be more human-readable
+      //     const eventData = data.map((item: any) => item.toString());
+      //     // Build the result object
+      //     const result: ExecutedTransaction = new ExecutedTransaction(
+      //       blockNumber,
+      //       extrinsicHash,
+      //       signer,
+      //       `${section}.${method}`,
+      //       status,
+      //       eventData
+      //     )
+      //     // Push the result to the list
+      //     listOfEvents.push(result);
+      //   }
+      // });
+
+      // events.forEach((record: EventRecord, index: number) => {
+      //   const { event } = record;
+      //   const types = event.typeDef;
+
+      //   // Extract necessary fields to create an ExecutedTransaction instance
+      //   const section = event.section;
+      //   const method = event.method;
+      //   const eventData = event.data.map((data, i) => ({
+      //     type: types[i].type,
+      //     value: data.toString()
+      //   }));
+
+      //   const executedTransaction = new ExecutedTransaction(
+      //     blockNumber,                      // block
+      //     `${blockNumber}-${index}`,         // id (unique per block and event index)
+      //     JSON.stringify(eventData), //eventData[0]?.value || 'Unknown',  // owner (you can adjust how you determine the owner)
+      //     `${section}.${method}`,            // operation (e.g., balances.Transfer)
+      //     'Confirmed',                         // status (you can adjust this based on event logic)
+      //     eventData                          // eventData (raw event data)
+      //   );
+      //   // Push the result to the list
+      //   listOfEvents.push(executedTransaction);
+      // });
+
+      // signedBlock.block.extrinsics.forEach((extrinsic, index) => {
+      //   const { method, signer } = extrinsic;
+
+      //   // Find all the events associated with this extrinsic
+      //   const relatedEvents = events.filter(({ phase }: { phase: any }) =>
+      //     phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
+      //   );
+
+      //   // For each event related to this extrinsic
+      //   relatedEvents.forEach((record: EventRecord) => {
+      //     const { event } = record;
+      //     const types = event.typeDef;
+
+      //     // Create a new ExecutedTransaction instance
+      //     const executedTransaction = new ExecutedTransaction(
+      //       blockNumber,                              // block
+      //       `${blockNumber}-${index}`,                 // id (unique per block and event index)
+      //       signer.toString(),                        // signer (owner) from the extrinsic
+      //       `${event.section}.${event.method}`,       // operation (e.g., balances.Transfer)
+      //       'Confirmed', // status based on whether the extrinsic is signed
+      //       event.data.map((data, i) => ({            // eventData (raw event data)
+      //         type: types[i].type,
+      //         value: data.toString()
+      //       }))
+      //     );
+
+      //     // Add the transaction to the array
+      //     listOfEvents.push(executedTransaction);
+      //   });
+      // });
+
+      // Loop through the extrinsics to get the signer (owner) of each transaction
+      signedBlock.block.extrinsics.forEach((extrinsic, index) => {
+        const { method, signer } = extrinsic;
+
+        // Find all the events associated with this extrinsic
+        const relatedEvents = events.filter(({ phase }: { phase: any }) =>
+          phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
+        );
+
+        // Check for success or failure in the related events
+        let status = 'Pending'; // Default status
+
+        relatedEvents.forEach((record: EventRecord) => {
+          const { event } = record;
+
+          if (event.section === 'system' && event.method === 'ExtrinsicSuccess') {
+            status = 'Confirmed'; // Set status as Success if the ExtrinsicSuccess event is present
+          } else if (event.section === 'system' && event.method === 'ExtrinsicFailed') {
+            status = 'Failed'; // Set status as Failed if the ExtrinsicFailed event is present
+          }
+        });
+
+        // For each event related to this extrinsic
+        relatedEvents.forEach((record: EventRecord) => {
+          const { event } = record;
+          const types = event.typeDef;
+
+          // Create a new ExecutedTransaction instance
+          const executedTransaction = new ExecutedTransaction(
+            blockNumber,                              // block
+            `${blockNumber}-${index}`,                // id (unique per block and event index)
+            signer?.toString() || 'Unsigned',         // signer (owner) from the extrinsic
+            `${event.section}.${event.method}`,       // operation (e.g., balances.Transfer)
+            status,                                   // actual status based on the events
+            event.data.map((data, i) => ({            // eventData (raw event data)
+              type: types[i].type,
+              value: data.toString()
+            }))
+          );
+
+          // Add the transaction to the array
+          listOfEvents.push(executedTransaction);
+        });
+      });
+
+      // Handle system events that are not tied to extrinsics
+      const systemEvents = events.filter(({ phase }: { phase: any }) => phase.isFinalization || phase.isInitialization);
+      systemEvents.forEach((record: EventRecord, index: number) => {
+        const { event } = record;
+        const types = event.typeDef;
+
+        // Helper function to determine if a value is a valid hex address
+        function looksLikeAddress(value: string): boolean {
+          return value?.startsWith('0x') || value?.length >= 48;
         }
+
+        const eventData = event.data.map((data, i) => ({
+          type: types[i].type,
+          value: data.toString(),
+        }));
+
+        // Create a new ExecutedTransaction instance for system events
+        const executedTransaction = new ExecutedTransaction(
+          blockNumber,                              // block
+          `${blockNumber}-sys-${index}`,            // id (unique per block and system event index)
+          looksLikeAddress(eventData[0]?.value) ? eventData[0]?.value : "System",                                 // owner (system events don't have a specific owner)
+          `${event.section}.${event.method}`,       // operation (e.g., system.Finalized)
+          'Confirmed',                                // Status for system events is usually successful
+          eventData
+        );
+
+        // Add the transaction to the array
+        listOfEvents.push(executedTransaction);
       });
     }
+
     listOfEvents.reverse()
     return Promise.resolve(listOfEvents);
   }

@@ -126,7 +126,7 @@ export default function Home() {
               <TableRow key={index+"_"+transaction.id+"_"+transaction.operation} href={`/compose/${transaction.id}`} title={`Transaction #${transaction.id}`}>
                 <TableCell>{formatNumber(transaction.block)}</TableCell>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
-                <TableCell>{formatHash(transaction.owner)}</TableCell>
+                <TableCell>{transaction.owner}</TableCell>
                 <TableCell>{transaction.operation}</TableCell>
                 <TableCell className="text-right"><Badge color={transaction.status === "Confirmed" ? "lime" : "red"}>{transaction.status}</Badge></TableCell>
               </TableRow>
