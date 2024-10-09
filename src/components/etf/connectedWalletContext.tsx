@@ -120,7 +120,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
         eraProgress,
         setEraProgress,
         sessionsPerEra,
-        setSessionsPerEra
+        setSessionsPerEra,
     }), [
         signer,
         isConnected,

@@ -103,11 +103,11 @@ export function ApplicationLayout({
                   <SidebarLabel>Recent blocks </SidebarLabel>
                 </SidebarItem>
                 <BlockHeaders />
-                <SidebarItem href={"#"}>
+                {/* <SidebarItem href={"#"}>
                   <RocketLaunchIcon />
                   <SidebarLabel>Recent events </SidebarLabel>
                 </SidebarItem>
-                <LatestEvents />
+                <LatestEvents /> */}
               </SidebarSection>
               <SidebarSpacer />
               <SidebarSection>

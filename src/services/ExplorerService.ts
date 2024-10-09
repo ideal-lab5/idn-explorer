@@ -8,6 +8,7 @@ import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
 import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
+import { metadata } from "@/app/layout";
 
 @singleton()
 export class ExplorerService implements IExplorerService {
@@ -174,7 +175,8 @@ export class ExplorerService implements IExplorerService {
             event.data.map((data, i) => ({            // eventData (raw event data)
               type: types[i].type,
               value: data.toString()
-            }))
+            })),
+            event?.meta?.docs?.map(meta => meta.toString().trim())
           );
 
           // Add the transaction to the array
@@ -205,7 +207,8 @@ export class ExplorerService implements IExplorerService {
           looksLikeAddress(eventData[0]?.value) ? eventData[0]?.value : "System",                                 // owner (system events don't have a specific owner)
           `${event.section}.${event.method}`,       // operation (e.g., system.Finalized)
           'Confirmed',                                // Status for system events is usually successful
-          eventData
+          eventData,
+          event?.meta?.docs?.map(meta => meta.toString().trim()),
         );
 
         // Add the transaction to the array

@@ -1,81 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { EventRecord } from '@polkadot/types/interfaces';
 import { Badge } from '@/components/badge'
 import {
     SidebarItem,
     SidebarLabel
 } from '@/components/sidebar'
-
-interface BlockchainEvent {
-    blockNumber: number;
-    event: string;
-    meta: string[];
-    section: string;
-    method: string;
-    data: string[];
-}
+import { explorerClient } from '@/app/explorerClient';
+import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 
 export const LatestEvents: React.FC = () => {
-    const [events, setEvents] = useState<BlockchainEvent[]>([]);
+    const [events, setEvents] = useState<ExecutedTransaction[]>([]);
 
     useEffect(() => {
 
         async function subscribeEvents() {
             const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io');
             const api = await ApiPromise.create({ provider: wsProvider });
+            await api.isReady;
 
-            // Get the current block number from the chain
-            const latestHeader = await api.rpc.chain.getHeader();
-            let currentBlockNumber = latestHeader.number.toNumber();
-
-            api.query.system.events((records: EventRecord[]) => {
-
-                setEvents((prevEvents) => {
-                    // Extracting event details
-                    const newEvents: BlockchainEvent[] = records.map(({ event }) => {
-                        const { section, method } = event;
-
-                        return {
-                            blockNumber: currentBlockNumber,
-                            event: event.toString(),
-                            section,
-                            meta: event.meta.docs.map((d) => d.toString().trim()),
-                            method,
-                            index: event.index,
-                            data: event.data.map((data) => data.toString()),
-                        };
-                    }).filter(({ method, section }) => section !== 'system' 
-                        // &&
-                        // (
-                        //     !['balances', 'treasury'].includes(section) ||
-                        //     !['Deposit', 'UpdatedInactive', 'Withdraw'].includes(method)
-                        // ) &&
-                        // (
-                        //     !['transactionPayment'].includes(section) ||
-                        //     !['TransactionFeePaid'].includes(method)
-                        // ) &&
-                        // (
-                        //     !['paraInclusion', 'parasInclusion', 'inclusion'].includes(section) ||
-                        //     !['CandidateBacked', 'CandidateIncluded'].includes(method)
-                        // ) &&
-                        // (
-                        //     !['relayChainInfo'].includes(section) ||
-                        //     !['CurrentBlockNumbers'].includes(method)
-                        // )
-                    ).reverse();
-
-                    // Combine new events with previous events and remove duplicates
-                    const updatedEvents = [...newEvents, ...prevEvents];
-                    // Keep only the most recent 5 events
-                    return updatedEvents.slice(0, 5);
+            // Subscribe to new block headers
+            await api.rpc.chain.subscribeNewHeads(async (lastHeader) => {
+                const blockNumber = lastHeader.number.toNumber();
+                explorerClient.queryHistoricalEvents(blockNumber, blockNumber).then((result) => {
+                    setEvents(result);
                 });
-
-                // Update block number for the next set of events
-                currentBlockNumber += 1;
             });
         }
-
 
         subscribeEvents();
 
@@ -87,10 +37,10 @@ export const LatestEvents: React.FC = () => {
         <>
             {!events?.length && <SidebarItem><SidebarLabel><Badge color="purple">No events found</Badge></SidebarLabel></SidebarItem>}
             {events.map((event, index) => (
-                <SidebarItem href={`/compose/${event.blockNumber}`} key={index}>
-                    <SidebarLabel><Badge color="purple">{event.section}.{event.method}</Badge>
+                <SidebarItem href={`/compose/${event.block}`} key={index}>
+                    <SidebarLabel><Badge color="purple">{event.id} {event.operation}</Badge>
                         <p className="text-xs pl-1 truncate">
-                            {event.meta[0]}</p>
+                            {event?.metadata[0]}</p>
                     </SidebarLabel>
                 </SidebarItem>
             ))}

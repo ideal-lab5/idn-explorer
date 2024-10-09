@@ -4,6 +4,8 @@ import { Badge } from '@/components/badge'
 import { Divider } from '@/components/divider'
 import { Heading, Subheading } from '@/components/heading'
 import { Input, InputGroup } from '@/components/input'
+import { Checkbox, CheckboxField } from '@/components/checkbox'
+import { Field, Label } from '@/components/fieldset'
 import { Navbar, NavbarItem, NavbarSection } from '@/components/navbar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
@@ -12,25 +14,23 @@ import { Randomness } from '@/domain/Randomness'
 import { formatNumber } from '@polkadot/util'
 import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
 import { useSearchParams } from 'next/navigation'
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 import {
   Pagination,
-  PaginationGap,
-  PaginationList,
   PaginationNext,
-  PaginationPage,
   PaginationPrevious,
 } from '@/components/pagination'
 
-export function Stat({ title, value, change, helpText }: { title: string; value: string; change: string; helpText?: string }) {
+export function Stat({ title, value, change, helpText }: { readonly title: string; readonly value: string; readonly change: string; readonly helpText?: string }) {
   return (
     <div>
       <Divider />
-      <div className="mt-6 text-lg/6 font-medium sm:text-sm/6">{title}</div>
-      <div className="mt-3 text-3xl/8 font-semibold sm:text-2xl/8">{value}</div>
-      <div className="mt-3 text-sm/6 sm:text-xs/6">
+      <div className="mt-6 text-lg/6 font-medium sm:text-sm/6"><Badge color="cyan">{title}</Badge></div>
+      <div className="mt-3 ml-2 text-3xl/8 font-semibold sm:text-2xl/8">{value}</div>
+      {change && helpText && <div className="mt-3 text-sm/6 sm:text-xs/6">
         <Badge color={'purple'}>{change}</Badge>{' '}
         <span className="text-zinc-500">{helpText}</span>
-      </div>
+      </div>}
     </div>
   )
 }
@@ -43,15 +43,19 @@ export default function Home() {
     executedTransactions,
     scheduledTransactions,
     generatedRandomness,
-    epochIndex, sessionProgress,
-    sessionLength, eraProgress,
-    sessionsPerEra
+    sessionProgress,
+    sessionLength
   } = useConnectedWallet();
   const [executedTxPage, setExecutedTxPage] = useState<number>(0);
   const [scheduledTxPage, setScheduledTxPage] = useState<number>(0);
   const [randomnessPage, setRandomnessPage] = useState<number>(0);
   const searchParams = useSearchParams()
+  const [copyStatus, setCopyStatus] = useState(false); // To indicate if the text was copied
 
+  const onCopyText = () => {
+    setCopyStatus(true);
+    setTimeout(() => setCopyStatus(false), 2000); // Reset status after 2 seconds
+  };
 
   useEffect(() => {
 
@@ -84,18 +88,13 @@ export default function Home() {
     <>
       <Heading>The Ideal Network Explorer</Heading>
       <div className="mt-4 grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat title="Last Block" value={latestBlock >= 0 ? `#${formatNumber(latestBlock)}` : "..."} change="1.2s" helpText="target 6s" />
-        <Stat title="Epoch" value={`${sessionProgress && sessionLength ? formatNumber((sessionProgress / sessionLength) * 100) + "%" : "..."}`} change="4h 48m 36s" />
+        <Stat title="Last Block" value={latestBlock >= 0 ? `#${formatNumber(latestBlock)}` : "..."} change="" helpText="" />
+        <Stat title="Epoch" value={`${sessionProgress && sessionLength ? formatNumber((sessionProgress / sessionLength) * 100) + "%" : "..."}`} change="" />
         <Stat title="Executed" value={formatNumber(executedTransactions.length)} change={`Last ${NUMBER_BLOCKS_EXECUTED} blocks`} helpText="" />
         <Stat title="Scheduled" value={formatNumber(scheduledTransactions.length)} change="Upcoming txs" helpText="" />
       </div>
-      {/* <div>
-        <h2>Epoch Information</h2>
-        <p>Current Epoch: {epochIndex}</p>
-        <p>Era Progress: {eraProgress}/{sessionsPerEra}</p>
-      </div> */}
-      <Subheading className="mt-5"><Badge color="lime">Transactions</Badge></Subheading>
-      <div>
+
+      <div className="mt-4">
         <Navbar>
           <NavbarSection>
             <NavbarItem href="#" onClick={() => setSelectedTab(0)} current={selectedTab === 0}>Executed</NavbarItem>
@@ -105,11 +104,17 @@ export default function Home() {
         </Navbar>
       </div>
       {selectedTab === 0 && <>
-        <div className="mt-4 grid xl:grid-cols-2 sm:grid-cols-2">
+        <div className="mt-4 grid xl:grid-cols-3 sm:grid-cols-2">
           <InputGroup>
             <MagnifyingGlassIcon />
             <Input name="searchExecuted" id="searchExecuted" placeholder="Search executed txs" aria-label="Search" />
           </InputGroup>
+        </div>
+        <div className="mt-4 grid xl:grid-cols-3 sm:grid-cols-2">
+          <CheckboxField>
+            <Checkbox name="delayedOnly" />
+            <Label>Delayed transactions only</Label>
+          </CheckboxField>
         </div>
         <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
           <TableHead>
@@ -123,7 +128,7 @@ export default function Home() {
           </TableHead>
           <TableBody>
             {executedTransactions.slice(executedTxPage * PAGE_SIZE, (executedTxPage + 1) * PAGE_SIZE).map((transaction, index) => (
-              <TableRow key={index+"_"+transaction.id+"_"+transaction.operation} href={`/compose/${transaction.id}`} title={`Transaction #${transaction.id}`}>
+              <TableRow key={index + "_" + transaction.id + "_" + transaction.operation} href={`/compose/${transaction.id}_OP_${transaction.operation}`} title={`Transaction #${transaction.id}`}>
                 <TableCell>{formatNumber(transaction.block)}</TableCell>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
                 <TableCell>{transaction.owner}</TableCell>
@@ -171,19 +176,17 @@ export default function Home() {
           <TableHead>
             <TableRow>
               <TableHeader>Block</TableHeader>
-              {/* <TableHeader>Signature</TableHeader> */}
-              <TableHeader>Randomness</TableHeader>
-              {/* <TableHeader className="text-right">Status</TableHeader> */}
+              <TableHeader>Randomness {copyStatus && <Badge color='cyan' className="text-xs text-zinc-500">copied to clipboard!</Badge>}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
             {generatedRandomness.slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE).map((transaction: Randomness, index: number) => (
-              <TableRow key={index} href={"#"} title={`Transaction #${index}`}>
-                <TableCell>{formatNumber(transaction.block)}</TableCell>
-                {/* <TableCell className="text-zinc-500 truncate">{`${formatHash(transaction.signature)}`}</TableCell> */}
-                <TableCell className="text-wrap"><p>{transaction.randomness}</p></TableCell>
-                {/* <TableCell className="text-right"><Badge color={"lime"}>{transaction.status}</Badge></TableCell> */}
-              </TableRow>
+              <CopyToClipboard key={"copy_" + index} text={transaction.randomness} onCopy={onCopyText}>
+                <TableRow key={"row_" + index} href={"#"} title={`Transaction #${index}`}>
+                  <TableCell>{formatNumber(transaction.block)}</TableCell>
+                  <TableCell className="text-wrap"><p className="text-xs">{transaction.randomness}</p></TableCell>
+                </TableRow>
+              </CopyToClipboard>
             ))}
           </TableBody>
         </Table>{generatedRandomness.length > PAGE_SIZE && <Pagination>
