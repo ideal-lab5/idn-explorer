@@ -38,7 +38,7 @@ interface ConnectedWalletContextType {
 // Create the context with default values
 const ConnectedWalletContext = createContext<ConnectedWalletContextType | undefined>(undefined);
 
-export const NUMBER_BLOCKS_EXECUTED = 200;
+export const NUMBER_BLOCKS_EXECUTED = 250;
 export const RAMDOMNESS_SAMPLE = 33;
 // Create a provider component
 export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

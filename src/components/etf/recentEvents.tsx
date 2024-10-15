@@ -37,7 +37,7 @@ export const LatestEvents: React.FC = () => {
         <>
             {!events?.length && <SidebarItem><SidebarLabel><Badge color="purple">No events found</Badge></SidebarLabel></SidebarItem>}
             {events.map((event, index) => (
-                <SidebarItem href={`/compose/${event.block}`} key={index}>
+                <SidebarItem href={`/compose/${event.id}_OP_${event.operation}`} key={index}>
                     <SidebarLabel><Badge color="purple">{event.id} {event.operation}</Badge>
                         <p className="text-xs pl-1 truncate">
                             {event?.metadata[0]}</p>

@@ -51,6 +51,9 @@ export default function Home() {
   const [randomnessPage, setRandomnessPage] = useState<number>(0);
   const searchParams = useSearchParams()
   const [copyStatus, setCopyStatus] = useState(false); // To indicate if the text was copied
+  const [delayedOnly, setDelayedOnly] = useState(false); // To indicate if only show delayed txs
+  const [searchTermExecuted, setSearchTermExecuted] = useState<string>("");
+  const [searchTermScheduled, setSearchTermScheduled] = useState<string>("");
 
   const onCopyText = () => {
     setCopyStatus(true);
@@ -86,12 +89,12 @@ export default function Home() {
 
   return (
     <>
-      <Heading>The Ideal Network Explorer</Heading>
+      <Heading>The Ideal Network Explorer <Badge>{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</Badge></Heading>
       <div className="mt-4 grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
         <Stat title="Last Block" value={latestBlock >= 0 ? `#${formatNumber(latestBlock)}` : "..."} change="" helpText="" />
         <Stat title="Epoch" value={`${sessionProgress && sessionLength ? formatNumber((sessionProgress / sessionLength) * 100) + "%" : "..."}`} change="" />
-        <Stat title="Executed" value={formatNumber(executedTransactions.length)} change={`Last ${NUMBER_BLOCKS_EXECUTED} blocks`} helpText="" />
-        <Stat title="Scheduled" value={formatNumber(scheduledTransactions.length)} change="Upcoming txs" helpText="" />
+        <Stat title="Executed" value={formatNumber(executedTransactions.filter(element => (delayedOnly && element.delayedTx) || !delayedOnly).filter(element => searchTermExecuted == "" || (element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.operation.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase()))).length)} change={`Last ${NUMBER_BLOCKS_EXECUTED} blocks`} helpText="" />
+        <Stat title="Scheduled" value={formatNumber(scheduledTransactions.filter(element => searchTermScheduled == "" || (element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) || element.operation.toLowerCase().includes(searchTermScheduled.toLowerCase()) || element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase()))).length)} change="Upcoming txs" helpText="" />
       </div>
 
       <div className="mt-4">
@@ -107,12 +110,12 @@ export default function Home() {
         <div className="mt-4 grid xl:grid-cols-3 sm:grid-cols-2">
           <InputGroup>
             <MagnifyingGlassIcon />
-            <Input name="searchExecuted" id="searchExecuted" placeholder="Search executed txs" aria-label="Search" />
+            <Input name="searchExecuted" id="searchExecuted" value={searchTermExecuted} onChange={e => setSearchTermExecuted(e.target.value)} placeholder="Search executed txs" aria-label="Search" />
           </InputGroup>
         </div>
         <div className="mt-4 grid xl:grid-cols-3 sm:grid-cols-2">
           <CheckboxField>
-            <Checkbox name="delayedOnly" />
+            <Checkbox name="delayedOnly" checked={delayedOnly} onChange={setDelayedOnly} />
             <Label>Delayed transactions only</Label>
           </CheckboxField>
         </div>
@@ -127,7 +130,7 @@ export default function Home() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {executedTransactions.slice(executedTxPage * PAGE_SIZE, (executedTxPage + 1) * PAGE_SIZE).map((transaction, index) => (
+            {executedTransactions.filter(element => (delayedOnly && element.delayedTx) || !delayedOnly).filter(element => searchTermExecuted == "" || (element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.operation.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase()))).slice(executedTxPage * PAGE_SIZE, (executedTxPage + 1) * PAGE_SIZE).map((transaction, index) => (
               <TableRow key={index + "_" + transaction.id + "_" + transaction.operation} href={`/compose/${transaction.id}_OP_${transaction.operation}`} title={`Transaction #${transaction.id}`}>
                 <TableCell>{formatNumber(transaction.block)}</TableCell>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
@@ -137,7 +140,7 @@ export default function Home() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>{executedTransactions.length > PAGE_SIZE && <Pagination>
+        </Table>{executedTransactions.filter(element => (delayedOnly && element.delayedTx) || !delayedOnly).filter(element => searchTermExecuted == "" || (element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.operation.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase()))).length > PAGE_SIZE && <Pagination>
           <PaginationPrevious href={executedTxPage === 0 ? `?executedTxPage=0&tab=0` : `?executedTxPage=${executedTxPage - 1}&tab=0`} />
           <PaginationNext href={`?executedTxPage=${executedTxPage + 1}&tab=0`} />
         </Pagination>}</>}
@@ -145,7 +148,7 @@ export default function Home() {
         <div className="mt-4 grid xl:grid-cols-2 sm:grid-cols-2">
           <InputGroup>
             <MagnifyingGlassIcon />
-            <Input name="searchScheduled" id="searchScheduled" placeholder="Search scheduled txs" aria-label="Search" />
+            <Input name="searchScheduled" id="searchScheduled" value={searchTermScheduled} onChange={e => setSearchTermScheduled(e.target.value)} placeholder="Search scheduled txs" aria-label="Search" />
           </InputGroup>
         </div>
         <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
@@ -158,8 +161,8 @@ export default function Home() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {scheduledTransactions.slice(scheduledTxPage * PAGE_SIZE, (scheduledTxPage + 1) * PAGE_SIZE).map((transaction) => (
-              <TableRow key={transaction.id} href={`#`} title={`Transaction #${transaction.id}`}>
+            {scheduledTransactions.filter(element => searchTermScheduled == "" || (element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) || element.operation.toLowerCase().includes(searchTermScheduled.toLowerCase()) || element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase()))).slice(scheduledTxPage * PAGE_SIZE, (scheduledTxPage + 1) * PAGE_SIZE).map((transaction) => (
+              <TableRow key={transaction.id} title={`Transaction #${transaction.id}`}>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
                 <TableCell>{formatHash(transaction.owner)}</TableCell>
                 <TableCell>{transaction.operation}</TableCell>

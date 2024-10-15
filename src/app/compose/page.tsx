@@ -17,6 +17,7 @@ import { ExclamationTriangleIcon } from '@heroicons/react/20/solid'
 export default function Compose() {
 
   const [selectedTab, setSelectedTab] = useState<string>("scheduled");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const { latestBlock, signer, isConnected,
     executedTransactions,
@@ -36,7 +37,7 @@ export default function Compose() {
               <div className="flex-1">
                 <InputGroup>
                   <MagnifyingGlassIcon />
-                  <Input name="search" placeholder="Search transactions&hellip;" />
+                  <Input name="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search transactions&hellip;" />
                 </InputGroup>
               </div>
               <div>
@@ -44,7 +45,7 @@ export default function Compose() {
                   <option value="scheduled">My Scheduled</option>
                   <option value="executed">My Executed</option>
                 </Select>
-                {selectedTab === "executed" && <span className="text-zinc-500 ml-2 text-xs">{`Last ${NUMBER_BLOCKS_EXECUTED} blocks`}</span>}
+                {selectedTab === "executed" && <span className="text-zinc-500 ml-2 text-xs">{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</span>}
               </div>
             </div>
           </div>
@@ -53,13 +54,13 @@ export default function Compose() {
           </Link>
         </div>
         <ul className="mt-10">
-          {selectedTab === "executed" && executedTransactions.filter((transaction) => transaction.owner === signer.address).map((transaction, index) => (
-            <li key={index+"_"+transaction.id+"_"+transaction.operation}>
+          {selectedTab === "executed" && executedTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => searchTerm == "" || (element.id.toLowerCase().includes(searchTerm.toLowerCase()) || element.operation.toLowerCase().includes(searchTerm.toLowerCase()) || element.owner.toLowerCase().includes(searchTerm.toLowerCase()))).map((transaction, index) => (
+            <li key={index + "_" + transaction.id + "_" + transaction.operation}>
               <Divider soft={index > 0} />
               <div className="flex items-center justify-between">
                 <div className="flex gap-6 py-3">
                   <div className="w-32 shrink-0">
-                    <Link href={"#"} aria-hidden="true">
+                    <Link href={`/compose/${transaction.id}_OP_${transaction.operation}`} aria-hidden="true">
                       <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
                     </Link>
                   </div>
@@ -91,7 +92,7 @@ export default function Compose() {
               </div>
             </li>
           ))}
-          {selectedTab === "scheduled" && scheduledTransactions.filter((transaction) => transaction.owner === signer.address).map((transaction, index) => (
+          {selectedTab === "scheduled" && scheduledTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => searchTerm == "" || (element.id.toLowerCase().includes(searchTerm.toLowerCase()) || element.operation.toLowerCase().includes(searchTerm.toLowerCase()) || element.owner.toLowerCase().includes(searchTerm.toLowerCase()))).map((transaction, index) => (
             <li key={transaction.id}>
               <Divider soft={index > 0} />
               <div className="flex items-center justify-between">

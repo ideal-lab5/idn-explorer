@@ -76,13 +76,13 @@ export default function ExecutedTransaction({ params }: { readonly params: { rea
               </DescriptionDetails>
             </div>)}
           <DescriptionTerm>Event data</DescriptionTerm>
-          {transaction?.eventData?.map((eventData: any, index: number) =>
-            <div key={"detail_" + index}>
-              <DescriptionDetails>
+          <DescriptionDetails>
+            {transaction?.eventData?.map((eventData: any, index: number) =>
+              <div key={"detail_" + index}>
                 <p className='text-xs'>{eventData.type}</p>
                 <p className='text-xs'>{eventData.value}</p>
-              </DescriptionDetails>
-            </div>)}
+              </div>)}
+          </DescriptionDetails>
         </DescriptionList>
       </div>
     </div> : <div>Loading...</div>

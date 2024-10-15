@@ -8,7 +8,6 @@ import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
 import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
-import { metadata } from "@/app/layout";
 
 @singleton()
 export class ExplorerService implements IExplorerService {
@@ -114,7 +113,7 @@ export class ExplorerService implements IExplorerService {
             "NA",
             humanValue.maybeId,
             humanValue.origin.system.Signed,
-            "Extrinsinc Call",
+            "Extrinsic Call",
             key.toHuman()[0]
           );
           listOfTransactions.push(delayedTx);
@@ -165,18 +164,20 @@ export class ExplorerService implements IExplorerService {
           const { event } = record;
           const types = event.typeDef;
 
+          const operation = `${event.section}.${event.method}`;
           // Create a new ExecutedTransaction instance
           const executedTransaction = new ExecutedTransaction(
             blockNumber,                              // block
             `${blockNumber}-${index}`,                // id (unique per block and event index)
             signer?.toString() || 'Unsigned',         // signer (owner) from the extrinsic
-            `${event.section}.${event.method}`,       // operation (e.g., balances.Transfer)
+            operation,       // operation (e.g., balances.Transfer)
             status,                                   // actual status based on the events
             event.data.map((data, i) => ({            // eventData (raw event data)
               type: types[i].type,
               value: data.toString()
             })),
-            event?.meta?.docs?.map(meta => meta.toString().trim())
+            event?.meta?.docs?.map(meta => meta.toString().trim()),
+            operation === "scheduler.Scheduled"
           );
 
           // Add the transaction to the array
@@ -201,14 +202,16 @@ export class ExplorerService implements IExplorerService {
         }));
 
         // Create a new ExecutedTransaction instance for system events
+        const operation = `${event.section}.${event.method}`;
         const executedTransaction = new ExecutedTransaction(
           blockNumber,                              // block
           `${blockNumber}-sys-${index}`,            // id (unique per block and system event index)
           looksLikeAddress(eventData[0]?.value) ? eventData[0]?.value : "System",                                 // owner (system events don't have a specific owner)
-          `${event.section}.${event.method}`,       // operation (e.g., system.Finalized)
+          operation,       // operation (e.g., system.Finalized)
           'Confirmed',                                // Status for system events is usually successful
           eventData,
           event?.meta?.docs?.map(meta => meta.toString().trim()),
+          operation === "scheduler.Dispatched" || looksLikeAddress(eventData[0]?.value)
         );
 
         // Add the transaction to the array

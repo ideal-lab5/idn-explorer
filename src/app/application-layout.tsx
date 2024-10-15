@@ -67,23 +67,10 @@ export function ApplicationLayout({
               <Dropdown>
                 <DropdownButton as={SidebarItem}>
                   <Avatar src="/ideal/logo-onecolor-white-ISO.png" />
-                  <SidebarLabel>Ideal Network</SidebarLabel>
-                  <ChevronDownIcon />
+                  <SidebarLabel>Ideal Network</SidebarLabel> 
                 </DropdownButton>
-                <DropdownMenu className="min-w-80 lg:min-w-64" anchor="bottom start">
-                  <DropdownItem href="/settings">
-                    <Cog8ToothIcon />
-                    <DropdownLabel>Settings</DropdownLabel>
-                  </DropdownItem>
-                  <DropdownDivider />
-                  <DropdownItem href="#">
-                    <Avatar slot="icon" src="/ideal/logo-onecolor-white-ISO.png" />
-                    <DropdownLabel>Ideal Network</DropdownLabel>
-                  </DropdownItem>
-                </DropdownMenu>
               </Dropdown>
             </SidebarHeader>
-
             <SidebarBody>
               <SidebarSection>
                 <SidebarItem href="/" current={pathname === '/'}>
@@ -95,19 +82,13 @@ export function ApplicationLayout({
                   <SidebarLabel>Compose</SidebarLabel>
                 </SidebarItem>
               </SidebarSection>
-
               <SidebarSection className="max-lg:hidden">
                 <SidebarHeading>Status</SidebarHeading>
-                <SidebarItem href={"#"}>
+                <SidebarItem>
                   <CubeIcon />
                   <SidebarLabel>Recent blocks </SidebarLabel>
                 </SidebarItem>
                 <BlockHeaders />
-                {/* <SidebarItem href={"#"}>
-                  <RocketLaunchIcon />
-                  <SidebarLabel>Recent events </SidebarLabel>
-                </SidebarItem>
-                <LatestEvents /> */}
               </SidebarSection>
               <SidebarSpacer />
               <SidebarSection>

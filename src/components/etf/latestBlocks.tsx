@@ -71,7 +71,7 @@ export const BlockHeaders: React.FC = () => {
         <>
             {!headers?.length && <SidebarItem><SidebarLabel><Badge color="lime">Loading recent blocks...</Badge></SidebarLabel></SidebarItem>}
             {headers.map((header, index) => (
-                <SidebarItem href={"#"} key={index}>
+                <SidebarItem key={index}>
                     <SidebarLabel><Badge color="lime">{formatNumber(header.blockNumber)}</Badge> </SidebarLabel>
                     <SidebarLabel className="text-xs pl-1 truncate">{`${formatHash(header.blockHash)}`}</SidebarLabel>
                 </SidebarItem>
