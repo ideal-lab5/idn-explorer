@@ -19,7 +19,7 @@ import { explorerClient } from '@/app/explorerClient'
 
 const FUTURE_BLOCK_DEFAULT_START: number = 100;
 
-export default function ScheduleTransaction({ }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
+export default function ScheduleTransaction() {
 
   const router = useRouter()
   const { latestBlock, signer, isConnected } = useConnectedWallet();

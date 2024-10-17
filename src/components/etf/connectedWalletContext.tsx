@@ -89,7 +89,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                 setSessionLength(progress.sessionLength.toNumber());
                 setEraProgress(progress.eraProgress.toNumber());
                 setSessionsPerEra(progress.sessionsPerEra.toNumber());
-                setEpochIndex(epochInfo.toNumber());
+                setEpochIndex((epochInfo as any).toNumber());
                 const blockNumber = lastHeader.number.toNumber();
                 const blockHash = lastHeader.hash.toHex();
                 setLatestBlock(blockNumber);

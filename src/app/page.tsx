@@ -21,7 +21,7 @@ import {
   PaginationPrevious,
 } from '@/components/pagination'
 
-export function Stat({ title, value, change, helpText }: { readonly title: string; readonly value: string; readonly change: string; readonly helpText?: string }) {
+function Stat({ title, value, change, helpText }: { readonly title: string; readonly value: string; readonly change: string; readonly helpText?: string }) {
   return (
     <div>
       <Divider />
