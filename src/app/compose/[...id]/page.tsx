@@ -3,7 +3,7 @@
 import { Badge } from '@/components/badge'
 import { DescriptionDetails, DescriptionList, DescriptionTerm } from '@/components/description-list'
 import { Divider } from '@/components/divider'
-import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
+import { useConnectedWallet } from '@/components/etf/connectedWalletContext'
 import { Heading, Subheading } from '@/components/heading'
 import { Link } from '@/components/link'
 import { ChevronLeftIcon, CommandLineIcon, CubeIcon, WalletIcon } from '@heroicons/react/16/solid'

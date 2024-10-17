@@ -9,7 +9,7 @@ import { Input } from '@/components/input'
 import { Heading, Subheading } from '@/components/heading'
 import { ChevronDoubleLeftIcon } from '@heroicons/react/16/solid'
 import { DynamicExtrinsicForm } from '@/components/etf/dynamicExtrinsicForm'
-import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
+import { useConnectedWallet } from '@/components/etf/connectedWalletContext'
 import { ConnectWallet } from '@/components/etf/connectWallet'
 import { useState } from 'react'
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
@@ -19,7 +19,7 @@ import { explorerClient } from '@/app/explorerClient'
 
 const FUTURE_BLOCK_DEFAULT_START: number = 100;
 
-export default function ScheduleTransaction({ ...props }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
+export default function ScheduleTransaction({ }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
 
   const router = useRouter()
   const { latestBlock, signer, isConnected } = useConnectedWallet();

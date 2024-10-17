@@ -12,7 +12,7 @@ import { container, delay, inject, injectable, registry } from "tsyringe";
 ])
 class ExplorerClient {
     constructor(@inject("ExplorerServiceImplementation") public explorerServiceInstance: IExplorerService
-) { }
+    ) { }
 }
 
 export const explorerClient: IExplorerService = container.resolve(ExplorerClient).explorerServiceInstance;

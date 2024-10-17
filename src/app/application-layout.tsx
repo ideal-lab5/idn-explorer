@@ -1,14 +1,9 @@
 'use client'
 import { Avatar } from '@/components/avatar'
 import { BlockHeaders } from '@/components/etf/latestBlocks'
-import { LatestEvents } from '@/components/etf/recentEvents'
 import {
   Dropdown,
   DropdownButton,
-  DropdownDivider,
-  DropdownItem,
-  DropdownLabel,
-  DropdownMenu,
 } from '@/components/dropdown'
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from '@/components/navbar'
 import {
@@ -23,20 +18,14 @@ import {
 } from '@/components/sidebar'
 import { SidebarLayout } from '@/components/sidebar-layout'
 import {
-  ChevronDownIcon,
-  Cog8ToothIcon,
-} from '@heroicons/react/16/solid'
-import {
   QuestionMarkCircleIcon,
   SparklesIcon,
   ClockIcon,
-  CubeIcon,
-  RocketLaunchIcon,
+  CubeIcon
 } from '@heroicons/react/20/solid'
 import { usePathname } from 'next/navigation'
-import { ConnectedWalletProvider } from "@/components/etf/ConnectedWalletContext";
+import { ConnectedWalletProvider } from "@/components/etf/connectedWalletContext";
 import { ConnectWallet, AccountDropdownMenu } from "@/components/etf/connectWallet";
-
 
 export function ApplicationLayout({
   children,
@@ -67,7 +56,7 @@ export function ApplicationLayout({
               <Dropdown>
                 <DropdownButton as={SidebarItem}>
                   <Avatar src="/ideal/logo-onecolor-white-ISO.png" />
-                  <SidebarLabel>Ideal Network</SidebarLabel> 
+                  <SidebarLabel>Ideal Network</SidebarLabel>
                 </DropdownButton>
               </Dropdown>
             </SidebarHeader>

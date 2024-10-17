@@ -8,7 +8,6 @@ import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
 import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
-import { Keyring } from "@polkadot/api";
 
 @singleton()
 export class ExplorerService implements IExplorerService {
@@ -106,7 +105,6 @@ export class ExplorerService implements IExplorerService {
     let entries = await api.api.query.scheduler.agenda.entries();
     entries.forEach(([key, value]: [any, any]) => {
       for (const humanValue of value.map((v: any) => v.toHuman())) {
-        //console.log(`Value: `, key.toHuman(), JSON.stringify(humanValue));
         //we are only interested on those txs scheduled to be executed in the future
         if (humanValue.maybeCiphertext) {
           const delayedTx = new DelayedTransaction(
@@ -120,7 +118,6 @@ export class ExplorerService implements IExplorerService {
         }
       }
     });
-    //TODO: get upcoming txs
     return Promise.resolve(listOfTransactions);
   }
 
@@ -136,34 +133,27 @@ export class ExplorerService implements IExplorerService {
       const block = await api.api.rpc.chain.getBlock(blockHash);
       // Get the events for the block
       const events = await api.api.query.system.events.at(blockHash);
-
       // Loop through the extrinsics to get the signer (owner) of each transaction
       signedBlock.block.extrinsics.forEach((extrinsic, index) => {
         const { method, signer } = extrinsic;
-
         // Find all the events associated with this extrinsic
         const relatedEvents = events.filter(({ phase }: { phase: any }) =>
           phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
         );
-
         // Check for success or failure in the related events
         let status = 'Pending'; // Default status
-
         relatedEvents.forEach((record: EventRecord) => {
           const { event } = record;
-
           if (event.section === 'system' && event.method === 'ExtrinsicSuccess') {
             status = 'Confirmed'; // Set status as Success if the ExtrinsicSuccess event is present
           } else if (event.section === 'system' && event.method === 'ExtrinsicFailed') {
             status = 'Failed'; // Set status as Failed if the ExtrinsicFailed event is present
           }
         });
-
         // For each event related to this extrinsic
         relatedEvents.forEach((record: EventRecord) => {
           const { event } = record;
           const types = event.typeDef;
-
           const operation = `${event.section}.${event.method}`;
           // Create a new ExecutedTransaction instance
           const executedTransaction = new ExecutedTransaction(
@@ -179,41 +169,35 @@ export class ExplorerService implements IExplorerService {
             event?.meta?.docs?.map(meta => meta.toString().trim()),
             operation === "scheduler.Scheduled"
           );
-
           // Add the transaction to the array
           listOfEvents.push(executedTransaction);
         });
       });
-
       // Handle system events that are not tied to extrinsics
       const systemEvents = events.filter(({ phase }: { phase: any }) => phase.isFinalization || phase.isInitialization);
       systemEvents.forEach((record: EventRecord, index: number) => {
         const { event } = record;
         const types = event.typeDef;
-
         // Helper function to determine if a value is a valid hex address
         function looksLikeAddress(value: string): boolean {
           return value?.startsWith('0x') || value?.length >= 48;
         }
-
         const eventData = event.data.map((data, i) => ({
           type: types[i].type,
           value: data.toString(),
         }));
-
         // Create a new ExecutedTransaction instance for system events
         const operation = `${event.section}.${event.method}`;
         const executedTransaction = new ExecutedTransaction(
           blockNumber,                              // block
           `${blockNumber}-sys-${index}`,            // id (unique per block and system event index)
-          looksLikeAddress(eventData[0]?.value) ? eventData[0]?.value : "System",                                 // owner (system events don't have a specific owner)
+          looksLikeAddress(eventData[0]?.value) ? eventData[0]?.value : "System",
           operation,       // operation (e.g., system.Finalized)
           'Confirmed',                                // Status for system events is usually successful
           eventData,
           event?.meta?.docs?.map(meta => meta.toString().trim()),
           operation === "scheduler.Dispatched" || looksLikeAddress(eventData[0]?.value)
         );
-
         // Add the transaction to the array
         listOfEvents.push(executedTransaction);
       });
@@ -235,9 +219,8 @@ export class ExplorerService implements IExplorerService {
     // Initialize keyring and add the account using the string value
     await api.api.tx.scheduler.cancel(blockNumber, index).signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
       if (result.status.isInBlock) {
-        console.log('in block')
+        console.log('in block');
       }
-
       // Check if there is a dispatch error
       if (result.dispatchError) {
         if (result.dispatchError.isModule) {
