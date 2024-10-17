@@ -8,6 +8,7 @@ import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
 import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
+import { Keyring } from "@polkadot/api";
 
 @singleton()
 export class ExplorerService implements IExplorerService {
@@ -88,7 +89,6 @@ export class ExplorerService implements IExplorerService {
     }
     parametersPath += ")";
     extrinsicPath += parametersPath;
-    console.log(`scheduleTransaction: ${extrinsicPath}`);
     let innerCall = eval(extrinsicPath);
     let deadline = transactionDetails.block;
     let outerCall = await api.delay(innerCall, 127, deadline);
@@ -227,6 +227,33 @@ export class ExplorerService implements IExplorerService {
     const api = await this.getEtfApi(signer);
     const accountInfo = await api.api.query.system.account(signer.address);
     return Promise.resolve(accountInfo.data.free.toHuman());
+  }
+
+  async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {
+    console.log('canceling transaction', blockNumber, index, signer);
+    const api = await this.getEtfApi(signer);
+    // Initialize keyring and add the account using the string value
+    await api.api.tx.scheduler.cancel(blockNumber, index).signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
+      if (result.status.isInBlock) {
+        console.log('in block')
+      }
+
+      // Check if there is a dispatch error
+      if (result.dispatchError) {
+        if (result.dispatchError.isModule) {
+          // Decode the module error
+          const decoded = api.api.registry.findMetaError(result.dispatchError.asModule);
+          console.error(`Error: ${JSON.stringify(decoded)}`);
+        } else {
+          // Handle other errors (non-module errors)
+          console.error(`Error: ${result.dispatchError.toString()}`);
+        }
+      } else {
+        console.log('Extrinsic executed successfully');
+      }
+    });
+
+    return Promise.resolve();
   }
 
 }

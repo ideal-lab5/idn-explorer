@@ -34,6 +34,11 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
       return;
     }
 
+    if (extrinsicData.block <= latestBlock) {
+      setLastError("Please enter a valid future block number.");
+      return;
+    }
+
     setIsProcessing(true);
 
     if (extrinsicData) {
@@ -74,7 +79,7 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
               <div>
                 <Field>
                   <Label>Block</Label>
-                  <Input name="block" value={block} onChange={e => setBlock(parseInt(e.target.value))} placeholder="Future Block Number" autoFocus />
+                  <Input type='number' name="block" value={block} onChange={e => setBlock(parseInt(e.target.value))} placeholder="Future Block Number" autoFocus />
                 </Field>
               </div>
               <div className="space-y-1">

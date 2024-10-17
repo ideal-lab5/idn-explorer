@@ -13,19 +13,34 @@ import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/etf/Con
 import { ConnectWallet } from '@/components/etf/connectWallet'
 import { useState } from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/20/solid'
+import { explorerClient } from '../explorerClient'
 
 export default function Compose() {
 
   const [selectedTab, setSelectedTab] = useState<string>("scheduled");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [lastError, setLastError] = useState<string | null>(null);
 
-  const { latestBlock, signer, isConnected,
+  const { signer, isConnected,
     executedTransactions,
     scheduledTransactions,
-    epochIndex, sessionProgress,
-    sessionLength, eraProgress,
-    sessionsPerEra
   } = useConnectedWallet();
+
+  const handleCancelTransaction = async (blockNumber: number, index: number) => {
+    // if (isProcessing || !signer || !blockNumber || !index) {
+    //   return;
+    // }
+    setIsProcessing(true);
+    setLastError(null);
+    try {
+      await explorerClient.cancelTransaction(signer, blockNumber, index);
+    } catch (error: any) {
+      console.error(error);
+      setLastError(error.message);
+    }
+    setIsProcessing(false);
+  }
 
   return (
     signer && isConnected ?
@@ -60,13 +75,13 @@ export default function Compose() {
               <div className="flex items-center justify-between">
                 <div className="flex gap-6 py-3">
                   <div className="w-32 shrink-0">
-                    <Link href={`/compose/${transaction.id}_OP_${transaction.operation}`} aria-hidden="true">
+                    <Link href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`} aria-hidden="true">
                       <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
                     </Link>
                   </div>
                   <div className="space-y-1.5">
                     <div className="text-base/6 font-semibold">
-                      <Link href={"#"}>{transaction.id}</Link>
+                      <Link href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`}>{transaction.id}</Link>
                     </div>
                     <div className="text-xs/6 text-zinc-500">
                       Block: {transaction.block}
@@ -85,7 +100,7 @@ export default function Compose() {
                       <EllipsisVerticalIcon />
                     </DropdownButton>
                     <DropdownMenu anchor="bottom end">
-                      <DropdownItem href={"#"}>View</DropdownItem>
+                      <DropdownItem href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`}>View</DropdownItem>
                     </DropdownMenu>
                   </Dropdown>
                 </div>
@@ -98,13 +113,11 @@ export default function Compose() {
               <div className="flex items-center justify-between">
                 <div key={transaction.id} className="flex gap-6 py-3">
                   <div className="w-32 shrink-0">
-                    <Link href={"#"} aria-hidden="true">
-                      <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
-                    </Link>
+                    <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
                   </div>
                   <div className="space-y-1.5">
                     <div className="text-base/6 font-semibold">
-                      <Link href={"#"}>{transaction.id}</Link>
+                      {transaction.id}
                     </div>
                     <div className="text-xs/6 text-zinc-500">
                       Deadline: {transaction.deadlineBlock}
@@ -123,7 +136,7 @@ export default function Compose() {
                       <EllipsisVerticalIcon />
                     </DropdownButton>
                     <DropdownMenu anchor="bottom end">
-                      <DropdownItem href={"#"}>View</DropdownItem>
+                      <DropdownItem onClick={() => handleCancelTransaction(parseInt(transaction.deadlineBlock), index)}>{isProcessing ? "Canceling..." : "Cancel"}</DropdownItem>
                     </DropdownMenu>
                   </Dropdown>
                 </div>
