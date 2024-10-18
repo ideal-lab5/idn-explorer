@@ -26,7 +26,7 @@ export class ExplorerService implements IExplorerService {
     if (!this.api) {
       // ensure params are defined
       if (process.env.NEXT_PUBLIC_NODE_WS === undefined) {
-        console.error("Provide a valid value for NEXT_PUBLIC_NODE_DETAILS. Using fallback");
+        console.error("Provide a valid value for NEXT_PUBLIC_NODE_WS. Using fallback");
         process.env.NEXT_PUBLIC_NODE_WS = this.node_dev;
       }
 
