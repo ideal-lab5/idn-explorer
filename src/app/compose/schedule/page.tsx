@@ -9,7 +9,7 @@ import { Input } from '@/components/input'
 import { Heading, Subheading } from '@/components/heading'
 import { ChevronDoubleLeftIcon } from '@heroicons/react/16/solid'
 import { DynamicExtrinsicForm } from '@/components/etf/dynamicExtrinsicForm'
-import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
+import { useConnectedWallet } from '@/components/etf/connectedWalletContext'
 import { ConnectWallet } from '@/components/etf/connectWallet'
 import { useState } from 'react'
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
@@ -19,7 +19,7 @@ import { explorerClient } from '@/app/explorerClient'
 
 const FUTURE_BLOCK_DEFAULT_START: number = 100;
 
-export default function ScheduleTransaction({ ...props }: {} & React.ComponentPropsWithoutRef<typeof Button>) {
+export default function ScheduleTransaction() {
 
   const router = useRouter()
   const { latestBlock, signer, isConnected } = useConnectedWallet();
@@ -31,6 +31,11 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
   async function handleScheduleTransaction() {
 
     if (isProcessing || !signer || extrinsicData === null) {
+      return;
+    }
+
+    if (extrinsicData.block <= latestBlock) {
+      setLastError("Please enter a valid future block number.");
       return;
     }
 
@@ -74,7 +79,7 @@ export default function ScheduleTransaction({ ...props }: {} & React.ComponentPr
               <div>
                 <Field>
                   <Label>Block</Label>
-                  <Input name="block" value={block} onChange={e => setBlock(parseInt(e.target.value))} placeholder="Future Block Number" autoFocus />
+                  <Input type='number' name="block" value={block} onChange={e => setBlock(parseInt(e.target.value))} placeholder="Future Block Number" autoFocus />
                 </Field>
               </div>
               <div className="space-y-1">

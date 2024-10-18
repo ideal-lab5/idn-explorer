@@ -6,7 +6,6 @@ import { ApiPromise, WsProvider } from '@polkadot/api'
 import React, { useEffect, useState } from 'react'
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
 
-
 interface PalletOption {
     text: string;
     value: string;
@@ -107,7 +106,7 @@ export const DynamicExtrinsicForm: React.FC<{ block: number, setExtrinsicData: R
         }
 
         isReady();
-    }, [selectedPallet, selectedExtrinsic, parameters])
+    }, [selectedPallet, selectedExtrinsic, parameters, block])
 
     return (
         <div className="grid grid-cols-2 gap-6">

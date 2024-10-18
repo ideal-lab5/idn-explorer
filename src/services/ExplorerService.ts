@@ -7,6 +7,7 @@ import { Randomness } from "@/domain/Randomness";
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
+import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
 
 @singleton()
 export class ExplorerService implements IExplorerService {
@@ -25,7 +26,7 @@ export class ExplorerService implements IExplorerService {
     if (!this.api) {
       // ensure params are defined
       if (process.env.NEXT_PUBLIC_NODE_WS === undefined) {
-        console.error("Provide a valid value for NEXT_PUBLIC_NODE_DETAILS. Using fallback");
+        console.error("Provide a valid value for NEXT_PUBLIC_NODE_WS. Using fallback");
         process.env.NEXT_PUBLIC_NODE_WS = this.node_dev;
       }
 
@@ -35,6 +36,7 @@ export class ExplorerService implements IExplorerService {
         console.log("Connecting to ETF chain");
         await api.init(JSON.stringify(chainSpec));
         this.api = api;
+        console.log("api initialized")
       } catch (_e) {
         // TODO: next will try to fetch the wasm blob but it doesn't need to
         // since the transitive dependency is built with the desired wasm already
@@ -45,12 +47,11 @@ export class ExplorerService implements IExplorerService {
     if (signer) {
       this.api.api.setSigner(signer);
     }
-    console.log("api initialized")
     return Promise.resolve(this.api);
   };
 
   async getRandomness(blockNumber: number, size: number = 10): Promise<Randomness[]> {
-    let api = await this.getEtfApi();
+    const api = await this.getEtfApi();
     let listOfGeneratedRandomness: Randomness[] = [];
     let i: number = 0;
     while (i < size && (blockNumber - i >= 0)) {
@@ -71,9 +72,23 @@ export class ExplorerService implements IExplorerService {
   }
 
   async scheduleTransaction(signer: any, transactionDetails: DelayedTransactionDetails): Promise<void> {
-    let api = await this.getEtfApi(signer.signer);
-    let innerCall = api.api.tx.balances
-      .transferKeepAlive('5CMHXGNmDzSpQotcBUUPXyR8jRqfKttXuU87QraJrydrMdcz', 100);
+    const api = await this.getEtfApi(signer.signer);
+    let extrinsicPath = `api.api.tx.${transactionDetails.pallet}.${transactionDetails.extrinsic}`;
+    let parametersPath = "(";
+    if (transactionDetails.params.length > 0) {
+      transactionDetails.params.forEach((param: any) => {
+        if (isNaN(param.value) && param.value != "true" && param.value != "false") {
+          parametersPath += `"${param.value}", `;
+        }
+        else {
+          parametersPath += `${param.value}, `;
+        }
+      });
+      parametersPath = parametersPath.slice(0, -2);
+    }
+    parametersPath += ")";
+    extrinsicPath += parametersPath;
+    let innerCall = eval(extrinsicPath);
     let deadline = transactionDetails.block;
     let outerCall = await api.delay(innerCall, 127, deadline);
     await outerCall.signAndSend(signer.address, (result: any) => {
@@ -81,29 +96,28 @@ export class ExplorerService implements IExplorerService {
         console.log('in block')
       }
     });
+    return Promise.resolve();
   }
 
   async getScheduledTransactions(): Promise<DelayedTransaction[]> {
-    let api = await this.getEtfApi();
+    const api = await this.getEtfApi();
     let listOfTransactions: DelayedTransaction[] = [];
     let entries = await api.api.query.scheduler.agenda.entries();
     entries.forEach(([key, value]: [any, any]) => {
       for (const humanValue of value.map((v: any) => v.toHuman())) {
-        //console.log(`Value: `, key.toHuman(), JSON.stringify(humanValue));
         //we are only interested on those txs scheduled to be executed in the future
         if (humanValue.maybeCiphertext) {
           const delayedTx = new DelayedTransaction(
             "NA",
             humanValue.maybeId,
             humanValue.origin.system.Signed,
-            "Extrinsinc Call",
+            "Extrinsic Call",
             key.toHuman()[0]
           );
           listOfTransactions.push(delayedTx);
         }
       }
     });
-    //TODO: get upcoming txs
     return Promise.resolve(listOfTransactions);
   }
 
@@ -114,38 +128,81 @@ export class ExplorerService implements IExplorerService {
     for (let blockNumber = startBlock; blockNumber <= endBlock; blockNumber++) {
       // Get the block hash
       const blockHash = await api.api.rpc.chain.getBlockHash(blockNumber);
+      const signedBlock: SignedBlock = await api.api.rpc.chain.getBlock(blockHash);
       // Get the block to fetch extrinsics
       const block = await api.api.rpc.chain.getBlock(blockHash);
       // Get the events for the block
       const events = await api.api.query.system.events.at(blockHash);
-      events.forEach(({ event, phase }: { event: any, phase: any }) => {
-        const { section, method, data } = event;
-
-        if (phase.isApplyExtrinsic && section !== 'system') {
-          const extrinsicIndex = phase.asApplyExtrinsic.toNumber();
-          const extrinsic = block.block.extrinsics[extrinsicIndex];
-          // Compute the extrinsic hash
-          const extrinsicHash = extrinsic.hash.toHex();
-          // Extract the signer (who sent the extrinsic)
-          const signer = extrinsic.signer.toString();
-          const isFailed = api.api.events.system.ExtrinsicFailed.is(event);
-          const status = isFailed ? 'Failed' : 'Confirmed';
-          // Format data to be more human-readable
-          const eventData = data.map((item: any) => item.toString());
-          // Build the result object
-          const result: ExecutedTransaction = new ExecutedTransaction(
-            blockNumber,
-            extrinsicHash,
-            signer,
-            `${section}.${method}`,
-            status,
-            eventData
-          )
-          // Push the result to the list
-          listOfEvents.push(result);
+      // Loop through the extrinsics to get the signer (owner) of each transaction
+      signedBlock.block.extrinsics.forEach((extrinsic, index) => {
+        const { method, signer } = extrinsic;
+        // Find all the events associated with this extrinsic
+        const relatedEvents = events.filter(({ phase }: { phase: any }) =>
+          phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
+        );
+        // Check for success or failure in the related events
+        let status = 'Pending'; // Default status
+        relatedEvents.forEach((record: EventRecord) => {
+          const { event } = record;
+          if (event.section === 'system' && event.method === 'ExtrinsicSuccess') {
+            status = 'Confirmed'; // Set status as Success if the ExtrinsicSuccess event is present
+          } else if (event.section === 'system' && event.method === 'ExtrinsicFailed') {
+            status = 'Failed'; // Set status as Failed if the ExtrinsicFailed event is present
+          }
+        });
+        // For each event related to this extrinsic
+        relatedEvents.forEach((record: EventRecord) => {
+          const { event } = record;
+          const types = event.typeDef;
+          const operation = `${event.section}.${event.method}`;
+          // Create a new ExecutedTransaction instance
+          const executedTransaction = new ExecutedTransaction(
+            blockNumber,                              // block
+            `${blockNumber}-${index}`,                // id (unique per block and event index)
+            signer?.toString() || 'Unsigned',         // signer (owner) from the extrinsic
+            operation,       // operation (e.g., balances.Transfer)
+            status,                                   // actual status based on the events
+            event.data.map((data, i) => ({            // eventData (raw event data)
+              type: types[i].type,
+              value: data.toString()
+            })),
+            event?.meta?.docs?.map(meta => meta.toString().trim()),
+            operation === "scheduler.Scheduled"
+          );
+          // Add the transaction to the array
+          listOfEvents.push(executedTransaction);
+        });
+      });
+      // Handle system events that are not tied to extrinsics
+      const systemEvents = events.filter(({ phase }: { phase: any }) => phase.isFinalization || phase.isInitialization);
+      systemEvents.forEach((record: EventRecord, index: number) => {
+        const { event } = record;
+        const types = event.typeDef;
+        // Helper function to determine if a value is a valid hex address
+        function looksLikeAddress(value: string): boolean {
+          return value?.startsWith('0x') || value?.length >= 48;
         }
+        const eventData = event.data.map((data, i) => ({
+          type: types[i].type,
+          value: data.toString(),
+        }));
+        // Create a new ExecutedTransaction instance for system events
+        const operation = `${event.section}.${event.method}`;
+        const executedTransaction = new ExecutedTransaction(
+          blockNumber,                              // block
+          `${blockNumber}-sys-${index}`,            // id (unique per block and system event index)
+          looksLikeAddress(eventData[0]?.value) ? eventData[0]?.value : "System",
+          operation,       // operation (e.g., system.Finalized)
+          'Confirmed',                                // Status for system events is usually successful
+          eventData,
+          event?.meta?.docs?.map(meta => meta.toString().trim()),
+          operation === "scheduler.Dispatched" || looksLikeAddress(eventData[0]?.value)
+        );
+        // Add the transaction to the array
+        listOfEvents.push(executedTransaction);
       });
     }
+
     listOfEvents.reverse()
     return Promise.resolve(listOfEvents);
   }
@@ -154,6 +211,32 @@ export class ExplorerService implements IExplorerService {
     const api = await this.getEtfApi(signer);
     const accountInfo = await api.api.query.system.account(signer.address);
     return Promise.resolve(accountInfo.data.free.toHuman());
+  }
+
+  async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {
+    console.log('canceling transaction', blockNumber, index, signer);
+    const api = await this.getEtfApi(signer);
+    // Initialize keyring and add the account using the string value
+    await api.api.tx.scheduler.cancel(blockNumber, index).signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
+      if (result.status.isInBlock) {
+        console.log('in block');
+      }
+      // Check if there is a dispatch error
+      if (result.dispatchError) {
+        if (result.dispatchError.isModule) {
+          // Decode the module error
+          const decoded = api.api.registry.findMetaError(result.dispatchError.asModule);
+          console.error(`Error: ${JSON.stringify(decoded)}`);
+        } else {
+          // Handle other errors (non-module errors)
+          console.error(`Error: ${result.dispatchError.toString()}`);
+        }
+      } else {
+        console.log('Extrinsic executed successfully');
+      }
+    });
+
+    return Promise.resolve();
   }
 
 }

@@ -33,12 +33,22 @@ interface ConnectedWalletContextType {
     setEraProgress: React.Dispatch<React.SetStateAction<number | null>>;
     sessionsPerEra: number | null;
     setSessionsPerEra: React.Dispatch<React.SetStateAction<number | null>>;
+    delayedOnly: boolean;
+    setDelayedOnly: React.Dispatch<React.SetStateAction<boolean>>;
+    composeCurrentSelection: string;
+    setComposeCurrentSelection: React.Dispatch<React.SetStateAction<string>>;
+    composeCurrentSearchTerm: string;
+    setComposeCurrentSearchTerm: React.Dispatch<React.SetStateAction<string>>;
+    searchTermExecuted: string;
+    setSearchTermExecuted: React.Dispatch<React.SetStateAction<string>>;
+    searchTermScheduled: string;
+    setSearchTermScheduled: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // Create the context with default values
 const ConnectedWalletContext = createContext<ConnectedWalletContextType | undefined>(undefined);
 
-export const NUMBER_BLOCKS_EXECUTED = 200;
+export const NUMBER_BLOCKS_EXECUTED = 250;
 export const RAMDOMNESS_SAMPLE = 33;
 // Create a provider component
 export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -55,6 +65,11 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     const [sessionLength, setSessionLength] = useState<number | null>(null);
     const [eraProgress, setEraProgress] = useState<number | null>(null);
     const [sessionsPerEra, setSessionsPerEra] = useState<number | null>(null);
+    const [delayedOnly, setDelayedOnly] = useState(false); // To indicate if only show delayed txs
+    const [composeCurrentSelection, setComposeCurrentSelection] = useState<string>("scheduled");
+    const [composeCurrentSearchTerm, setComposeCurrentSearchTerm] = useState<string>("");
+    const [searchTermExecuted, setSearchTermExecuted] = useState<string>("");
+    const [searchTermScheduled, setSearchTermScheduled] = useState<string>("");
 
     useEffect(() => {
 
@@ -74,7 +89,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                 setSessionLength(progress.sessionLength.toNumber());
                 setEraProgress(progress.eraProgress.toNumber());
                 setSessionsPerEra(progress.sessionsPerEra.toNumber());
-                setEpochIndex(epochInfo.toNumber());
+                setEpochIndex((epochInfo as any).toNumber());
                 const blockNumber = lastHeader.number.toNumber();
                 const blockHash = lastHeader.hash.toHex();
                 setLatestBlock(blockNumber);
@@ -120,7 +135,17 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
         eraProgress,
         setEraProgress,
         sessionsPerEra,
-        setSessionsPerEra
+        setSessionsPerEra,
+        delayedOnly,
+        setDelayedOnly,
+        composeCurrentSelection,
+        setComposeCurrentSelection,
+        composeCurrentSearchTerm,
+        setComposeCurrentSearchTerm,
+        searchTermExecuted,
+        setSearchTermExecuted,
+        searchTermScheduled,
+        setSearchTermScheduled
     }), [
         signer,
         isConnected,
@@ -134,7 +159,12 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
         sessionProgress,
         sessionLength,
         eraProgress,
-        sessionsPerEra
+        sessionsPerEra,
+        delayedOnly,
+        composeCurrentSelection,
+        composeCurrentSearchTerm,
+        searchTermExecuted,
+        searchTermScheduled
     ]);
 
     return (

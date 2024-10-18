@@ -9,22 +9,47 @@ import { Input, InputGroup } from '@/components/input'
 import { Link } from '@/components/link'
 import { Select } from '@/components/select'
 import { EllipsisVerticalIcon, MagnifyingGlassIcon } from '@heroicons/react/16/solid'
-import { useConnectedWallet } from '@/components/etf/ConnectedWalletContext'
+import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/etf/connectedWalletContext'
 import { ConnectWallet } from '@/components/etf/connectWallet'
 import { useState } from 'react'
-import { ExclamationTriangleIcon } from '@heroicons/react/20/solid'
+import { ExclamationTriangleIcon, XCircleIcon } from '@heroicons/react/20/solid'
+import { explorerClient } from '../explorerClient'
+
+interface LatestError {
+  index: number;
+  message: string;
+  type: string;
+}
 
 export default function Compose() {
 
-  const [selectedTab, setSelectedTab] = useState<string>("scheduled");
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [lastMessage, setLastMessage] = useState<LatestError | null>(null);
 
-  const { latestBlock, signer, isConnected,
+  const { signer, isConnected,
     executedTransactions,
     scheduledTransactions,
-    epochIndex, sessionProgress,
-    sessionLength, eraProgress,
-    sessionsPerEra
+    composeCurrentSelection,
+    setComposeCurrentSelection,
+    composeCurrentSearchTerm,
+    setComposeCurrentSearchTerm
   } = useConnectedWallet();
+
+  const handleCancelTransaction = async (blockNumber: number, index: number) => {
+    if (isProcessing || !signer) {
+      return;
+    }
+    setIsProcessing(true);
+    setLastMessage(null);
+    try {
+      await explorerClient.cancelTransaction(signer, blockNumber, index);
+      setLastMessage({ index, message: "Your transaction will be canceled within next few blocks. Keep an eye on My Events.", type: "success" });
+    } catch (error: any) {
+      console.error(error);
+      setLastMessage({ index, message: error.message, type: "error" });
+    }
+    setIsProcessing(false);
+  }
 
   return (
     signer && isConnected ?
@@ -36,14 +61,15 @@ export default function Compose() {
               <div className="flex-1">
                 <InputGroup>
                   <MagnifyingGlassIcon />
-                  <Input name="search" placeholder="Search transactions&hellip;" />
+                  <Input name="search" value={composeCurrentSearchTerm} onChange={e => setComposeCurrentSearchTerm(e.target.value)} placeholder="Search transactions&hellip;" />
                 </InputGroup>
               </div>
               <div>
-                <Select name="sort_by" onChange={(e) => setSelectedTab(e.target.value)}>
+                <Select name="sort_by" value={composeCurrentSelection} onChange={(e) => setComposeCurrentSelection(e.target.value)}>
                   <option value="scheduled">My Scheduled</option>
-                  <option value="executed">My Executed</option>
+                  <option value="executed">My Events</option>
                 </Select>
+                {composeCurrentSelection === "executed" && <span className="text-zinc-500 ml-2 text-xs">{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</span>}
               </div>
             </div>
           </div>
@@ -52,19 +78,19 @@ export default function Compose() {
           </Link>
         </div>
         <ul className="mt-10">
-          {selectedTab === "executed" && executedTransactions.filter((transaction) => transaction.owner === signer.address).map((transaction, index) => (
-            <li key={transaction.id}>
+          {composeCurrentSelection === "executed" && executedTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => composeCurrentSearchTerm == "" || (element.id.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.operation.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.owner.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()))).map((transaction, index) => (
+            <li key={index + "_" + transaction.id + "_" + transaction.operation}>
               <Divider soft={index > 0} />
               <div className="flex items-center justify-between">
-                <div key={transaction.id} className="flex gap-6 py-3">
+                <div className="flex gap-6 py-3">
                   <div className="w-32 shrink-0">
-                    <Link href={"#"} aria-hidden="true">
+                    <Link href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`} aria-hidden="true">
                       <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
                     </Link>
                   </div>
                   <div className="space-y-1.5">
                     <div className="text-base/6 font-semibold">
-                      <Link href={"#"}>{transaction.id}</Link>
+                      <Link href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`}>{transaction.id}</Link>
                     </div>
                     <div className="text-xs/6 text-zinc-500">
                       Block: {transaction.block}
@@ -83,26 +109,24 @@ export default function Compose() {
                       <EllipsisVerticalIcon />
                     </DropdownButton>
                     <DropdownMenu anchor="bottom end">
-                      <DropdownItem href={"#"}>View</DropdownItem>
+                      <DropdownItem href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`}>View</DropdownItem>
                     </DropdownMenu>
                   </Dropdown>
                 </div>
               </div>
             </li>
           ))}
-          {selectedTab === "scheduled" && scheduledTransactions.filter((transaction) => transaction.owner === signer.address).map((transaction, index) => (
+          {composeCurrentSelection === "scheduled" && scheduledTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => composeCurrentSearchTerm == "" || (element.id.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.operation.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.owner.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()))).map((transaction, index) => (
             <li key={transaction.id}>
               <Divider soft={index > 0} />
               <div className="flex items-center justify-between">
                 <div key={transaction.id} className="flex gap-6 py-3">
                   <div className="w-32 shrink-0">
-                    <Link href={"#"} aria-hidden="true">
-                      <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
-                    </Link>
+                    <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
                   </div>
                   <div className="space-y-1.5">
                     <div className="text-base/6 font-semibold">
-                      <Link href={"#"}>{transaction.id}</Link>
+                      {transaction.id}
                     </div>
                     <div className="text-xs/6 text-zinc-500">
                       Deadline: {transaction.deadlineBlock}
@@ -121,14 +145,25 @@ export default function Compose() {
                       <EllipsisVerticalIcon />
                     </DropdownButton>
                     <DropdownMenu anchor="bottom end">
-                      <DropdownItem href={"#"}>View</DropdownItem>
+                      <DropdownItem onClick={() => handleCancelTransaction(parseInt(transaction.deadlineBlock), index)}>{isProcessing ? "Canceling..." : "Cancel"}</DropdownItem>
                     </DropdownMenu>
                   </Dropdown>
                 </div>
               </div>
+              {lastMessage?.index === index &&
+                <div className={`border-l-4 ${lastMessage.type === "error" ? "border-rose-400 bg-rose-50 p-4" : "border-yellow-400 bg-yellow-50 p-4"}`}>
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      {lastMessage?.type === "error" ? <XCircleIcon aria-hidden="true" className="h-5 w-5 text-rose-400" /> :  <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />}
+                    </div>
+                    <div className="ml-3">
+                      <h3 className={`text-sm font-medium ${lastMessage?.type === "error" ? "text-rose-800" : "text-yellow-700"}`}>{lastMessage?.message}</h3>
+                    </div>
+                  </div>
+                </div>}
             </li>
           ))}
-          {selectedTab === "executed" && !executedTransactions.filter((transaction) => transaction.owner === signer.address).length &&
+          {composeCurrentSelection === "executed" && !executedTransactions.filter((transaction) => transaction.owner === signer.address).length &&
             <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -144,7 +179,7 @@ export default function Compose() {
                 </div>
               </div>
             </div>}
-          {selectedTab === "scheduled" && !scheduledTransactions.filter((transaction) => transaction.owner === signer.address).length &&
+          {composeCurrentSelection === "scheduled" && !scheduledTransactions.filter((transaction) => transaction.owner === signer.address).length &&
             <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">

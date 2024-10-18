@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import '@/styles/tailwind.css'
 import type { Metadata } from 'next'
 import type React from 'react'

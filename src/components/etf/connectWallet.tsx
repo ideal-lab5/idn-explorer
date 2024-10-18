@@ -1,5 +1,4 @@
 'use client'
-import "reflect-metadata";
 import { Avatar } from '@/components/avatar'
 import {
     Dropdown,
@@ -21,7 +20,7 @@ import { Button } from "@/components/button";
 import { Dialog, DialogTitle } from "@/components/dialog";
 import { Text } from "@/components/text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
-import { useConnectedWallet } from "@/components/etf/ConnectedWalletContext";
+import { useConnectedWallet } from "@/components/etf/connectedWalletContext";
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/20/solid";
 import { explorerClient } from "@/app/explorerClient";
 
