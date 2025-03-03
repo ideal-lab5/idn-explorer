@@ -1,9 +1,13 @@
-import { explorerClient } from '@/app/explorerClient';
+'use client';
+
+import { explorerClient } from '@/lib/explorer-client';
 import { DelayedTransaction } from '@/domain/DelayedTransaction';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
-import { ApiPromise, WsProvider } from '@polkadot/api';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { usePolkadot } from '@/contexts/PolkadotContext';
+import { container } from 'tsyringe';
+import { IChainStateService } from '@/services/IChainStateService';
 
 // Define the shape of the context
 interface ConnectedWalletContextType {
@@ -48,10 +52,13 @@ interface ConnectedWalletContextType {
 // Create the context with default values
 const ConnectedWalletContext = createContext<ConnectedWalletContextType | undefined>(undefined);
 
-export const NUMBER_BLOCKS_EXECUTED = 250;
+export const NUMBER_BLOCKS_EXECUTED = 50;
 export const RAMDOMNESS_SAMPLE = 33;
 // Create a provider component
 export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const { polkadotApiService } = usePolkadot();
+    const chainStateService = container.resolve<IChainStateService>('IChainStateService');
+    const [isReady, setIsReady] = useState(false);
     const [signer, setSigner] = useState<any>(undefined); // The state variable
     const [isConnected, setIsConnected] = useState(false);
     const [signerAddress, setSignerAddress] = useState<string>("");
@@ -72,42 +79,71 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     const [searchTermScheduled, setSearchTermScheduled] = useState<string>("");
 
     useEffect(() => {
+        const checkApiReady = async () => {
+            const ready = await polkadotApiService.isReady();
+            setIsReady(ready);
+        };
+        checkApiReady();
+    }, [polkadotApiService]);
 
-        async function subscribeToLatestBlock() {
-            const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io');
-            const api = await ApiPromise.create({ provider: wsProvider });
-            await api.isReady;
+    useEffect(() => {
+        if (!isReady) return;
 
-            // Subscribe to new block headers
-            await api.rpc.chain.subscribeNewHeads(async (lastHeader) => {
+        let unsubscribe: (() => void) | undefined;
 
-                // Get the current epoch index
-                const epochInfo = await api.query.babe.epochIndex();
-                const progress = await api.derive.session.progress();
-                // Get session and era progress
-                setSessionProgress(progress.sessionProgress.toNumber());
-                setSessionLength(progress.sessionLength.toNumber());
-                setEraProgress(progress.eraProgress.toNumber());
-                setSessionsPerEra(progress.sessionsPerEra.toNumber());
-                setEpochIndex((epochInfo as any).toNumber());
-                const blockNumber = lastHeader.number.toNumber();
-                const blockHash = lastHeader.hash.toHex();
-                setLatestBlock(blockNumber);
-                explorerClient.getRandomness(blockNumber, RAMDOMNESS_SAMPLE).then((result) => {
-                    setGeneratedRandomness(result);
+        const subscribeToUpdates = async () => {
+            try {
+                unsubscribe = await chainStateService.subscribeToBlocks((blockNumber) => {
+                    setLatestBlock(blockNumber);
+                    console.log("BLOCK", blockNumber);
+                    // Update other state based on new blocks
+                    if (signerAddress) {
+                        chainStateService.getBalance(signerAddress)
+                            .then(balance => setSignerBalance(balance))
+                            .catch(console.error);
+                    }
+
+                    // Get session and era progress
+                    Promise.all([
+                        chainStateService.getSessionInfo(),
+                        chainStateService.getEpochIndex(),
+                        explorerClient.getScheduledTransactions(),
+                        explorerClient.queryHistoricalEvents(
+                            blockNumber > NUMBER_BLOCKS_EXECUTED ? 
+                            blockNumber - NUMBER_BLOCKS_EXECUTED : 0, 
+                            blockNumber
+                        ),
+                        explorerClient.getRandomness(blockNumber, RAMDOMNESS_SAMPLE)
+                    ]).then(([
+                        sessionInfo,
+                        epochIndex,
+                        scheduled,
+                        executed,
+                        randomness
+                    ]) => {
+                        setSessionProgress(sessionInfo.sessionProgress);
+                        setSessionLength(sessionInfo.sessionLength);
+                        setEraProgress(sessionInfo.eraProgress);
+                        setSessionsPerEra(sessionInfo.sessionsPerEra);
+                        setEpochIndex(epochIndex);
+                        setScheduledTransactions(scheduled);
+                        setExecutedTransactions(executed);
+                        setGeneratedRandomness(randomness);
+                    }).catch(console.error);
                 });
-                explorerClient.queryHistoricalEvents(blockNumber > NUMBER_BLOCKS_EXECUTED ? blockNumber - NUMBER_BLOCKS_EXECUTED : 0, blockNumber).then((result) => {
-                    setExecutedTransactions(result);
-                });
-                explorerClient.getScheduledTransactions().then((result) => {
-                    setScheduledTransactions(result);
-                });
-            });
-        }
+            } catch (error) {
+                console.error('Failed to subscribe to updates:', error);
+            }
+        };
 
-        subscribeToLatestBlock();
+        subscribeToUpdates();
 
-    }, []);
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, [isReady, signerAddress]);
 
     const contextValue = React.useMemo(() => ({
         signer,

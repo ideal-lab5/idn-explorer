@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 by Ideal Labs, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 'use client'
 import { Avatar } from '@/components/avatar'
 import {
@@ -22,7 +38,7 @@ import { Text } from "@/components/text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { useConnectedWallet } from "@/components/etf/connectedWalletContext";
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/20/solid";
-import { explorerClient } from "@/app/explorerClient";
+import { explorerClient } from '@/lib/explorer-client';
 
 export function AccountDropdownMenu({ anchor }: { readonly anchor: 'top start' | 'bottom end' }) {
     const { setSignerAddress, setSigner, setIsConnected } = useConnectedWallet();

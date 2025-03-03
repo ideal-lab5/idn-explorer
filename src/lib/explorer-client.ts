@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-/** 
- * This is the Randomness domain class. It is used to represent a generated random value.
-*/
-export class Randomness {
-    block: number;
-    randomness: string;
-    signature: string;
-    status: string = "Generated";
+import { ExplorerService } from "@/services/ExplorerService";
+import type { IExplorerService } from "@/services/IExplorerService";
+import { container } from './di-container';
 
-    constructor(
-        block: number,
-        randomness: string,
-        signature: string
-    ) {
-        this.block = block;
-        this.randomness = randomness;
-        this.signature = signature;
-    }
+// Only create the client in browser environment
+let explorerClient: IExplorerService | null = null;
+
+if (typeof window !== 'undefined') {
+  explorerClient = container.resolve<IExplorerService>('IExplorerService');
 }
+
+export { explorerClient };
