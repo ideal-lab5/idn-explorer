@@ -14,22 +14,13 @@
  * limitations under the License.
  */
 
-/** 
- * This is the Randomness domain class. It is used to represent a generated random value.
-*/
-export class Randomness {
-    block: number;
-    randomness: string;
-    signature: string;
-    status: string = "Generated";
+import { ApiPromise } from '@polkadot/api';
 
-    constructor(
-        block: number,
-        randomness: string,
-        signature: string
-    ) {
-        this.block = block;
-        this.randomness = randomness;
-        this.signature = signature;
-    }
+export interface IPolkadotApiService {
+  getApi(): Promise<ApiPromise>;
+  isReady(): Promise<boolean>;
+  disconnect(): Promise<void>;
+  onReady(callback: () => void): void;
+  onDisconnect(callback: () => void): void;
+  onError(callback: (error: Error) => void): void;
 }

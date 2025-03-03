@@ -1,5 +1,22 @@
-import { singleton } from "tsyringe";
-import { IExplorerService } from "./IExplorerService";
+/*
+ * Copyright 2025 by Ideal Labs, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { inject, singleton } from "tsyringe";
+import type { IExplorerService } from "./IExplorerService";
+import type { IPolkadotApiService } from "./IPolkadotApiService";
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import chainSpec from "../etf_spec/dev/etf_spec.json"
 import { Etf } from "@ideallabs/etf.js";
@@ -11,101 +28,126 @@ import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
 
 @singleton()
 export class ExplorerService implements IExplorerService {
+  private etfApi: Etf | null = null;
 
-  api: any;
-  node_dev: string = "ws://127.0.0.1:9944";
-
-  constructor() {
-    this.getEtfApi().then(() => {
+  constructor(
+    @inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService
+  ) {
+    this.initializeEtf().then(() => {
       console.log("ETF.js API is ready.");
     });
-  };
+  }
 
-  async getEtfApi(signer = undefined): Promise<any> {
+  private async initializeEtf(): Promise<void> {
 
-    if (!this.api) {
-      // ensure params are defined
-      if (process.env.NEXT_PUBLIC_NODE_WS === undefined) {
-        console.error("Provide a valid value for NEXT_PUBLIC_NODE_WS. Using fallback");
-        process.env.NEXT_PUBLIC_NODE_WS = this.node_dev;
-      }
+    if (!process.env.NEXT_PUBLIC_NODE_WS) {
+      console.error("NEXT_PUBLIC_NODE_WS environment variable is not defined.");
+      this.etfApi = null;
+      return;
+    }
 
+    if (!this.etfApi) {
       try {
         await cryptoWaitReady();
-        let api = new Etf(process.env.NEXT_PUBLIC_NODE_WS, false);
+        this.etfApi = new Etf(process.env.NEXT_PUBLIC_NODE_WS, false);
         console.log("Connecting to ETF chain");
-        await api.init(JSON.stringify(chainSpec));
-        this.api = api;
-        console.log("api initialized")
-      } catch (_e) {
-        // TODO: next will try to fetch the wasm blob but it doesn't need to
-        // since the transitive dependency is built with the desired wasm already
-        // so we can ignore this error for now (no impact to functionality)
-        // but shall be addressed in the future
+        await this.etfApi.init(JSON.stringify(chainSpec));
+        console.log("ETF API initialized");
+      } catch (e) {
+        console.error("Failed to initialize ETF API:", e);
+        this.etfApi = null;
+        throw e;
       }
     }
-    if (signer) {
-      this.api.api.setSigner(signer);
+  }
+
+  async getEtfApi(signer = undefined): Promise<any> {
+    if (!this.etfApi) {
+      await this.initializeEtf();
     }
-    return Promise.resolve(this.api);
-  };
+
+    if (signer) {
+      // Only set signer on ETF API for timelock operations
+      this.etfApi!.api.setSigner(signer);
+    }
+    return this.etfApi;
+  }
 
   async getRandomness(blockNumber: number, size: number = 10): Promise<Randomness[]> {
-    const api = await this.getEtfApi();
+    const polkadotApi = await this.polkadotApiService.getApi();
     let listOfGeneratedRandomness: Randomness[] = [];
+
+    if (!polkadotApi?.query?.randomnessBeacon?.pulses) {
+      console.log("Network Without Randomness Beacon");
+      return listOfGeneratedRandomness;
+    }
+
     let i: number = 0;
     while (i < size && (blockNumber - i >= 0)) {
       let nextBlock: number = blockNumber - i;
-      let result = await api.api.query.randomnessBeacon.pulses(nextBlock).then((pulse: any) => {
-        return new Randomness(
-          nextBlock,
-          pulse.toHuman() != null ? pulse?.toHuman()['body']?.randomness as string : "",
-          pulse.toHuman() != null ? pulse?.toHuman()['body']?.signature as string : ""
-        );
-      });
-      if (result.randomness != "") {
-        listOfGeneratedRandomness.push(result);
+      try {
+        const pulse = await polkadotApi.query.randomnessBeacon.pulses(nextBlock);
+        const pulseData = pulse.toHuman();
+        if (pulseData) {
+          const result = new Randomness(
+            nextBlock,
+            pulseData['body']?.randomness || "",
+            pulseData['body']?.signature || ""
+          );
+          if (result.randomness !== "") {
+            listOfGeneratedRandomness.push(result);
+          }
+        }
+      } catch (e) {
+        console.error(`Error fetching randomness for block ${nextBlock}:`, e);
       }
       i++;
     }
-    return Promise.resolve(listOfGeneratedRandomness);
+    return listOfGeneratedRandomness;
   }
 
   async scheduleTransaction(signer: any, transactionDetails: DelayedTransactionDetails): Promise<void> {
-    const api = await this.getEtfApi(signer.signer);
-    let extrinsicPath = `api.api.tx.${transactionDetails.pallet}.${transactionDetails.extrinsic}`;
-    let parametersPath = "(";
-    if (transactionDetails.params.length > 0) {
-      transactionDetails.params.forEach((param: any) => {
-        if (isNaN(param.value) && param.value != "true" && param.value != "false") {
-          parametersPath += `"${param.value}", `;
-        }
-        else {
-          parametersPath += `${param.value}, `;
-        }
-      });
-      parametersPath = parametersPath.slice(0, -2);
+    const polkadotApi = await this.polkadotApiService.getApi();
+    const etfApi = await this.getEtfApi();
+
+    // Get the inner call using Polkadot API
+    const tx = polkadotApi.tx[transactionDetails.pallet][transactionDetails.extrinsic];
+    if (!tx) {
+      throw new Error(`Invalid extrinsic: ${transactionDetails.pallet}.${transactionDetails.extrinsic}`);
     }
-    parametersPath += ")";
-    extrinsicPath += parametersPath;
-    let innerCall = eval(extrinsicPath);
-    let deadline = transactionDetails.block;
-    let outerCall = await api.delay(innerCall, 127, deadline);
-    await outerCall.signAndSend(signer.address, (result: any) => {
+
+    // Parse parameters
+    const params = transactionDetails.params.map(param => {
+      if (param.value === "true") return true;
+      if (param.value === "false") return false;
+      if (!isNaN(param.value)) return Number(param.value);
+      return param.value;
+    });
+
+    // Create the inner call
+    const innerCall = tx(...params);
+
+    // Use ETF's delay function with our Polkadot API call
+    const outerCall = await etfApi.delay(innerCall, 127, transactionDetails.block);
+
+    // Sign and send using Polkadot API
+    await outerCall.signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
       if (result.status.isInBlock) {
-        console.log('in block')
+        console.log('Transaction in block:', result.status.asInBlock.toHex());
       }
     });
-    return Promise.resolve();
   }
 
   async getScheduledTransactions(): Promise<DelayedTransaction[]> {
-    const api = await this.getEtfApi();
+    const polkadotApi = await this.polkadotApiService.getApi();
     let listOfTransactions: DelayedTransaction[] = [];
-    let entries = await api.api.query.scheduler.agenda.entries();
+    if (!polkadotApi?.query?.scheduler?.agenda) {
+      console.log("Network Without Randomness Beacon");
+      return listOfTransactions;
+    }
+    const entries = await polkadotApi.query.scheduler.agenda.entries();
     entries.forEach(([key, value]: [any, any]) => {
       for (const humanValue of value.map((v: any) => v.toHuman())) {
-        //we are only interested on those txs scheduled to be executed in the future
         if (humanValue.maybeCiphertext) {
           const delayedTx = new DelayedTransaction(
             "NA",
@@ -118,125 +160,134 @@ export class ExplorerService implements IExplorerService {
         }
       }
     });
-    return Promise.resolve(listOfTransactions);
+    return listOfTransactions;
   }
 
   async queryHistoricalEvents(startBlock: number, endBlock: number): Promise<ExecutedTransaction[]> {
-    let api = await this.getEtfApi();
+    const polkadotApi = await this.polkadotApiService.getApi();
     let listOfEvents: ExecutedTransaction[] = [];
-    // Connect to the node
+
     for (let blockNumber = startBlock; blockNumber <= endBlock; blockNumber++) {
-      // Get the block hash
-      const blockHash = await api.api.rpc.chain.getBlockHash(blockNumber);
-      const signedBlock: SignedBlock = await api.api.rpc.chain.getBlock(blockHash);
-      // Get the block to fetch extrinsics
-      const block = await api.api.rpc.chain.getBlock(blockHash);
-      // Get the events for the block
-      const events = await api.api.query.system.events.at(blockHash);
-      // Loop through the extrinsics to get the signer (owner) of each transaction
-      signedBlock.block.extrinsics.forEach((extrinsic, index) => {
-        const { method, signer } = extrinsic;
-        // Find all the events associated with this extrinsic
-        const relatedEvents = events.filter(({ phase }: { phase: any }) =>
-          phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
-        );
-        // Check for success or failure in the related events
-        let status = 'Pending'; // Default status
-        relatedEvents.forEach((record: EventRecord) => {
-          const { event } = record;
-          if (event.section === 'system' && event.method === 'ExtrinsicSuccess') {
-            status = 'Confirmed'; // Set status as Success if the ExtrinsicSuccess event is present
-          } else if (event.section === 'system' && event.method === 'ExtrinsicFailed') {
-            status = 'Failed'; // Set status as Failed if the ExtrinsicFailed event is present
-          }
-        });
-        // For each event related to this extrinsic
-        relatedEvents.forEach((record: EventRecord) => {
-          const { event } = record;
-          const types = event.typeDef;
-          const operation = `${event.section}.${event.method}`;
-          // Create a new ExecutedTransaction instance
-          const executedTransaction = new ExecutedTransaction(
-            blockNumber,                              // block
-            `${blockNumber}-${index}`,                // id (unique per block and event index)
-            signer?.toString() || 'Unsigned',         // signer (owner) from the extrinsic
-            operation,       // operation (e.g., balances.Transfer)
-            status,                                   // actual status based on the events
-            event.data.map((data, i) => ({            // eventData (raw event data)
-              type: types[i].type,
-              value: data.toString()
-            })),
-            event?.meta?.docs?.map(meta => meta.toString().trim()),
-            operation === "scheduler.Scheduled"
+      try {
+        // Get the block hash and block
+        const blockHash = await polkadotApi.rpc.chain.getBlockHash(blockNumber);
+        const signedBlock = await polkadotApi.rpc.chain.getBlock(blockHash);
+        const events = await polkadotApi.query.system.events.at(blockHash);
+
+        // Process extrinsics and their events
+        signedBlock.block.extrinsics.forEach((extrinsic, index) => {
+          const { method, signer } = extrinsic;
+
+          // Find events for this extrinsic
+          const relatedEvents = events.filter(({ phase }: EventRecord) =>
+            phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
           );
-          // Add the transaction to the array
-          listOfEvents.push(executedTransaction);
+
+          // Determine transaction status
+          let status = 'Pending';
+          relatedEvents.forEach((record: EventRecord) => {
+            const { event } = record;
+            if (event.section === 'system') {
+              if (event.method === 'ExtrinsicSuccess') status = 'Confirmed';
+              else if (event.method === 'ExtrinsicFailed') status = 'Failed';
+            }
+          });
+
+          // Process each event
+          relatedEvents.forEach((record: EventRecord) => {
+            const { event } = record;
+            const operation = `${event.section}.${event.method}`;
+
+            const executedTransaction = new ExecutedTransaction(
+              blockNumber,
+              `${blockNumber}-${index}`,
+              signer?.toString() || 'Unsigned',
+              operation,
+              status,
+              event.data.map((data, i) => ({
+                type: event.typeDef[i].type,
+                value: data.toString()
+              })),
+              event.meta.docs.map(d => d.toString().trim()),
+              operation === "scheduler.Scheduled"
+            );
+
+            listOfEvents.push(executedTransaction);
+          });
         });
-      });
-      // Handle system events that are not tied to extrinsics
-      const systemEvents = events.filter(({ phase }: { phase: any }) => phase.isFinalization || phase.isInitialization);
-      systemEvents.forEach((record: EventRecord, index: number) => {
-        const { event } = record;
-        const types = event.typeDef;
-        // Helper function to determine if a value is a valid hex address
-        function looksLikeAddress(value: string): boolean {
-          return value?.startsWith('0x') || value?.length >= 48;
-        }
-        const eventData = event.data.map((data, i) => ({
-          type: types[i].type,
-          value: data.toString(),
-        }));
-        // Create a new ExecutedTransaction instance for system events
-        const operation = `${event.section}.${event.method}`;
-        const executedTransaction = new ExecutedTransaction(
-          blockNumber,                              // block
-          `${blockNumber}-sys-${index}`,            // id (unique per block and system event index)
-          looksLikeAddress(eventData[0]?.value) ? eventData[0]?.value : "System",
-          operation,       // operation (e.g., system.Finalized)
-          'Confirmed',                                // Status for system events is usually successful
-          eventData,
-          event?.meta?.docs?.map(meta => meta.toString().trim()),
-          operation === "scheduler.Dispatched" || looksLikeAddress(eventData[0]?.value)
-        );
-        // Add the transaction to the array
-        listOfEvents.push(executedTransaction);
-      });
+
+        // Handle system events
+        events
+          .filter(({ phase }) => phase.isFinalization || phase.isInitialization)
+          .forEach((record: EventRecord, index: number) => {
+            const { event } = record;
+            const eventData = event.data.map((data, i) => ({
+              type: event.typeDef[i].type,
+              value: data.toString()
+            }));
+
+            const operation = `${event.section}.${event.method}`;
+            const executedTransaction = new ExecutedTransaction(
+              blockNumber,
+              `${blockNumber}-sys-${index}`,
+              this.looksLikeAddress(eventData[0]?.value) ? eventData[0].value : "System",
+              operation,
+              'Confirmed',
+              eventData,
+              event.meta.docs.map(d => d.toString().trim()),
+              operation === "scheduler.Dispatched" || this.looksLikeAddress(eventData[0]?.value)
+            );
+
+            listOfEvents.push(executedTransaction);
+          });
+      } catch (e) {
+        console.error(`Error processing block ${blockNumber}:`, e);
+      }
     }
 
-    listOfEvents.reverse()
-    return Promise.resolve(listOfEvents);
+    listOfEvents.reverse();
+    return listOfEvents;
   }
 
   async getFreeBalance(signer: any): Promise<string> {
-    const api = await this.getEtfApi(signer);
-    const accountInfo = await api.api.query.system.account(signer.address);
-    return Promise.resolve(accountInfo.data.free.toHuman());
+    const polkadotApi = await this.polkadotApiService.getApi();
+    const { data: balance } = await polkadotApi.query.system.account(signer.address);
+    return balance.free.toHuman();
   }
 
   async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {
-    console.log('canceling transaction', blockNumber, index, signer);
-    const api = await this.getEtfApi(signer);
-    // Initialize keyring and add the account using the string value
-    await api.api.tx.scheduler.cancel(blockNumber, index).signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
-      if (result.status.isInBlock) {
-        console.log('in block');
-      }
-      // Check if there is a dispatch error
-      if (result.dispatchError) {
-        if (result.dispatchError.isModule) {
-          // Decode the module error
-          const decoded = api.api.registry.findMetaError(result.dispatchError.asModule);
-          console.error(`Error: ${JSON.stringify(decoded)}`);
-        } else {
-          // Handle other errors (non-module errors)
-          console.error(`Error: ${result.dispatchError.toString()}`);
-        }
-      } else {
-        console.log('Extrinsic executed successfully');
-      }
-    });
+    const polkadotApi = await this.polkadotApiService.getApi();
+    console.log('Canceling transaction', blockNumber, index, signer);
 
-    return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      polkadotApi.tx.scheduler.cancel(blockNumber, index)
+        .signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
+          if (result.status.isInBlock) {
+            console.log('Transaction included in block:', result.status.asInBlock.toHex());
+            resolve();
+          }
+
+          if (result.dispatchError) {
+            if (result.dispatchError.isModule) {
+              const decoded = polkadotApi.registry.findMetaError(result.dispatchError.asModule);
+              const decodedError = `Module Error: ${decoded.section}.${decoded.method}: ${decoded.docs}`;
+              console.error(decodedError);
+              reject(new Error(decodedError));
+            } else {
+              const error = result.dispatchError.toString();
+              console.error('Dispatch error:', error);
+              reject(new Error(error));
+            }
+          }
+        })
+        .catch((e: any) => {
+          console.error('Error canceling transaction:', e);
+          reject(e);
+        });
+    });
   }
 
+  private looksLikeAddress(value: string): boolean {
+    return value?.startsWith('0x') || value?.length >= 48;
+  }
 }

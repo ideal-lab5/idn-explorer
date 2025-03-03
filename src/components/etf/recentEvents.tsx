@@ -1,37 +1,52 @@
+/*
+ * Copyright 2025 by Ideal Labs, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import React, { useEffect, useState } from 'react';
-import { ApiPromise, WsProvider } from '@polkadot/api';
 import { Badge } from '@/components/badge'
 import {
     SidebarItem,
     SidebarLabel
 } from '@/components/sidebar'
-import { explorerClient } from '@/app/explorerClient';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
+import { container } from 'tsyringe';
+import { IChainStateService } from '@/services/IChainStateService';
+import { explorerClient } from '@/lib/explorer-client';
 
-export const LatestEvents: React.FC = () => {
+export default function LatestEvents() {
     const [events, setEvents] = useState<ExecutedTransaction[]>([]);
+    const chainStateService = container.resolve<IChainStateService>('IChainStateService');
 
     useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
 
-        async function subscribeEvents() {
-            const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io');
-            const api = await ApiPromise.create({ provider: wsProvider });
-            await api.isReady;
-
-            // Subscribe to new block headers
-            await api.rpc.chain.subscribeNewHeads(async (lastHeader) => {
-                const blockNumber = lastHeader.number.toNumber();
-                explorerClient.queryHistoricalEvents(blockNumber, blockNumber).then((result) => {
-                    setEvents(result);
-                });
+        const subscribeToBlocks = async () => {
+            unsubscribe = await chainStateService.subscribeToBlocks(async (blockNumber) => {
+                const result = await explorerClient.queryHistoricalEvents(blockNumber, blockNumber);
+                setEvents(result);
             });
-        }
+        };
 
-        subscribeEvents();
+        subscribeToBlocks().catch(console.error);
 
         return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
         };
-    }, []);
+    }, [chainStateService]);
 
     return (
         <>

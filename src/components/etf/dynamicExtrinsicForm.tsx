@@ -1,10 +1,26 @@
-'use client'
-import { Field, Label } from '@/components/fieldset'
-import { Select } from '@/components/select'
-import { Input } from '@/components/input'
-import { ApiPromise, WsProvider } from '@polkadot/api'
-import React, { useEffect, useState } from 'react'
-import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
+/*
+ * Copyright 2025 by Ideal Labs, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { Field, Label } from '@/components/fieldset';
+import { Select } from '@/components/select';
+import { Input } from '@/components/input';
+import React, { useEffect, useState } from 'react';
+import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails';
+import { container } from 'tsyringe';
+import { ChainStateService } from '@/services/ChainStateService';
 
 interface PalletOption {
     text: string;
@@ -12,72 +28,44 @@ interface PalletOption {
 }
 
 interface MethodArgument {
-    argType: string;
-    argTypeName: string;
     name: string;
+    type: string;
+    typeName: string;
     value: any;
 }
 
 export const DynamicExtrinsicForm: React.FC<{ block: number, setExtrinsicData: React.Dispatch<React.SetStateAction<DelayedTransactionDetails | null>> }> = ({ block, setExtrinsicData }) => {
-    const [api, setApi] = useState<ApiPromise | null>(null)
-    const [pallets, setPallets] = useState<PalletOption[]>([])
-    const [extrinsics, setExtrinsics] = useState<string[]>([])
-    const [parameters, setParameters] = useState<MethodArgument[]>([])
-    const [selectedPallet, setSelectedPallet] = useState<string>("")
-    const [selectedExtrinsic, setSelectedExtrinsic] = useState<string>("")
+    const chainStateService = container.resolve(ChainStateService);
+    const [pallets, setPallets] = useState<PalletOption[]>([]);
+    const [extrinsics, setExtrinsics] = useState<string[]>([]);
+    const [parameters, setParameters] = useState<MethodArgument[]>([]);
+    const [selectedPallet, setSelectedPallet] = useState<string>("");
+    const [selectedExtrinsic, setSelectedExtrinsic] = useState<string>("");
 
     useEffect(() => {
-        async function connect() {
-            const wsProvider = new WsProvider(process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io')
-            const api = await ApiPromise.create({ provider: wsProvider })
-            setApi(api)
-
-            const availablePallets = Object
-                .keys(api.tx)
-                .filter((s) =>
-                    !s.startsWith('$')
-                )
-                .sort()
-                .filter((name): number => Object.keys(api.tx[name]).length)
-                .map((name): { text: string; value: string } => ({
-                    text: name,
-                    value: name
-                }));
-            setPallets(availablePallets)
+        async function loadPallets() {
+            const availablePallets = await chainStateService.getPallets();
+            setPallets(availablePallets);
         }
 
-        connect();
-    }, [])
+        loadPallets();
+    }, []);
 
-    function handlePalletChange(selectedPallet: string) {
+    async function handlePalletChange(selectedPallet: string) {
         setSelectedPallet(selectedPallet);
         setSelectedExtrinsic("");
-        if (api && selectedPallet) {
-            // Safely access the pallet
-            const pallet = api.tx[selectedPallet as keyof typeof api.tx];
-            if (pallet) {
-                const palletExtrinsics = Object.keys(pallet);
-                setExtrinsics(palletExtrinsics);
-                setParameters([]); // Reset parameters when a new extrinsic is selected
-            } else {
-                console.error(`Pallet ${selectedPallet} does not exist or has no extrinsics.`);
-                setExtrinsics([]);
-            }
+        if (selectedPallet) {
+            const palletExtrinsics = await chainStateService.getExtrinsics(selectedPallet);
+            setExtrinsics(palletExtrinsics);
+            setParameters([]); // Reset parameters when a new pallet is selected
         }
     }
 
-
-    function handleExtrinsicChange(selectedExtrinsic: string) {
+    async function handleExtrinsicChange(selectedExtrinsic: string) {
         setSelectedExtrinsic(selectedExtrinsic);
-        if (api && selectedPallet && selectedExtrinsic) {
-            const extrinsicMeta = api.tx[selectedPallet][selectedExtrinsic].meta
-            const paramTypes = extrinsicMeta.args.map((arg): MethodArgument => ({
-                argType: arg.type.toString(),
-                argTypeName: arg.typeName.unwrapOrDefault().toString(),
-                name: arg.name.toString(),
-                value: null
-            }));
-            setParameters(paramTypes);
+        if (selectedPallet && selectedExtrinsic) {
+            const paramTypes = await chainStateService.getExtrinsicParameters(selectedPallet, selectedExtrinsic);
+            setParameters(paramTypes.map(param => ({ ...param, value: null })));
         }
     }
 
@@ -96,7 +84,7 @@ export const DynamicExtrinsicForm: React.FC<{ block: number, setExtrinsicData: R
                     selectedExtrinsic,
                     parameters.map((param) => ({
                         name: param.name,
-                        type: param.argType,
+                        type: param.type,
                         value: param.value
                     }))
                 ))
@@ -106,7 +94,7 @@ export const DynamicExtrinsicForm: React.FC<{ block: number, setExtrinsicData: R
         }
 
         isReady();
-    }, [selectedPallet, selectedExtrinsic, parameters, block])
+    }, [selectedPallet, selectedExtrinsic, parameters, block]);
 
     return (
         <div className="grid grid-cols-2 gap-6">
@@ -135,10 +123,10 @@ export const DynamicExtrinsicForm: React.FC<{ block: number, setExtrinsicData: R
                 </Field>)}
             {parameters.length > 0 && parameters.map((param, index) => (
                 <Field key={`${selectedExtrinsic}_${param.name}_${index}`}>
-                    <Label>{`${param.name}: ${param.argType}`}</Label>
-                    <Input type="text" name={`input_${selectedExtrinsic}_${param.name}_${index}`} placeholder={`${param.argTypeName}`} onChange={(e) => handleParameterChange(index, e.target.value)} autoFocus />
+                    <Label>{`${param.name}: ${param.type}`}</Label>
+                    <Input type="text" name={`input_${selectedExtrinsic}_${param.name}_${index}`} placeholder={`${param.typeName}`} onChange={(e) => handleParameterChange(index, e.target.value)} autoFocus />
                 </Field>
             ))}
         </div>
-    )
+    );
 };
