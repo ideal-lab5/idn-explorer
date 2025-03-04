@@ -5,7 +5,7 @@ import { DelayedTransaction } from '@/domain/DelayedTransaction';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { usePolkadot } from '@/contexts/PolkadotContext';
+import { usePolkadot } from '@/components/contexts/polkadotContext';
 import { container } from 'tsyringe';
 import { IChainStateService } from '@/services/IChainStateService';
 

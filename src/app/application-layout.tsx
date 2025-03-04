@@ -16,7 +16,7 @@
 
 'use client'
 import { Avatar } from '@/components/avatar'
-import { BlockHeaders } from '@/components/etf/latestBlocks'
+import { BlockHeaders } from '@/components/timelock/latestBlocks'
 import {
   Dropdown,
   DropdownButton,
@@ -40,8 +40,8 @@ import {
   CubeIcon
 } from '@heroicons/react/20/solid'
 import { usePathname } from 'next/navigation'
-import { ConnectedWalletProvider } from "@/components/etf/connectedWalletContext";
-import { ConnectWallet, AccountDropdownMenu } from "@/components/etf/connectWallet";
+import { ConnectedWalletProvider } from "@/components/contexts/connectedWalletContext";
+import { ConnectWallet, AccountDropdownMenu } from "@/components/timelock/connectWallet";
 
 export function ApplicationLayout({
   children,
