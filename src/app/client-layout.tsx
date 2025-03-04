@@ -2,8 +2,8 @@
 
 import '@/styles/tailwind.css';
 import { Inter } from 'next/font/google';
-import { ConnectedWalletProvider } from '@/components/etf/connectedWalletContext';
-import { PolkadotProvider } from '@/contexts/PolkadotContext';
+import { ConnectedWalletProvider } from '@/components/contexts/connectedWalletContext';
+import { PolkadotProvider } from '@/components/contexts/polkadotContext';
 import { ApplicationLayout } from './application-layout';
 import { DIProvider } from '@/components/providers/di-provider';
 

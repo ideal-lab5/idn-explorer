@@ -28,7 +28,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { useEffect, useState } from 'react'
 import { Randomness } from '@/domain/Randomness'
 import { formatNumber } from '@polkadot/util'
-import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/etf/connectedWalletContext'
+import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/contexts/connectedWalletContext'
 import { useSearchParams } from 'next/navigation'
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import {
