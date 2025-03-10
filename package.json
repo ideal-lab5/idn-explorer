@@ -12,6 +12,7 @@
     "@headlessui/react": "^2.0.4",
     "@heroicons/react": "^2.1.3",
     "@ideallabs/etf.js": "^0.1.13-dev",
+    "@ideallabs/timelock.js": "1.0.0",
     "@polkadot/api": "^12.2.3",
     "@polkadot/api-contract": "^12.2.3",
     "@polkadot/extension-dapp": "^0.50.1",
