@@ -20,7 +20,7 @@ import type { IPolkadotApiService } from "./IPolkadotApiService";
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import chainSpec from "../etf_spec/dev/etf_spec.json"
 import { Etf } from "@ideallabs/etf.js";
-import {Timelock} from "@ideallabs/timelock.js";
+import {SupportedCurve, Timelock} from "@ideallabs/timelock.js";
 import { Randomness } from "@/domain/Randomness";
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
@@ -35,9 +35,9 @@ export class ExplorerService implements IExplorerService {
   constructor(
     @inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService
   ) {
-    // this.initializeEtf().then(() => {
-    //   console.log("ETF.js API is ready.");
-    // });
+    this.initializeEtf().then(() => {
+      console.log("ETF.js API is ready.");
+    });
     this.initializeTlock().then(()=> {
       console.log("TLock WASM has been initialized");
     })
@@ -78,9 +78,9 @@ export class ExplorerService implements IExplorerService {
     return this.etfApi;
   }
 
-  private async initializeTlock() {
+  async initializeTlock() {
     if(!this.tLockApi) {
-      this.tLockApi = await Timelock.build();
+      this.tLockApi = await Timelock.build(SupportedCurve.BLS12_381);
     }
   }
 
