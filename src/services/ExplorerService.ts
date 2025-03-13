@@ -19,7 +19,6 @@ import type { IExplorerService } from "./IExplorerService";
 import type { IPolkadotApiService } from "./IPolkadotApiService";
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import chainSpec from "../etf_spec/dev/etf_spec.json"
-import { Etf } from "@ideallabs/etf.js";
 import {SupportedCurve, Timelock} from "@ideallabs/timelock.js";
 import { Randomness } from "@/domain/Randomness";
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
@@ -29,53 +28,14 @@ import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
 
 @singleton()
 export class ExplorerService implements IExplorerService {
-  private etfApi: Etf | null = null;
   private tLockApi: Timelock | null = null;
 
   constructor(
     @inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService
   ) {
-    this.initializeEtf().then(() => {
-      console.log("ETF.js API is ready.");
-    });
     this.initializeTlock().then(()=> {
       console.log("TLock WASM has been initialized");
     })
-  }
-
-  private async initializeEtf(): Promise<void> {
-
-    if (!process.env.NEXT_PUBLIC_NODE_WS) {
-      console.error("NEXT_PUBLIC_NODE_WS environment variable is not defined.");
-      this.etfApi = null;
-      return;
-    }
-
-    if (!this.etfApi) {
-      try {
-        await cryptoWaitReady();
-        this.etfApi = new Etf(process.env.NEXT_PUBLIC_NODE_WS, false);
-        console.log("Connecting to ETF chain");
-        await this.etfApi.init(JSON.stringify(chainSpec));
-        console.log("ETF API initialized");
-      } catch (e) {
-        console.error("Failed to initialize ETF API:", e);
-        this.etfApi = null;
-        throw e;
-      }
-    }
-  }
-
-  async getEtfApi(signer = undefined): Promise<any> {
-    if (!this.etfApi) {
-      await this.initializeEtf();
-    }
-
-    if (signer) {
-      // Only set signer on ETF API for timelock operations
-      this.etfApi!.api.setSigner(signer);
-    }
-    return this.etfApi;
   }
 
   async initializeTlock() {
@@ -119,7 +79,6 @@ export class ExplorerService implements IExplorerService {
 
   async scheduleTransaction(signer: any, transactionDetails: DelayedTransactionDetails): Promise<void> {
     const polkadotApi = await this.polkadotApiService.getApi();
-    const etfApi = await this.getEtfApi();
 
     // Get the inner call using Polkadot API
     const tx = polkadotApi.tx[transactionDetails.pallet][transactionDetails.extrinsic];
@@ -138,8 +97,8 @@ export class ExplorerService implements IExplorerService {
     // Create the inner call
     const innerCall = tx(...params);
 
-    // Use ETF's delay function with our Polkadot API call
-    const outerCall = await etfApi.delay(innerCall, 127, transactionDetails.block);
+    // This outer call should be done with the IDN in the future.
+    const outerCall = tx(...params);
 
     // Sign and send using Polkadot API
     await outerCall.signAndSend(signer.address, { signer: signer.signer }, (result: any) => {

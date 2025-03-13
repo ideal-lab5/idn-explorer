@@ -20,7 +20,6 @@ import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { Randomness } from "@/domain/Randomness";
 
 export interface IExplorerService {
-    getEtfApi: () => Promise<any>;
     initializeTlock: () => Promise<any>;
     getRandomness: (blockNumber: number, size: number) => Promise<Randomness[]>;
     getScheduledTransactions: () => Promise<DelayedTransaction[]>;
