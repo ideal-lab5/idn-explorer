@@ -29,10 +29,15 @@ import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
 @singleton()
 export class ExplorerService implements IExplorerService {
   private tLockApi: Timelock | null = null;
+  private featureScheduleTransaction: boolean = false;
 
   constructor(
     @inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService
   ) {
+
+    if (process.env.FEATURE_SCHEDULE_TRANSACTION) {
+      this.featureScheduleTransaction = process.env.FEATURE_SCHEDULE_TRANSACTION == "enabled";
+    }
     this.initializeTlock().then(()=> {
       console.log("TLock WASM has been initialized");
     })
@@ -78,34 +83,41 @@ export class ExplorerService implements IExplorerService {
   }
 
   async scheduleTransaction(signer: any, transactionDetails: DelayedTransactionDetails): Promise<void> {
-    const polkadotApi = await this.polkadotApiService.getApi();
+    if(this.featureScheduleTransaction) {
 
-    // Get the inner call using Polkadot API
-    const tx = polkadotApi.tx[transactionDetails.pallet][transactionDetails.extrinsic];
-    if (!tx) {
-      throw new Error(`Invalid extrinsic: ${transactionDetails.pallet}.${transactionDetails.extrinsic}`);
-    }
+      const polkadotApi = await this.polkadotApiService.getApi();
 
-    // Parse parameters
-    const params = transactionDetails.params.map(param => {
-      if (param.value === "true") return true;
-      if (param.value === "false") return false;
-      if (!isNaN(param.value)) return Number(param.value);
-      return param.value;
-    });
-
-    // Create the inner call
-    const innerCall = tx(...params);
-
-    // This outer call should be done with the IDN in the future.
-    const outerCall = tx(...params);
-
-    // Sign and send using Polkadot API
-    await outerCall.signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
-      if (result.status.isInBlock) {
-        console.log('Transaction in block:', result.status.asInBlock.toHex());
+      // Get the inner call using Polkadot API
+      const tx = polkadotApi.tx[transactionDetails.pallet][transactionDetails.extrinsic];
+      if (!tx) {
+        throw new Error(`Invalid extrinsic: ${transactionDetails.pallet}.${transactionDetails.extrinsic}`);
       }
-    });
+
+      // Parse parameters
+      const params = transactionDetails.params.map(param => {
+        if (param.value === "true") return true;
+        if (param.value === "false") return false;
+        if (!isNaN(param.value)) return Number(param.value);
+        return param.value;
+      });
+
+      // Create the inner call
+      const innerCall = tx(...params);
+
+      // This outer call should be done with the IDN in the future.
+      const outerCall = tx(...params);
+
+      // Sign and send using Polkadot API
+      await outerCall.signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
+        if (result.status.isInBlock) {
+          console.log('Transaction in block:', result.status.asInBlock.toHex());
+        }
+      });
+
+    } else {
+      console.error("The Schedule Transaction Feature is not currently implemented");
+    }
+    
   }
 
   async getScheduledTransactions(): Promise<DelayedTransaction[]> {
