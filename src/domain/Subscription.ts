@@ -31,6 +31,41 @@ export enum SubscriptionState {
 }
 
 /**
+ * Defines criteria for which pulses should be delivered to a subscription.
+ * This allows subscribers to filter the random values they receive.
+ */
+export class PulseFilter {
+    constructor(
+        /** Optional filter by round number */
+        public round?: number,
+        /** Optional filter by pulse hash prefix */
+        public hashPrefix?: string,
+        /** Custom filter expression (advanced usage) */
+        public customExpression?: string
+    ) {}
+
+    /**
+     * Checks if a pulse matches this filter criteria
+     * 
+     * @param pulse The pulse to check against filter criteria
+     * @returns True if the pulse matches the filter or if no filter is set
+     */
+    matches(pulse: any): boolean {
+        // Simple mock implementation - in real code, this would check against actual pulse properties
+        if (!this.round && !this.hashPrefix && !this.customExpression) return true;
+        
+        if (this.round && pulse.round !== this.round) return false;
+        if (this.hashPrefix && !pulse.hash.startsWith(this.hashPrefix)) return false;
+        if (this.customExpression) {
+            // In a real implementation, this would evaluate the expression
+            console.warn('Custom expression filters not implemented in mock');
+        }
+        
+        return true;
+    }
+}
+
+/**
  * Contains the immutable details of a subscription.
  * These details are set when the subscription is created and
  * represent the core parameters of the randomness delivery service.
@@ -50,7 +85,11 @@ export class SubscriptionDetails {
         /** XCM location where random values should be delivered */
         public target: string,
         /** Additional data associated with the subscription */
-        public metadata: string
+        public metadata: string,
+        /** The storage deposit locked for this subscription */
+        public deposit: number = 0,
+        /** Optional filter for which pulses to receive */
+        public pulseFilter?: PulseFilter
     ) {}
 }
 
@@ -71,7 +110,11 @@ export class Subscription {
         /** Number of random values yet to be delivered */
         public creditsLeft: number,
         /** Current state of the subscription */
-        public state: SubscriptionState = SubscriptionState.Active
+        public state: SubscriptionState = SubscriptionState.Active,
+        /** Number of credits already consumed */
+        public creditsConsumed: number = 0,
+        /** Total fees paid for consumed credits */
+        public feesPaid: number = 0
     ) {}
 
     /**
@@ -91,7 +134,9 @@ export class Subscription {
         amount: number,
         target: string,
         frequency: number,
-        metadata: string = ''
+        metadata: string = '',
+        pulseFilter?: PulseFilter,
+        deposit: number = 0
     ): Subscription {
         const now = Date.now();
         const details = new SubscriptionDetails(
@@ -101,13 +146,18 @@ export class Subscription {
             amount,
             frequency,
             target,
-            metadata
+            metadata,
+            deposit,
+            pulseFilter
         );
         
         return new Subscription(
             `${subscriber}-${now}`, // Simple ID generation for mock
             details,
-            amount
+            amount,
+            SubscriptionState.Active,
+            0, // creditsConsumed
+            0  // feesPaid
         );
     }
 }

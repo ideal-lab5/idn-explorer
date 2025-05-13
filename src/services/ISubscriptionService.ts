@@ -14,17 +14,33 @@
  * limitations under the License.
  */
 
-import { Subscription, SubscriptionDetails } from '../domain/Subscription';
+import { Subscription, PulseFilter } from '../domain/Subscription';
+
+/**
+ * Parameters for updating a subscription with optional fields.
+ * When a field is undefined, it remains unchanged.
+ */
+export interface UpdateSubscriptionParams {
+    subscriptionId: string;
+    amount?: number;       // Optional new amount
+    frequency?: number;    // Optional new frequency
+    metadata?: string;     // Optional new metadata
+    pulseFilter?: PulseFilter; // Optional new pulse filter
+}
+
+
 
 /**
  * Defines the interface for interacting with subscription data.
  * This service abstracts the underlying subscription management,
  * whether it's using mock data or actual blockchain interactions.
  * 
- * All methods that modify subscription state require a signer to
- * ensure proper authorization, mirroring the blockchain's permission model.
+ * Methods are divided into two categories:
+ * 1. Transaction methods: require a signer and modify chain state via extrinsics
+ * 2. RPC methods: read-only operations that don't require a transaction
  */
 export interface ISubscriptionService {
+    
     /**
      * Creates a new subscription for randomness delivery.
      * 
@@ -33,13 +49,15 @@ export interface ISubscriptionService {
      * @param target - XCM location where random values will be delivered
      * @param frequency - Number of blocks between each delivery
      * @param metadata - Optional additional data for the subscription
+     * @param pulseFilter - Optional filter for which pulses to receive
      */
     createSubscription(
         signer: any, 
         amount: number,
         target: string,
         frequency: number,
-        metadata?: string
+        metadata?: string,
+        pulseFilter?: PulseFilter
     ): Promise<void>;
     
     /**
@@ -70,17 +88,14 @@ export interface ISubscriptionService {
     /**
      * Updates the parameters of an existing subscription.
      * Only the subscription owner can modify their subscription.
+     * Fields set to undefined will not be updated.
      * 
      * @param signer - Must match the subscription's original creator
-     * @param subscriptionId - ID of the subscription to update
-     * @param amount - New total number of random values
-     * @param frequency - New delivery frequency
+     * @param params - Parameters to update including subscriptionId and optional values
      */
     updateSubscription(
         signer: any,
-        subscriptionId: string,
-        amount: number,
-        frequency: number
+        params: UpdateSubscriptionParams
     ): Promise<void>;
     
     /**
@@ -96,7 +111,19 @@ export interface ISubscriptionService {
     ): Promise<void>;
     
     /**
+     * Calculates the fees for a given number of credits without creating a subscription.
+     * Uses the runtime API's calculate_subscription_fees method.
+     * 
+     * @param amount - Number of random values to receive
+     * @returns The calculated fee
+     */
+    calculateSubscriptionFees(
+        amount: number
+    ): Promise<number>;
+    
+    /**
      * Retrieves a single subscription by its ID.
+     * Uses the runtime API's get_subscription method.
      * 
      * @param subscriptionId - ID of the subscription to fetch
      * @returns The subscription if found, throws error otherwise
@@ -104,9 +131,11 @@ export interface ISubscriptionService {
     getSubscription(subscriptionId: string): Promise<Subscription>;
     
     /**
-     * Retrieves all active subscriptions in the system.
+     * Retrieves all subscriptions for a specific account.
+     * Uses the runtime API's get_subscriptions_for_subscriber method.
      * 
-     * @returns Array of all subscriptions
+     * @param accountId - Account ID to fetch subscriptions for
+     * @returns Array of subscriptions owned by the account
      */
-    getAllSubscriptions(): Promise<Subscription[]>;
+    getSubscriptionsForAccount(accountId: string): Promise<Subscription[]>;
 }
