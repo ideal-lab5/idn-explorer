@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Subscription, SubscriptionDetails, PulseFilter } from '../domain/Subscription';
+import { Subscription, PulseFilter } from '../domain/Subscription';
 
 /**
  * Parameters for updating a subscription with optional fields.
@@ -28,24 +28,19 @@ export interface UpdateSubscriptionParams {
     pulseFilter?: PulseFilter; // Optional new pulse filter
 }
 
-/**
- * Quote response for calculating subscription fees
- */
-export interface SubscriptionQuote {
-    fees: number;          // Fees for requested credits
-    deposit: number;       // Storage deposit required
-    total: number;         // Total cost (fees + deposit)
-}
+
 
 /**
  * Defines the interface for interacting with subscription data.
  * This service abstracts the underlying subscription management,
  * whether it's using mock data or actual blockchain interactions.
  * 
- * All methods that modify subscription state require a signer to
- * ensure proper authorization, mirroring the blockchain's permission model.
+ * Methods are divided into two categories:
+ * 1. Transaction methods: require a signer and modify chain state via extrinsics
+ * 2. RPC methods: read-only operations that don't require a transaction
  */
 export interface ISubscriptionService {
+    
     /**
      * Creates a new subscription for randomness delivery.
      * 
@@ -116,7 +111,19 @@ export interface ISubscriptionService {
     ): Promise<void>;
     
     /**
+     * Calculates the fees for a given number of credits without creating a subscription.
+     * Uses the runtime API's calculate_subscription_fees method.
+     * 
+     * @param amount - Number of random values to receive
+     * @returns The calculated fee
+     */
+    calculateSubscriptionFees(
+        amount: number
+    ): Promise<number>;
+    
+    /**
      * Retrieves a single subscription by its ID.
+     * Uses the runtime API's get_subscription method.
      * 
      * @param subscriptionId - ID of the subscription to fetch
      * @returns The subscription if found, throws error otherwise
@@ -124,42 +131,8 @@ export interface ISubscriptionService {
     getSubscription(subscriptionId: string): Promise<Subscription>;
     
     /**
-     * Calculates the fees and deposit required for a subscription without creating it.
-     * Useful for displaying pricing information to users before they commit.
-     * 
-     * @param amount - Number of random values to receive
-     * @param target - XCM location where random values will be delivered
-     * @param frequency - Number of blocks between each delivery
-     * @param metadata - Optional additional data for the subscription
-     * @param pulseFilter - Optional filter for which pulses to receive
-     * @returns Quote containing fees, deposit, and total cost
-     */
-    quoteSubscription(
-        amount: number,
-        target: string,
-        frequency: number,
-        metadata?: string,
-        pulseFilter?: PulseFilter
-    ): Promise<SubscriptionQuote>;
-    
-    /**
-     * Retrieves detailed information about a subscription.
-     * This includes additional metadata that may not be part of the basic Subscription object.
-     * 
-     * @param subscriptionId - ID of the subscription to retrieve detailed info for
-     * @returns Detailed subscription information
-     */
-    getSubscriptionInfo(subscriptionId: string): Promise<Subscription>;
-    
-    /**
-     * Retrieves all active subscriptions in the system.
-     * 
-     * @returns Array of all subscriptions
-     */
-    getAllSubscriptions(): Promise<Subscription[]>;
-    
-    /**
      * Retrieves all subscriptions for a specific account.
+     * Uses the runtime API's get_subscriptions_for_subscriber method.
      * 
      * @param accountId - Account ID to fetch subscriptions for
      * @returns Array of subscriptions owned by the account

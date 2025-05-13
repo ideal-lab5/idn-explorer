@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ISubscriptionService, UpdateSubscriptionParams, SubscriptionQuote } from './ISubscriptionService';
+import { ISubscriptionService, UpdateSubscriptionParams } from './ISubscriptionService';
 import { Subscription, SubscriptionState, SubscriptionDetails, PulseFilter } from '../domain/Subscription';
 
 /**
@@ -26,6 +26,7 @@ import { Subscription, SubscriptionState, SubscriptionDetails, PulseFilter } fro
  * - Maintains subscription state
  * - Enforces ownership checks
  * - Manages subscription lifecycle
+ * - Simulates both extrinsic and RPC calls to the blockchain
  */
 export class MockSubscriptionService implements ISubscriptionService {
     /** In-memory storage of subscriptions, keyed by subscription ID */
@@ -160,54 +161,24 @@ export class MockSubscriptionService implements ISubscriptionService {
         return subscription;
     }
 
-    /**
-     * Retrieves all subscriptions.
-     */
-    async getAllSubscriptions(): Promise<Subscription[]> {
-        return Array.from(this.subscriptions.values());
-    }
     
     /**
-     * Calculates the fees and deposit required for a subscription without creating it.
+     * Calculates the fees for a given number of credits without creating a subscription.
+     * Simulates calling the runtime API's calculate_subscription_fees RPC method.
      * 
      * @param amount Number of random values to receive
-     * @param target XCM location where random values will be delivered
-     * @param frequency Number of blocks between each delivery
-     * @param metadata Optional additional data for the subscription
-     * @param pulseFilter Optional filter for which pulses to receive
-     * @returns Quote containing fees, deposit, and total cost
+     * @returns The calculated fee
      */
-    async quoteSubscription(
-        amount: number,
-        target: string,
-        frequency: number,
-        metadata?: string,
-        pulseFilter?: PulseFilter
-    ): Promise<SubscriptionQuote> {
-        // Simple mock implementation - in a real implementation this would 
-        // call the pallet's quote_subscription extrinsic
+    async calculateSubscriptionFees(amount: number): Promise<number> {
+        // Simple mock implementation - in a real implementation this would
+        // call the runtime API's calculate_subscription_fees method
         const baseRate = 0.01;  // Mock base rate per unit
-        const fees = amount * baseRate;
-        const deposit = this.calculateStorageDeposit(amount, target, metadata, pulseFilter);
-        
-        return {
-            fees,
-            deposit,
-            total: fees + deposit
-        };
+        return amount * baseRate;
     }
     
-    /**
-     * Retrieves detailed information about a subscription.
-     * 
-     * @param subscriptionId ID of the subscription to retrieve detailed info for
-     * @returns Detailed subscription information
-     */
-    async getSubscriptionInfo(subscriptionId: string): Promise<Subscription> {
-        // In a mock implementation, this can return the same as getSubscription
-        // In a real implementation, it would call the pallet's get_subscription_info extrinsic
-        return this.getSubscription(subscriptionId);
-    }
+
+    
+    // getSubscriptionInfo method has been removed - using runtime API's get_subscription instead
     
     /**
      * Retrieves all subscriptions for a specific account.
