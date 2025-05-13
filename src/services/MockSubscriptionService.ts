@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { ISubscriptionService } from './ISubscriptionService';
-import { Subscription, SubscriptionState, SubscriptionDetails } from '../domain/Subscription';
+import { ISubscriptionService, UpdateSubscriptionParams, SubscriptionQuote } from './ISubscriptionService';
+import { Subscription, SubscriptionState, SubscriptionDetails, PulseFilter } from '../domain/Subscription';
 
 /**
  * Mock implementation of the subscription service.
@@ -39,20 +39,27 @@ export class MockSubscriptionService implements ISubscriptionService {
      * @param target The target of the subscription.
      * @param frequency The frequency of the subscription.
      * @param metadata Optional metadata for the subscription.
+     * @param pulseFilter Optional filter for which pulses to receive
      */
     async createSubscription(
         signer: any,
         amount: number,
         target: string,
         frequency: number,
-        metadata?: string
+        metadata?: string,
+        pulseFilter?: PulseFilter
     ): Promise<void> {
+        // Calculate a mock deposit based on the parameters
+        const deposit = this.calculateStorageDeposit(amount, target, metadata, pulseFilter);
+        
         const subscription = Subscription.create(
             signer.address,
             amount,
             target,
             frequency,
-            metadata
+            metadata,
+            pulseFilter,
+            deposit
         );
 
         this.subscriptions.set(subscription.id, subscription);
@@ -91,24 +98,40 @@ export class MockSubscriptionService implements ISubscriptionService {
      * Updates an existing subscription.
      * 
      * @param signer The signer of the subscription.
-     * @param subscriptionId The ID of the subscription to update.
-     * @param amount The new amount of the subscription.
-     * @param frequency The new frequency of the subscription.
+     * @param params Parameters to update including subscriptionId and optional values
      */
     async updateSubscription(
         signer: any,
-        subscriptionId: string,
-        amount: number,
-        frequency: number
+        params: UpdateSubscriptionParams
     ): Promise<void> {
-        const subscription = this.subscriptions.get(subscriptionId);
+        const subscription = this.subscriptions.get(params.subscriptionId);
         if (!subscription) throw new Error('Subscription not found');
         if (subscription.details.subscriber !== signer.address) throw new Error('Unauthorized');
         
-        subscription.details.amount = amount;
-        subscription.details.frequency = frequency;
+        // Update only the provided parameters
+        if (params.amount !== undefined) {
+            subscription.details.amount = params.amount;
+            // Update credits left if amount increased
+            const addedCredits = params.amount - (subscription.creditsLeft + subscription.creditsConsumed);
+            if (addedCredits > 0) {
+                subscription.creditsLeft += addedCredits;
+            }
+        }
+        
+        if (params.frequency !== undefined) {
+            subscription.details.frequency = params.frequency;
+        }
+        
+        if (params.metadata !== undefined) {
+            subscription.details.metadata = params.metadata;
+        }
+        
+        if (params.pulseFilter !== undefined) {
+            subscription.details.pulseFilter = params.pulseFilter;
+        }
+        
         subscription.details.updatedAt = Date.now();
-        this.subscriptions.set(subscriptionId, subscription);
+        this.subscriptions.set(params.subscriptionId, subscription);
     }
 
     /**
@@ -142,5 +165,93 @@ export class MockSubscriptionService implements ISubscriptionService {
      */
     async getAllSubscriptions(): Promise<Subscription[]> {
         return Array.from(this.subscriptions.values());
+    }
+    
+    /**
+     * Calculates the fees and deposit required for a subscription without creating it.
+     * 
+     * @param amount Number of random values to receive
+     * @param target XCM location where random values will be delivered
+     * @param frequency Number of blocks between each delivery
+     * @param metadata Optional additional data for the subscription
+     * @param pulseFilter Optional filter for which pulses to receive
+     * @returns Quote containing fees, deposit, and total cost
+     */
+    async quoteSubscription(
+        amount: number,
+        target: string,
+        frequency: number,
+        metadata?: string,
+        pulseFilter?: PulseFilter
+    ): Promise<SubscriptionQuote> {
+        // Simple mock implementation - in a real implementation this would 
+        // call the pallet's quote_subscription extrinsic
+        const baseRate = 0.01;  // Mock base rate per unit
+        const fees = amount * baseRate;
+        const deposit = this.calculateStorageDeposit(amount, target, metadata, pulseFilter);
+        
+        return {
+            fees,
+            deposit,
+            total: fees + deposit
+        };
+    }
+    
+    /**
+     * Retrieves detailed information about a subscription.
+     * 
+     * @param subscriptionId ID of the subscription to retrieve detailed info for
+     * @returns Detailed subscription information
+     */
+    async getSubscriptionInfo(subscriptionId: string): Promise<Subscription> {
+        // In a mock implementation, this can return the same as getSubscription
+        // In a real implementation, it would call the pallet's get_subscription_info extrinsic
+        return this.getSubscription(subscriptionId);
+    }
+    
+    /**
+     * Retrieves all subscriptions for a specific account.
+     * 
+     * @param accountId Account ID to fetch subscriptions for
+     * @returns Array of subscriptions owned by the account
+     */
+    async getSubscriptionsForAccount(accountId: string): Promise<Subscription[]> {
+        return Array.from(this.subscriptions.values())
+            .filter(sub => sub.details.subscriber === accountId);
+    }
+    
+    /**
+     * Calculates a mock storage deposit based on subscription parameters.
+     * This would be replaced with actual blockchain-based calculation in a real implementation.
+     * 
+     * @param amount Number of random values
+     * @param target XCM target location
+     * @param metadata Optional metadata string
+     * @param pulseFilter Optional pulse filter
+     * @returns The calculated storage deposit amount
+     */
+    private calculateStorageDeposit(
+        amount: number,
+        target: string,
+        metadata?: string,
+        pulseFilter?: PulseFilter
+    ): number {
+        // Base deposit
+        let deposit = 1.0;
+        
+        // Add for target complexity (simple mock calculation)
+        deposit += target.length * 0.01;
+        
+        // Add for metadata if present
+        if (metadata) {
+            deposit += metadata.length * 0.005;
+        }
+        
+        // Add for pulse filter if present
+        if (pulseFilter) {
+            deposit += 0.5;
+        }
+        
+        return deposit;
     }
 }

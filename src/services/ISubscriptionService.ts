@@ -14,7 +14,28 @@
  * limitations under the License.
  */
 
-import { Subscription, SubscriptionDetails } from '../domain/Subscription';
+import { Subscription, SubscriptionDetails, PulseFilter } from '../domain/Subscription';
+
+/**
+ * Parameters for updating a subscription with optional fields.
+ * When a field is undefined, it remains unchanged.
+ */
+export interface UpdateSubscriptionParams {
+    subscriptionId: string;
+    amount?: number;       // Optional new amount
+    frequency?: number;    // Optional new frequency
+    metadata?: string;     // Optional new metadata
+    pulseFilter?: PulseFilter; // Optional new pulse filter
+}
+
+/**
+ * Quote response for calculating subscription fees
+ */
+export interface SubscriptionQuote {
+    fees: number;          // Fees for requested credits
+    deposit: number;       // Storage deposit required
+    total: number;         // Total cost (fees + deposit)
+}
 
 /**
  * Defines the interface for interacting with subscription data.
@@ -33,13 +54,15 @@ export interface ISubscriptionService {
      * @param target - XCM location where random values will be delivered
      * @param frequency - Number of blocks between each delivery
      * @param metadata - Optional additional data for the subscription
+     * @param pulseFilter - Optional filter for which pulses to receive
      */
     createSubscription(
         signer: any, 
         amount: number,
         target: string,
         frequency: number,
-        metadata?: string
+        metadata?: string,
+        pulseFilter?: PulseFilter
     ): Promise<void>;
     
     /**
@@ -70,17 +93,14 @@ export interface ISubscriptionService {
     /**
      * Updates the parameters of an existing subscription.
      * Only the subscription owner can modify their subscription.
+     * Fields set to undefined will not be updated.
      * 
      * @param signer - Must match the subscription's original creator
-     * @param subscriptionId - ID of the subscription to update
-     * @param amount - New total number of random values
-     * @param frequency - New delivery frequency
+     * @param params - Parameters to update including subscriptionId and optional values
      */
     updateSubscription(
         signer: any,
-        subscriptionId: string,
-        amount: number,
-        frequency: number
+        params: UpdateSubscriptionParams
     ): Promise<void>;
     
     /**
@@ -104,9 +124,45 @@ export interface ISubscriptionService {
     getSubscription(subscriptionId: string): Promise<Subscription>;
     
     /**
+     * Calculates the fees and deposit required for a subscription without creating it.
+     * Useful for displaying pricing information to users before they commit.
+     * 
+     * @param amount - Number of random values to receive
+     * @param target - XCM location where random values will be delivered
+     * @param frequency - Number of blocks between each delivery
+     * @param metadata - Optional additional data for the subscription
+     * @param pulseFilter - Optional filter for which pulses to receive
+     * @returns Quote containing fees, deposit, and total cost
+     */
+    quoteSubscription(
+        amount: number,
+        target: string,
+        frequency: number,
+        metadata?: string,
+        pulseFilter?: PulseFilter
+    ): Promise<SubscriptionQuote>;
+    
+    /**
+     * Retrieves detailed information about a subscription.
+     * This includes additional metadata that may not be part of the basic Subscription object.
+     * 
+     * @param subscriptionId - ID of the subscription to retrieve detailed info for
+     * @returns Detailed subscription information
+     */
+    getSubscriptionInfo(subscriptionId: string): Promise<Subscription>;
+    
+    /**
      * Retrieves all active subscriptions in the system.
      * 
      * @returns Array of all subscriptions
      */
     getAllSubscriptions(): Promise<Subscription[]>;
+    
+    /**
+     * Retrieves all subscriptions for a specific account.
+     * 
+     * @param accountId - Account ID to fetch subscriptions for
+     * @returns Array of subscriptions owned by the account
+     */
+    getSubscriptionsForAccount(accountId: string): Promise<Subscription[]>;
 }
