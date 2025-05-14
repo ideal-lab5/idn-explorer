@@ -18,11 +18,11 @@
 
 import { Badge } from '@/components/badge'
 import { DescriptionDetails, DescriptionList, DescriptionTerm } from '@/components/description-list'
-import { Divider } from '@/components/divider'
 import { useConnectedWallet } from '@/components/contexts/connectedWalletContext'
-import { Heading, Subheading } from '@/components/heading'
 import { Link } from '@/components/link'
-import { ChevronLeftIcon, CommandLineIcon, CubeIcon, WalletIcon } from '@heroicons/react/16/solid'
+import { Button } from '@/components/button'
+import { ArrowLeftIcon } from '@heroicons/react/20/solid'
+import { CommandLineIcon, CubeIcon, WalletIcon } from '@heroicons/react/16/solid'
 import { notFound } from 'next/navigation'
 
 export default function ExecutedTransaction({ params }: { readonly params: { readonly id: readonly string[] } }) {
@@ -40,67 +40,116 @@ export default function ExecutedTransaction({ params }: { readonly params: { rea
   if (!transaction) notFound();
 
   return (
-    transaction ? <div>
-      <div className="max-lg:hidden">
-        <Link href={params.id[1] === "compose" ? "/compose" : "/"} className="inline-flex items-center gap-2 text-sm/6 text-zinc-500 dark:text-zinc-400">
-          <ChevronLeftIcon className="size-4 fill-zinc-400 dark:fill-zinc-500" />
-          {params.id[1] === "compose" ? "Back to Compose" : "Back to Explore"}
-        </Link>
-      </div>
-      <div className="mt-4 lg:mt-8">
-        <div className="flex items-center gap-4">
-          <Heading>Transaction #{transaction.id}</Heading>
-          <Badge color={transaction.status === 'Confirmed' ? 'lime' : 'red'}>{transaction.status}</Badge>
-        </div>
-        <div className="isolate mt-2.5 flex flex-wrap justify-between gap-x-6 gap-y-4">
-          <div className="flex flex-wrap gap-x-10 gap-y-4 py-1.5">
-            <span className="flex items-center gap-3 text-base/6 text-zinc-950 sm:text-sm/6 dark:text-white">
-              <CommandLineIcon className="size-4 shrink-0 fill-zinc-400 dark:fill-zinc-500" />
-              <span>{transaction.operation}</span>
-            </span>
-            <span className="flex items-center gap-3 text-base/6 text-zinc-950 sm:text-sm/6 dark:text-white">
-              <WalletIcon className="size-4 shrink-0 fill-zinc-400 dark:fill-zinc-500" />
-              <span className="inline-flex gap-3">
-                {transaction.id}{' '}
-                <span>
-                  <span aria-hidden="true">••••</span> {transaction.owner}
-                </span>
-              </span>
-            </span>
-            <span className="flex items-center gap-3 text-base/6 text-zinc-950 sm:text-sm/6 dark:text-white">
-              <CubeIcon className="size-4 shrink-0 fill-zinc-400 dark:fill-zinc-500" />
-              <span>{transaction.block}</span>
-            </span>
+    transaction ? (
+      <main className="flex-1 w-full">
+        <div className="w-full px-8 py-8">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center mb-6">
+              <Link href={params.id[1] === "compose" ? "/compose" : "/network-activity"} className="mr-4">
+                <Button className="p-2 rounded-full">
+                  <ArrowLeftIcon className="h-4 w-4" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold">Transaction #{transaction.id}</h1>
+                <div className="flex items-center mt-1">
+                  <Badge color={transaction.status === 'Confirmed' ? 'lime' : 'red'}>{transaction.status}</Badge>
+                </div>
+              </div>
+            </div>
+            <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+              <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800">
+                <h2 className="text-xl font-semibold">Transaction Details</h2>
+                <p className="text-sm text-zinc-500">Information about this transaction</p>
+              </div>
+              
+              <div className="px-6 py-5">
+                <div className="flex flex-wrap gap-4 mb-6">
+                  <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-md">
+                    <CommandLineIcon className="h-4 w-4 text-zinc-500" />
+                    <span className="text-sm">{transaction.operation}</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-md">
+                    <WalletIcon className="h-4 w-4 text-zinc-500" />
+                    <span className="text-sm truncate max-w-xs">{transaction.owner}</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-md">
+                    <CubeIcon className="h-4 w-4 text-zinc-500" />
+                    <span className="text-sm">Block #{transaction.block}</span>
+                  </div>
+                </div>
+                
+                {/* Basic transaction info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Transaction type</h3>
+                    <p className="text-sm">{transaction.operation}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Block</h3>
+                    <p className="text-sm">{transaction.block}</p>
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Owner</h3>
+                    <p className="text-sm break-all">{transaction.owner}</p>
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Metadata</h3>
+                    {transaction?.metadata?.map((metadata: any, index: number) => (
+                      <p key={`metadata-${index}`} className="text-sm break-all whitespace-pre-wrap">{metadata}</p>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Event data section */}
+                <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4 mb-4">
+                  <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-4">Event data</h3>
+                  
+                  {transaction?.eventData?.map((eventData: any, index: number) => {
+                    // Get raw string value
+                    let displayValue = "";
+                    
+                    try {
+                      if (typeof eventData.value === 'object') {
+                        displayValue = JSON.stringify(eventData.value, null, 2);
+                      } else {
+                        displayValue = String(eventData.value || "");
+                      }
+                    } catch (e) {
+                      displayValue = String(eventData.value || "");
+                    }
+                    
+                    return (
+                      <div key={`event-${index}`} className="mb-4 last:mb-0">
+                        <div className="bg-zinc-100 dark:bg-zinc-800 px-3 py-2 border-l-2 border-zinc-400 dark:border-zinc-600 rounded-sm mb-2">
+                          <p className="text-xs font-medium">{eventData.type}</p>
+                        </div>
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded p-3">
+                          <code className="block text-xs font-mono whitespace-pre-wrap break-all w-full">
+                            {displayValue}
+                          </code>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="mt-12">
-        <Subheading>Summary</Subheading>
-        <Divider className="mt-4" />
-        <DescriptionList>
-          <DescriptionTerm>Transaction type</DescriptionTerm>
-          <DescriptionDetails>{transaction.operation}</DescriptionDetails>
-          <DescriptionTerm>Block</DescriptionTerm>
-          <DescriptionDetails>{transaction.block}</DescriptionDetails>
-          <DescriptionTerm>Owner</DescriptionTerm>
-          <DescriptionDetails>{transaction.owner}</DescriptionDetails>
-          <DescriptionTerm>Metadata</DescriptionTerm>
-          {transaction?.metadata?.map((metadata: any, index: number) =>
-            <div key={"detail_" + index}>
-              <DescriptionDetails>
-                {metadata}
-              </DescriptionDetails>
-            </div>)}
-          <DescriptionTerm>Event data</DescriptionTerm>
-          <DescriptionDetails>
-            {transaction?.eventData?.map((eventData: any, index: number) =>
-              <div key={"detail_" + index}>
-                <p className='text-xs'>{eventData.type}</p>
-                <p className='text-xs'>{eventData.value}</p>
-              </div>)}
-          </DescriptionDetails>
-        </DescriptionList>
-      </div>
-    </div> : <div>Loading...</div>
+      </main>
+    ) : (
+      <main className="flex-1 w-full">
+        <div className="w-full px-8 py-8 flex items-center justify-center">
+          <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden p-8 text-center">
+            <h2 className="text-xl font-semibold mb-4">Loading transaction details...</h2>
+            <div className="animate-pulse h-6 w-24 bg-zinc-200 dark:bg-zinc-700 rounded mx-auto"></div>
+          </div>
+        </div>
+      </main>
+    )
   );
 }

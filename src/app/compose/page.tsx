@@ -58,7 +58,7 @@ export default function Compose() {
     setIsProcessing(true);
     setLastMessage(null);
     try {
-      await explorerClient.cancelTransaction(signer, blockNumber, index);
+      await explorerClient?.cancelTransaction(signer, blockNumber, index);
       setLastMessage({ index, message: "Your transaction will be canceled within next few blocks. Keep an eye on My Events.", type: "success" });
     } catch (error: any) {
       console.error(error);
@@ -67,17 +67,44 @@ export default function Compose() {
     setIsProcessing(false);
   }
 
+  if (!signer || !isConnected) {
+    return (
+      <main className="flex-1 w-full">
+        <div className="w-full px-8 py-8 flex items-center justify-center">
+          <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden p-8 text-center">
+            <h2 className="text-xl font-semibold mb-4">Please connect your wallet to view your transactions</h2>
+            <ConnectWallet buttonOnly={true} />
+          </div>
+        </div>
+      </main>
+    );
+  }
+  
   return (
-    signer && isConnected ?
-      <>
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="max-sm:w-full sm:flex-1">
-            <Heading>Compose</Heading>
-            <div className="mt-4 flex max-w-xl gap-4">
+    <main className="flex-1 w-full">
+      <div className="w-full px-8 py-8">
+        <h1 className="text-3xl font-bold mb-6">My Transactions</h1>
+        
+        <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden mb-8">
+          <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-medium">Transaction Management</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  View and manage your scheduled and executed transactions
+                </p>
+              </div>
+              <Link href={`/compose/schedule`} aria-hidden="true">
+                <Button type="button" className="cursor-pointer" outline>Schedule Transaction</Button>
+              </Link>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="flex max-w-xl gap-4 mb-6">
               <div className="flex-1">
                 <InputGroup>
                   <MagnifyingGlassIcon />
-                  <Input name="search" value={composeCurrentSearchTerm} onChange={e => setComposeCurrentSearchTerm(e.target.value)} placeholder="Search transactions&hellip;" />
+                  <Input name="search" value={composeCurrentSearchTerm} onChange={e => setComposeCurrentSearchTerm(e.target.value)} placeholder="Search transactions..." />
                 </InputGroup>
               </div>
               <div>
@@ -88,132 +115,113 @@ export default function Compose() {
                 {composeCurrentSelection === "executed" && <span className="text-zinc-500 ml-2 text-xs">{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</span>}
               </div>
             </div>
-          </div>
-          <Link href={`/compose/schedule`} aria-hidden="true">
-            <Button type="button" className="relative top-0 right-0 cursor-pointer" outline>Schedule Transaction</Button>
-          </Link>
-        </div>
-        <ul className="mt-10">
-          {composeCurrentSelection === "executed" && executedTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => composeCurrentSearchTerm == "" || (element.id.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.operation.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.owner.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()))).map((transaction, index) => (
-            <li key={index + "_" + transaction.id + "_" + transaction.operation}>
-              <Divider soft={index > 0} />
-              <div className="flex items-center justify-between">
-                <div className="flex gap-6 py-3">
-                  <div className="w-32 shrink-0">
-                    <Link href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`} aria-hidden="true">
-                      <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
-                    </Link>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="text-base/6 font-semibold">
-                      <Link href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`}>{transaction.id}</Link>
+            <ul className="space-y-4">
+              {composeCurrentSelection === "executed" && executedTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => composeCurrentSearchTerm == "" || (element.id.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.operation.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.owner.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()))).map((transaction, index) => {
+                return (
+                  <li key={index + "_" + transaction.id + "_" + transaction.operation} className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden p-4">
+                    <div className="flex flex-wrap items-center gap-4 sm:flex-nowrap">
+                      <div className="flex-shrink-0">
+                        <Badge color={transaction.status === "Confirmed" ? "lime" : "red"}>
+                          {transaction.status}
+                        </Badge>
+                      </div>
+                      <div className="flex-grow">
+                        <div className="text-base font-semibold">
+                          {transaction.id}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          Block: {transaction.block}
+                        </div>
+                        <div className="text-xs text-zinc-600 mt-1">
+                          <Badge>{transaction.operation}</Badge>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs/6 text-zinc-500">
-                      Block: {transaction.block}
+                  </li>
+                );
+              })}
+              {composeCurrentSelection === "scheduled" && scheduledTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => composeCurrentSearchTerm == "" || (element.id.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.operation.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.owner.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()))).map((transaction, index) => {
+                return (
+                  <li key={index} className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden p-4">
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <div className="text-base font-semibold">
+                          {transaction.id}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          Deadline: {transaction.deadlineBlock}
+                        </div>
+                        <div className="text-xs text-zinc-600 mt-1">
+                          <Badge>{transaction.operation}</Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Badge className="max-sm:hidden" color={'lime'}>
+                          {"Scheduled"}
+                        </Badge>
+                        <Dropdown>
+                          <DropdownButton className="cursor-pointer" plain aria-label="More options">
+                            <EllipsisVerticalIcon />
+                          </DropdownButton>
+                          <DropdownMenu anchor="bottom end">
+                            <DropdownItem onClick={() => handleCancelTransaction(parseInt(transaction.deadlineBlock), index)}>{isProcessing ? "Canceling..." : "Cancel"}</DropdownItem>
+                          </DropdownMenu>
+                        </Dropdown>
+                      </div>
                     </div>
-                    <div className="text-xs/6 text-zinc-600">
-                      <Badge>{transaction.operation}</Badge>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Badge className="max-sm:hidden" color={transaction.status === 'Confirmed' ? 'lime' : 'red'}>
-                    {transaction.status}
-                  </Badge>
-                  <Dropdown>
-                    <DropdownButton className="cursor-pointer" plain aria-label="More options">
-                      <EllipsisVerticalIcon />
-                    </DropdownButton>
-                    <DropdownMenu anchor="bottom end">
-                      <DropdownItem href={`/compose/${transaction.id}_OP_${transaction.operation}/compose`}>View</DropdownItem>
-                    </DropdownMenu>
-                  </Dropdown>
-                </div>
-              </div>
-            </li>
-          ))}
-          {composeCurrentSelection === "scheduled" && scheduledTransactions.filter((transaction) => transaction.owner === signer.address).filter(element => composeCurrentSearchTerm == "" || (element.id.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.operation.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()) || element.owner.toLowerCase().includes(composeCurrentSearchTerm.toLowerCase()))).map((transaction, index) => (
-            <li key={transaction.id}>
-              <Divider soft={index > 0} />
-              <div className="flex items-center justify-between">
-                <div key={transaction.id} className="flex gap-6 py-3">
-                  <div className="w-32 shrink-0">
-                    <img className="size-10/12 rounded-lg shadow" src={"ideal/original-original.png"} alt="" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="text-base/6 font-semibold">
-                      {transaction.id}
-                    </div>
-                    <div className="text-xs/6 text-zinc-500">
-                      Deadline: {transaction.deadlineBlock}
-                    </div>
-                    <div className="text-xs/6 text-zinc-600">
-                      <Badge>{transaction.operation}</Badge>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Badge className="max-sm:hidden" color={'lime'}>
-                    {"Scheduled"}
-                  </Badge>
-                  <Dropdown>
-                    <DropdownButton className="cursor-pointer" plain aria-label="More options">
-                      <EllipsisVerticalIcon />
-                    </DropdownButton>
-                    <DropdownMenu anchor="bottom end">
-                      <DropdownItem onClick={() => handleCancelTransaction(parseInt(transaction.deadlineBlock), index)}>{isProcessing ? "Canceling..." : "Cancel"}</DropdownItem>
-                    </DropdownMenu>
-                  </Dropdown>
-                </div>
-              </div>
-              {lastMessage?.index === index &&
-                <div className={`border-l-4 ${lastMessage.type === "error" ? "border-rose-400 bg-rose-50 p-4" : "border-yellow-400 bg-yellow-50 p-4"}`}>
-                  <div className="flex">
+                    {lastMessage?.index === index && (
+                      <div className="mt-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            {lastMessage?.type === "error" ? <XCircleIcon aria-hidden="true" className="h-5 w-5 text-rose-400" /> : <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />}
+                          </div>
+                          <div className="ml-3">
+                            <h3 className={`text-sm font-medium ${lastMessage?.type === "error" ? "text-rose-600 dark:text-rose-400" : "text-yellow-600 dark:text-yellow-400"}`}>{lastMessage?.message}</h3>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+              {composeCurrentSelection === "executed" && !executedTransactions.filter((transaction) => transaction.owner === signer.address).length &&
+                <div className="mt-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden p-6">
+                  <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      {lastMessage?.type === "error" ? <XCircleIcon aria-hidden="true" className="h-5 w-5 text-rose-400" /> :  <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />}
+                      <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />
                     </div>
                     <div className="ml-3">
-                      <h3 className={`text-sm font-medium ${lastMessage?.type === "error" ? "text-rose-800" : "text-yellow-700"}`}>{lastMessage?.message}</h3>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        You have no executed transactions.{' '}
+                        <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-zinc-700 dark:text-zinc-300 underline hover:text-zinc-600">
+                          Schedule a new transaction.
+                        </Link>
+                      </p>
                     </div>
                   </div>
-                </div>}
-            </li>
-          ))}
-          {composeCurrentSelection === "executed" && !executedTransactions.filter((transaction) => transaction.owner === signer.address).length &&
-            <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    You have no executed transactions.{' '}
-                    <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-yellow-700 underline hover:text-yellow-600">
-                      Schedule a new transaction.
-                    </Link>
-                  </p>
+              }
+              {composeCurrentSelection === "scheduled" && !scheduledTransactions.filter((transaction) => transaction.owner === signer.address).length &&
+                <div className="mt-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        You have no upcoming transactions scheduled.{' '}
+                        <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-zinc-700 dark:text-zinc-300 underline hover:text-zinc-600">
+                          Schedule a new transaction.
+                        </Link>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>}
-          {composeCurrentSelection === "scheduled" && !scheduledTransactions.filter((transaction) => transaction.owner === signer.address).length &&
-            <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <ExclamationTriangleIcon aria-hidden="true" className="h-5 w-5 text-yellow-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    You have no up coming transactions scheduled.{' '}
-                    <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-yellow-700 underline hover:text-yellow-600">
-                      Schedule a new transaction.
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </div>}
-        </ul>
-      </> : <div className="flex items-center justify-center pt-20">
-        <Heading>Please connect your wallet <ConnectWallet buttonOnly={true} /></Heading>
+              }
+            </ul>
+          </div>
+        </div>
       </div>
-  )
+    </main>
+  );
 }

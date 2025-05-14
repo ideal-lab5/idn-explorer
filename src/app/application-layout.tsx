@@ -37,7 +37,9 @@ import {
   QuestionMarkCircleIcon,
   SparklesIcon,
   ClockIcon,
-  CubeIcon
+  CubeIcon,
+  BoltIcon,
+  ChartBarIcon
 } from '@heroicons/react/20/solid'
 import { usePathname } from 'next/navigation'
 import { ConnectedWalletProvider } from "@/components/contexts/connectedWalletContext";
@@ -77,16 +79,31 @@ export function ApplicationLayout({
               </Dropdown>
             </SidebarHeader>
             <SidebarBody>
+
+            <SidebarSection>
+                <SidebarHeading>Randomness</SidebarHeading>
+                <SidebarItem href="/subscriptions/dashboard" current={pathname === '/' || pathname === '/subscriptions/dashboard'}>
+                  <ChartBarIcon />
+                  <SidebarLabel>Delivery Monitor</SidebarLabel>
+                </SidebarItem>
+                <SidebarItem href="/subscriptions" current={pathname === '/subscriptions' || (pathname.startsWith('/subscriptions/') && pathname !== '/subscriptions/dashboard')}>
+                  <BoltIcon />
+                  <SidebarLabel>My Subscriptions</SidebarLabel>
+                </SidebarItem>
+              </SidebarSection>
+
               <SidebarSection>
-                <SidebarItem href="/" current={pathname === '/'}>
+                <SidebarHeading>Timelock</SidebarHeading>
+                <SidebarItem href="/network-activity" current={pathname === '/network-activity'}>
                   <SparklesIcon />
-                  <SidebarLabel>Explore</SidebarLabel>
+                  <SidebarLabel>Activity Hub</SidebarLabel>
                 </SidebarItem>
                 <SidebarItem href="/compose" current={pathname.startsWith('/compose')}>
                   <ClockIcon />
-                  <SidebarLabel>Compose</SidebarLabel>
+                  <SidebarLabel>My Transactions</SidebarLabel>
                 </SidebarItem>
               </SidebarSection>
+              
               <SidebarSection className="max-lg:hidden">
                 <SidebarHeading>Status</SidebarHeading>
                 <SidebarItem>

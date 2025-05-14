@@ -17,19 +17,15 @@
 'use client'
 
 import { Button } from '@/components/button'
-import { Field, Label, Fieldset } from '@/components/fieldset'
-import { Text } from '@/components/text'
 import { Badge } from '@/components/badge'
 import { Link } from '@/components/link'
 import { Input } from '@/components/input'
-import { Heading, Subheading } from '@/components/heading'
-import { ChevronDoubleLeftIcon } from '@heroicons/react/16/solid'
+import { ArrowLeftIcon, ArrowPathIcon, XCircleIcon } from '@heroicons/react/20/solid'
 import { DynamicExtrinsicForm } from '@/components/timelock/dynamicExtrinsicForm'
 import { useConnectedWallet } from '@/components/contexts/connectedWalletContext'
 import { ConnectWallet } from '@/components/timelock/connectWallet'
 import { useState } from 'react'
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
-import { XCircleIcon } from '@heroicons/react/20/solid'
 import { useRouter } from 'next/navigation'
 import { explorerClient } from '@/lib/explorer-client'
 
@@ -60,7 +56,7 @@ export default function ScheduleTransaction() {
     if (extrinsicData) {
       setLastError(null);
       try {
-        await explorerClient.scheduleTransaction(signer, extrinsicData);
+        await explorerClient?.scheduleTransaction(signer, extrinsicData);
         router.push(`/compose`)
       } catch (error: any) {
         setLastError(error.message);
@@ -70,71 +66,108 @@ export default function ScheduleTransaction() {
     setIsProcessing(false);
   }
 
-  return (
-    signer && isConnected ?
-      <>
-        <div className="max-lg:hidden">
-          <Link href={"/compose"} className="inline-flex items-center gap-2 text-sm/6 text-zinc-500 dark:text-zinc-400">
-            <ChevronDoubleLeftIcon className="size-4 fill-zinc-400 dark:fill-zinc-500" />
-            {"Back to Compose"}
-          </Link>
-        </div>
-        <div className="mt-4 lg:mt-8">
-          <div className="flex items-center gap-4">
-            <Heading>New Delayed Transaction</Heading>
-            <Badge color={"lime"}>{"New"}</Badge>
+  if (!signer || !isConnected) {
+    return (
+      <main className="flex-1 w-full">
+        <div className="w-full px-8 py-8 flex items-center justify-center">
+          <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden p-8 text-center">
+            <h2 className="text-xl font-semibold mb-4">Please connect your wallet to schedule transactions</h2>
+            <ConnectWallet buttonOnly={true} />
           </div>
         </div>
-        <div className="mt-6 relative">
-          <Fieldset>
-            <section className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Subheading>Future Block</Subheading>
-                <Text>Specify the future block number at which you want the transaction to be executed.</Text>
-              </div>
-              <div>
-                <Field>
-                  <Label>Block</Label>
-                  <Input type='number' name="block" value={block} onChange={e => setBlock(parseInt(e.target.value))} placeholder="Future Block Number" autoFocus />
-                </Field>
-              </div>
-              <div className="space-y-1">
-                <Subheading>Pallet / Extrinsic / Arguments</Subheading>
-                <Text>Select the pallet, extrinsic, and provide all necessary arguments to compose your delayed transaction.</Text>
-              </div>
-              <div>
-                <DynamicExtrinsicForm setExtrinsicData={setExtrinsicData} block={block} />
-              </div>
-            </section>
+      </main>
+    );
+  }
 
-            <section className="grid gap-x-8 gap-y-2 sm:grid-cols-2 mt-5 mb-5">
-              <div className="space-y-1"></div>
-              <Button disabled={extrinsicData === null || isProcessing}
-                className="relative top-0 right-0 cursor-pointer"
-                type="button" onClick={() => handleScheduleTransaction()}>
-                {isProcessing ? "Processing..." : "Schedule Tx"}
+  return (
+    <main className="flex-1 w-full">
+      <div className="w-full px-8 py-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center mb-6">
+            <Link href="/compose" className="mr-4">
+              <Button className="p-2 rounded-full">
+                <ArrowLeftIcon className="h-4 w-4" />
               </Button>
-            </section>
-          </Fieldset>
-          {lastError &&
-            <div className="border-l-4 border-rose-400 bg-rose-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <XCircleIcon aria-hidden="true" className="h-5 w-5 text-rose-400" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-rose-800">There was an error with your submission</h3>
-                  <div className="mt-2 text-sm text-rose-700">
-                    <ul className="list-disc space-y-1 pl-5">
-                      <li>{lastError}</li>
-                    </ul>
+            </Link>
+            <h1 className="text-3xl font-bold">Schedule New Transaction <Badge color="lime">New</Badge></h1>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+            <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800">
+              <h2 className="text-xl font-semibold">Transaction Details</h2>
+              <p className="text-sm text-zinc-500">
+                Configure when and how your transaction will be executed
+              </p>
+            </div>
+            
+            <div className="px-6 py-5 space-y-4">
+              <div className="space-y-2">
+                <label 
+                  htmlFor="block" 
+                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                >
+                  Future Block
+                </label>
+                <Input 
+                  id="block" 
+                  name="block" 
+                  type="number"
+                  value={block} 
+                  onChange={e => setBlock(parseInt(e.target.value))} 
+                  placeholder="Future Block Number" 
+                  autoFocus 
+                />
+                <p className="text-sm text-zinc-500">
+                  Specify the future block number at which you want the transaction to be executed
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label 
+                  htmlFor="extrinsic" 
+                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                >
+                  Pallet / Extrinsic / Arguments
+                </label>
+                <DynamicExtrinsicForm setExtrinsicData={setExtrinsicData} block={block} />
+                <p className="text-sm text-zinc-500">
+                  Select the pallet, extrinsic, and provide all necessary arguments
+                </p>
+              </div>
+
+              {lastError && (
+                <div className="mt-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-lg p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <XCircleIcon aria-hidden="true" className="h-5 w-5 text-red-400" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800 dark:text-red-400">There was an error with your submission</h3>
+                      <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                        <p>{lastError}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>}
-        </div >
-      </> : <div className="flex items-center justify-center pt-20">
-        <Heading>Please connect your wallet <ConnectWallet buttonOnly={true} /></Heading>
+              )}
+            </div>
+            
+            <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-2">
+              <Link href="/compose">
+                <Button type="button">Cancel</Button>
+              </Link>
+              <Button 
+                disabled={extrinsicData === null || isProcessing}
+                type="button" 
+                onClick={() => handleScheduleTransaction()}
+              >
+                {isProcessing && <ArrowPathIcon className="mr-2 h-4 w-4 animate-spin" />}
+                {isProcessing ? "Processing..." : "Schedule Transaction"}
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
+    </main>
   )
 }
