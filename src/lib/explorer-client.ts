@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { ExplorerService } from "@/services/ExplorerService";
 import type { IExplorerService } from "@/services/IExplorerService";
 import { container } from './di-container';
 

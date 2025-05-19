@@ -165,7 +165,7 @@ export default function NetworkActivityPage() {
           </TableHead>
           <TableBody>
             {executedTransactions.filter(element => (delayedOnly && element.delayedTx) || !delayedOnly).filter(element => searchTermExecuted == "" || (element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.operation.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase()))).slice(executedTxPage * PAGE_SIZE, (executedTxPage + 1) * PAGE_SIZE).map((transaction, index) => (
-              <TableRow key={index + "_" + transaction.id + "_" + transaction.operation} href={`/compose/${transaction.id}_OP_${transaction.operation}`} title={`Transaction #${transaction.id}`}>
+              <TableRow key={index + "_" + transaction.id + "_" + transaction.operation} href={`/timelock/${transaction.id}_OP_${transaction.operation}`} title={`Transaction #${transaction.id}`}>
                 <TableCell>{formatNumber(transaction.block)}</TableCell>
                 <TableCell className="text-zinc-500">{transaction.id}</TableCell>
                 <TableCell>{transaction.owner}</TableCell>

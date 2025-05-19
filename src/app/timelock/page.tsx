@@ -26,7 +26,7 @@ import { Link } from '@/components/link'
 import { Select } from '@/components/select'
 import { EllipsisVerticalIcon, MagnifyingGlassIcon } from '@heroicons/react/16/solid'
 import { NUMBER_BLOCKS_EXECUTED, useConnectedWallet } from '@/components/contexts/connectedWalletContext'
-import { ConnectWallet } from '@/components/timelock/connectWallet'
+import { ConnectWallet } from '@/components/idn/connectWallet'
 import { useState } from 'react'
 import { ExclamationTriangleIcon, XCircleIcon } from '@heroicons/react/20/solid'
 import { explorerClient } from '@/lib/explorer-client';
@@ -94,7 +94,7 @@ export default function Compose() {
                   View and manage your scheduled and executed transactions
                 </p>
               </div>
-              <Link href={`/compose/schedule`} aria-hidden="true">
+              <Link href={`/timelock/schedule`} aria-hidden="true">
                 <Button type="button" className="cursor-pointer" outline>Schedule Transaction</Button>
               </Link>
             </div>
@@ -193,7 +193,7 @@ export default function Compose() {
                     <div className="ml-3">
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">
                         You have no executed transactions.{' '}
-                        <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-zinc-700 dark:text-zinc-300 underline hover:text-zinc-600">
+                        <Link href={`/timelock/schedule`} aria-hidden="true" className="font-medium text-zinc-700 dark:text-zinc-300 underline hover:text-zinc-600">
                           Schedule a new transaction.
                         </Link>
                       </p>
@@ -210,7 +210,7 @@ export default function Compose() {
                     <div className="ml-3">
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">
                         You have no upcoming transactions scheduled.{' '}
-                        <Link href={`/compose/schedule`} aria-hidden="true" className="font-medium text-zinc-700 dark:text-zinc-300 underline hover:text-zinc-600">
+                        <Link href={`/timelock/schedule`} aria-hidden="true" className="font-medium text-zinc-700 dark:text-zinc-300 underline hover:text-zinc-600">
                           Schedule a new transaction.
                         </Link>
                       </p>

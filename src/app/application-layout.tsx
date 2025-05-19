@@ -16,7 +16,7 @@
 
 'use client'
 import { Avatar } from '@/components/avatar'
-import { BlockHeaders } from '@/components/timelock/latestBlocks'
+import { BlockHeaders } from '@/components/idn/latestBlocks'
 import {
   Dropdown,
   DropdownButton,
@@ -43,7 +43,7 @@ import {
 } from '@heroicons/react/20/solid'
 import { usePathname } from 'next/navigation'
 import { ConnectedWalletProvider } from "@/components/contexts/connectedWalletContext";
-import { ConnectWallet, AccountDropdownMenu } from "@/components/timelock/connectWallet";
+import { ConnectWallet, AccountDropdownMenu } from "@/components/idn/connectWallet";
 
 export function ApplicationLayout({
   children,
@@ -98,7 +98,7 @@ export function ApplicationLayout({
                   <SparklesIcon />
                   <SidebarLabel>Activity Hub</SidebarLabel>
                 </SidebarItem>
-                <SidebarItem href="/compose" current={pathname.startsWith('/compose')}>
+                <SidebarItem href="/timelock" current={pathname.startsWith('/timelock')}>
                   <ClockIcon />
                   <SidebarLabel>My Transactions</SidebarLabel>
                 </SidebarItem>

@@ -21,9 +21,9 @@ import { Badge } from '@/components/badge'
 import { Link } from '@/components/link'
 import { Input } from '@/components/input'
 import { ArrowLeftIcon, ArrowPathIcon, XCircleIcon } from '@heroicons/react/20/solid'
-import { DynamicExtrinsicForm } from '@/components/timelock/dynamicExtrinsicForm'
+import { DynamicExtrinsicForm } from '@/components/idn/dynamicExtrinsicForm'
 import { useConnectedWallet } from '@/components/contexts/connectedWalletContext'
-import { ConnectWallet } from '@/components/timelock/connectWallet'
+import { ConnectWallet } from '@/components/idn/connectWallet'
 import { useState } from 'react'
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails'
 import { useRouter } from 'next/navigation'
@@ -57,7 +57,7 @@ export default function ScheduleTransaction() {
       setLastError(null);
       try {
         await explorerClient?.scheduleTransaction(signer, extrinsicData);
-        router.push(`/compose`)
+        router.push(`/timelock`)
       } catch (error: any) {
         setLastError(error.message);
       }
@@ -84,7 +84,7 @@ export default function ScheduleTransaction() {
       <div className="w-full px-8 py-8">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center mb-6">
-            <Link href="/compose" className="mr-4">
+            <Link href="/timelock" className="mr-4">
               <Button className="p-2 rounded-full">
                 <ArrowLeftIcon className="h-4 w-4" />
               </Button>
@@ -153,7 +153,7 @@ export default function ScheduleTransaction() {
             </div>
             
             <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-2">
-              <Link href="/compose">
+              <Link href="/timelock">
                 <Button type="button">Cancel</Button>
               </Link>
               <Button 

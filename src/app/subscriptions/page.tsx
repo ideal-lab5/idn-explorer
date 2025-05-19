@@ -3,13 +3,36 @@
 import { Button } from "@/components/button"
 import Link from "next/link"
 import { PlusIcon, BoltIcon } from "@heroicons/react/20/solid"
-import { dummySubscriptions } from "./[id]/data"
+import { useSubscription } from "@/components/contexts/subscriptionContext"
+import { domainToUiSubscription } from "@/utils/subscriptionMapper"
 import { useConnectedWallet } from "@/components/contexts/connectedWalletContext"
-import { ConnectWallet } from "@/components/timelock/connectWallet"
+import { ConnectWallet } from "@/components/idn/connectWallet"
+import React, { useState, useEffect } from "react"
+import { UiSubscription } from "./types/UiSubscription"
 
 export default function SubscriptionsPage() {
-  const { signer, isConnected } = useConnectedWallet();
+  const { subscriptions, refreshSubscriptions, loading, error } = useSubscription();
+  const { signer, signerAddress, isConnected } = useConnectedWallet();
+  const [uiSubscriptions, setUiSubscriptions] = useState<UiSubscription[]>([]);
   
+  // Convert domain subscriptions to UI subscriptions when dependencies change
+  useEffect(() => {
+    console.log('subscriptions changed:', subscriptions);
+    if (subscriptions.length > 0) {
+      console.log(`Mapping ${subscriptions.length} domain subscriptions to UI model`);
+      const mappedSubscriptions = subscriptions.map(domainToUiSubscription);
+      setUiSubscriptions(mappedSubscriptions);
+    } else {
+      setUiSubscriptions([]);
+    }
+  }, [subscriptions]);
+
+  useEffect(() => {
+    console.log('SubscriptionProvider effect triggered with signerAddress:', signerAddress);
+    if (!signerAddress) return;
+    refreshSubscriptions(signerAddress);
+  }, [signerAddress]);
+
   if (!signer || !isConnected) {
     return (
       <main className="flex-1 w-full">
@@ -37,7 +60,15 @@ export default function SubscriptionsPage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {dummySubscriptions.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full py-12 text-center">
+                <p className="text-xl text-zinc-500 mb-4">Loading subscriptions...</p>
+              </div>
+            ) : error ? (
+              <div className="col-span-full py-12 text-center">
+                <p className="text-xl text-red-500 mb-4">Error loading subscriptions: {error}</p>
+              </div>
+            ) : uiSubscriptions.length === 0 ? (
               <div className="col-span-full py-12 text-center">
                 <BoltIcon className="h-16 w-16 text-zinc-300 mx-auto mb-4" />
                 <p className="text-xl text-zinc-500 mb-4">No subscriptions found</p>
@@ -46,7 +77,7 @@ export default function SubscriptionsPage() {
                 </Link>
               </div>
             ) : (
-              dummySubscriptions.map((sub) => (
+              uiSubscriptions.map((sub) => (
                 <div key={sub.id} className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-2">

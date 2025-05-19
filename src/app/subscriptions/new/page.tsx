@@ -5,36 +5,59 @@ import { Input } from "@/components/input"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeftIcon, ArrowPathIcon } from "@heroicons/react/20/solid"
+import { ArrowLeftIcon, ArrowPathIcon, ExclamationCircleIcon } from "@heroicons/react/20/solid"
 import { useConnectedWallet } from "@/components/contexts/connectedWalletContext"
-import { ConnectWallet } from "@/components/timelock/connectWallet"
+import { useSubscription } from "@/components/contexts/subscriptionContext"
+import { ConnectWallet } from "@/components/idn/connectWallet"
 
 export default function NewSubscriptionPage() {
-  // Simple feedback state
-  const [feedback, setFeedback] = useState<string | null>(null)
+  // State for form feedback and loading
+  const [feedback, setFeedback] = useState<{message: string, type: 'success' | 'error'} | null>(null)
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const { signer, isConnected } = useConnectedWallet();
+  const { createSubscription } = useSubscription();
 
   const handleCreateSubscription = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
+    setFeedback(null)
 
-    const formData = new FormData(e.currentTarget)
-    const name = formData.get("name") as string
-    const parachainId = parseInt(formData.get("parachainId") as string)
-    const duration = parseInt(formData.get("duration") as string)
-    const xcmLocation = formData.get("xcmLocation") as string
-    const frequency = parseInt(formData.get("frequency") as string)
-
-    // Simulate subscription creation
-    setTimeout(() => {
+    try {
+      const formData = new FormData(e.currentTarget)
+      const name = formData.get("name") as string
+      const parachainId = formData.get("parachainId") as string
+      const amount = formData.get("duration") as string
+      const target = formData.get("xcmLocation") as string || `{v2{parents:1,interior:{x1:{parachain:${parachainId}}}}}` 
+      const frequency = formData.get("frequency") as string
+      
+      // Create the subscription using the service
+      await createSubscription(
+        signer,
+        parseInt(amount),
+        target,
+        parseInt(frequency), 
+        name // Using name as metadata
+      )
+      
+      setFeedback({
+        message: `Subscription "${name}" created successfully`,
+        type: 'success'
+      })
+      
+      // Navigate back to subscriptions page after short delay
+      setTimeout(() => {
+        router.push("/subscriptions")
+      }, 1500)
+    } catch (err) {
+      console.error('Failed to create subscription:', err)
+      setFeedback({
+        message: `Failed to create subscription: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        type: 'error'
+      })
+    } finally {
       setLoading(false)
-      // Show success message in console
-      console.log(`Subscription "${name}" created successfully`)
-      // In a real app, we would show a toast message
-      router.push("/subscriptions")
-    }, 1500)
+    }
   }
 
   if (!signer || !isConnected) {
@@ -73,6 +96,14 @@ export default function NewSubscriptionPage() {
                 </div>
                 
                 <div className="px-6 py-5 space-y-4">
+                  {feedback && (
+                    <div className={`p-4 rounded-lg ${feedback.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>
+                      <div className="flex">
+                        {feedback.type === 'error' && <ExclamationCircleIcon className="h-5 w-5 mr-2 flex-shrink-0" />}
+                        {feedback.message}
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <label 
                       htmlFor="name" 

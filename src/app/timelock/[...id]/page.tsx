@@ -45,7 +45,7 @@ export default function ExecutedTransaction({ params }: { readonly params: { rea
         <div className="w-full px-8 py-8">
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center mb-6">
-              <Link href={params.id[1] === "compose" ? "/compose" : "/network-activity"} className="mr-4">
+              <Link href={params.id[1] === "compose" ? "/timelock" : "/network-activity"} className="mr-4">
                 <Button className="p-2 rounded-full">
                   <ArrowLeftIcon className="h-4 w-4" />
                 </Button>

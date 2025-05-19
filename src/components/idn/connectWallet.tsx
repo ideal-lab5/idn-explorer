@@ -89,7 +89,16 @@ export const ConnectWallet: React.FC<{ buttonOnly: boolean }> = ({ buttonOnly = 
         const injector = await ext.web3FromAddress(address);
         const accountDetails = { signer: injector.signer, address };
         setSigner(accountDetails);
-        setSignerBalance(await explorerClient.getFreeBalance(accountDetails));
+        
+        // Check if explorerClient is available before calling getFreeBalance
+        if (explorerClient) {
+            const balance = await explorerClient.getFreeBalance(accountDetails);
+            setSignerBalance(balance);
+        } else {
+            console.error('Explorer client is not initialized');
+            setSignerBalance('0'); // Use string '0' instead of number 0
+        }
+        
         setSignerAddress(address);
         setIsConnected(true);
         setShowWalletSelection(false);

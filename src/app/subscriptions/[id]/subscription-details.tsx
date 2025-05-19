@@ -10,31 +10,104 @@ import {
 } from "@heroicons/react/20/solid"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
-import type { DummySubscription } from "./data"
+import { useState, useEffect } from "react"
+import type { UiSubscription } from "../types/UiSubscription"
 import { useConnectedWallet } from "@/components/contexts/connectedWalletContext"
-import { ConnectWallet } from "@/components/timelock/connectWallet"
+import { useSubscription } from "@/components/contexts/subscriptionContext"
+import { domainToUiSubscription } from "@/utils/subscriptionMapper"
+import { ConnectWallet } from "@/components/idn/connectWallet"
 
 interface SubscriptionDetailsProps {
   id: string;
-  subscription: DummySubscription;
+  subscription: UiSubscription;
 }
 
-export function SubscriptionDetails({ id, subscription }: SubscriptionDetailsProps) {
+export function SubscriptionDetails({ id, subscription: initialData }: SubscriptionDetailsProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [feedback, setFeedback] = useState<{message: string, visible: boolean} | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [subscription, setSubscription] = useState<UiSubscription>(initialData)
+  const [feedback, setFeedback] = useState<{message: string, visible: boolean, type: 'success' | 'error'} | null>(null)
   const router = useRouter()
   const { signer, isConnected } = useConnectedWallet()
-
-  const handleAction = (action: "pause" | "resume" | "cancel") => {
-    // In a real application, this would call an API
-    setTimeout(() => {
-      if (action === "cancel") {
-        router.push("/subscriptions")
-      } else {
-        router.refresh()
+  const { getSubscription, pauseSubscription, reactivateSubscription, killSubscription } = useSubscription()
+  
+  // Fetch the latest subscription data from the service
+  useEffect(() => {
+    async function fetchSubscription() {
+      if (!isConnected) return
+      
+      try {
+        setIsLoading(true)
+        setError(null)
+        const domainSubscription = await getSubscription(id)
+        const uiSubscription = domainToUiSubscription(domainSubscription)
+        setSubscription(uiSubscription)
+      } catch (err) {
+        console.error('Failed to fetch subscription:', err)
+        setError('Failed to load subscription details')
+      } finally {
+        setIsLoading(false)
       }
-    }, 500)
+    }
+    
+    fetchSubscription()
+  }, [id, isConnected, getSubscription])
+
+  const handleAction = async (action: "pause" | "resume" | "cancel") => {
+    try {
+      setIsLoading(true)
+      setFeedback(null)
+      
+      if (action === "pause") {
+        await pauseSubscription(signer, id)
+        setFeedback({
+          message: 'Subscription paused successfully',
+          visible: true,
+          type: 'success'
+        })
+      } else if (action === "resume") {
+        await reactivateSubscription(signer, id)
+        setFeedback({
+          message: 'Subscription resumed successfully',
+          visible: true,
+          type: 'success'
+        })
+      } else if (action === "cancel") {
+        await killSubscription(signer, id)
+        setFeedback({
+          message: 'Subscription cancelled successfully',
+          visible: true,
+          type: 'success'
+        })
+        setTimeout(() => {
+          router.push("/subscriptions")
+        }, 1500)
+        return
+      }
+      
+      // Refresh the subscription data
+      const domainSubscription = await getSubscription(id)
+      const uiSubscription = domainToUiSubscription(domainSubscription)
+      setSubscription(uiSubscription)
+      
+      // Auto-hide feedback after 3 seconds
+      setTimeout(() => {
+        setFeedback(null)
+      }, 3000)
+    } catch (err) {
+      console.error(`Failed to ${action} subscription:`, err)
+      setFeedback({
+        message: `Failed to ${action} subscription: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        visible: true,
+        type: 'error'
+      })
+    } finally {
+      setIsLoading(false)
+      if (action === "cancel") {
+        setIsDialogOpen(false)
+      }
+    }
   }
 
   if (!signer || !isConnected) {
@@ -60,6 +133,48 @@ export function SubscriptionDetails({ id, subscription }: SubscriptionDetailsPro
     );
   }
   
+  if (isLoading && !subscription) {
+    return (
+      <div>
+        <div className="flex items-center mb-6">
+          <Link href="/subscriptions" className="mr-4">
+            <Button className="p-2 rounded-full">
+              <ArrowLeftIcon className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">Loading Subscription...</h1>
+        </div>
+        <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-8 text-center">
+          <p className="text-zinc-500">Loading subscription details...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div>
+        <div className="flex items-center mb-6">
+          <Link href="/subscriptions" className="mr-4">
+            <Button className="p-2 rounded-full">
+              <ArrowLeftIcon className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">Error</h1>
+        </div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-8 text-center">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div>
       <div className="flex items-center mb-6">
@@ -74,6 +189,12 @@ export function SubscriptionDetails({ id, subscription }: SubscriptionDetailsPro
         </div>
       </div>
 
+      {feedback && feedback.visible && (
+        <div className={`mb-4 p-4 rounded-lg ${feedback.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>
+          {feedback.message}
+        </div>
+      )}
+      
       <div className="grid gap-6">
         <div className="bg-white dark:bg-zinc-800 rounded-lg shadow overflow-hidden">
           <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800">
@@ -127,19 +248,22 @@ export function SubscriptionDetails({ id, subscription }: SubscriptionDetailsPro
             {subscription.status === "active" ? (
               <Button
                 onClick={() => handleAction("pause")}
+                disabled={isLoading}
               >
-                <PauseIcon className="h-4 w-4 mr-2" /> Pause Subscription
+                {isLoading ? "Processing..." : <><PauseIcon className="h-4 w-4 mr-2" /> Pause Subscription</>}
               </Button>
             ) : subscription.status === "paused" ? (
               <Button
                 onClick={() => handleAction("resume")}
+                disabled={isLoading}
               >
-                <PlayIcon className="h-4 w-4 mr-2" /> Resume Subscription
+                {isLoading ? "Processing..." : <><PlayIcon className="h-4 w-4 mr-2" /> Resume Subscription</>}
               </Button>
             ) : null}
             
             <Button
               onClick={() => setIsDialogOpen(true)}
+              disabled={isLoading}
             >
               <XMarkIcon className="h-4 w-4 mr-2" /> Cancel Subscription
             </Button>

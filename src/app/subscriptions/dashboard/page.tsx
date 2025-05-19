@@ -1,11 +1,14 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { 
   BoltIcon, 
   ClockIcon, 
   CreditCardIcon 
 } from "@heroicons/react/24/outline"
-import { dummySubscriptions } from "../[id]/data"
+import { useSubscription } from "@/components/contexts/subscriptionContext"
+import { domainToUiSubscription } from "@/utils/subscriptionMapper"
+import { UiSubscription } from "../types/UiSubscription"
 import {
   LineChart,
   Line,
@@ -36,10 +39,53 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function DashboardPage() {
-  // Calculate stats from dummy data
-  const activeSubscriptions = dummySubscriptions.filter(sub => sub.status === "active").length
-  const totalTokens = dummySubscriptions.reduce((sum, sub) => sum + (sub.duration - sub.remainingAmount), 0)
-  const avgDuration = Math.round(dummySubscriptions.reduce((sum, sub) => sum + sub.duration, 0) / dummySubscriptions.length)
+  // Use the subscription context to get data for all subscriptions
+  const { getAllSubscriptions } = useSubscription();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  
+  const [uiSubscriptions, setUiSubscriptions] = useState<UiSubscription[]>([]);
+  
+  // Fetch all subscriptions on component mount
+  useEffect(() => {
+    const fetchAllSubscriptions = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get all subscriptions for the dashboard
+        const allSubscriptions = await getAllSubscriptions();
+        
+        // Convert domain subscriptions to UI model
+        const convertedSubscriptions = allSubscriptions.map(sub => {
+          const uiSub = domainToUiSubscription(sub);
+          // Ensure all fields required by our interface exist
+          return {
+            ...uiSub,
+            // Add default values for any potentially missing fields
+            usageHistory: uiSub.usageHistory || []
+          } as UiSubscription;
+        });
+        
+        setUiSubscriptions(convertedSubscriptions);
+        console.log(`Dashboard loaded ${convertedSubscriptions.length} subscriptions`);
+      } catch (err: any) {
+        console.error('Failed to load dashboard data:', err);
+        setError(err?.message || 'Failed to load subscription data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAllSubscriptions();
+  }, [getAllSubscriptions]);
+  
+  // Calculate stats from real data
+  const activeSubscriptions = uiSubscriptions.filter((sub: UiSubscription) => sub.status === "active").length;
+  const totalTokens = uiSubscriptions.reduce((sum: number, sub: UiSubscription) => sum + (sub.duration - sub.remainingAmount), 0);
+  const avgDuration = uiSubscriptions.length > 0 ? 
+    Math.round(uiSubscriptions.reduce((sum: number, sub: UiSubscription) => sum + sub.duration, 0) / uiSubscriptions.length) : 0;
   
   return (
     <main className="flex-1 w-full">
@@ -176,14 +222,23 @@ export default function DashboardPage() {
               <div>Block</div>
               <div>Tokens</div>
             </div>
-            {dummySubscriptions.flatMap(sub => 
-              sub.usageHistory.map((usage, idx) => ({
+            {loading ? (
+              <div className="grid grid-cols-4 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700">
+                <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
+                <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
+                <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
+                <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
+              </div>
+            ) : error ? (
+              <div className="p-4 text-red-500">Error loading subscription data</div>
+            ) : uiSubscriptions.flatMap((sub: UiSubscription) => 
+              sub.usageHistory.map((usage: { date: string; blocks: number; tokens: number }) => ({
                 subscription: sub.name,
                 ...usage
-              }))
-            ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              })))
+            .sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 5)
-            .map((delivery, index) => (
+            .map((delivery: { subscription: string; date: string; blocks: number; tokens: number }, index: number) => (
               <div key={index} className="grid grid-cols-4 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700 last:border-0">
                 <div>{delivery.subscription}</div>
                 <div>{delivery.date}</div>

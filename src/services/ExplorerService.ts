@@ -14,19 +14,17 @@
  * limitations under the License.
  */
 
-import { inject, singleton } from "tsyringe";
+import { injectable, inject } from "tsyringe";
 import type { IExplorerService } from "./IExplorerService";
 import type { IPolkadotApiService } from "./IPolkadotApiService";
-import { cryptoWaitReady } from '@polkadot/util-crypto';
-import chainSpec from "../etf_spec/dev/etf_spec.json"
 import {SupportedCurve, Timelock} from "@ideallabs/timelock.js";
 import { Randomness } from "@/domain/Randomness";
 import { DelayedTransaction } from "@/domain/DelayedTransaction";
 import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
 import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
-import { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
+import { EventRecord } from '@polkadot/types/interfaces';
 
-@singleton()
+@injectable()
 export class ExplorerService implements IExplorerService {
   private tLockApi: Timelock | null = null;
   private featureScheduleTransaction: boolean = false;
@@ -63,12 +61,14 @@ export class ExplorerService implements IExplorerService {
       let nextBlock: number = blockNumber - i;
       try {
         const pulse = await polkadotApi.query.randomnessBeacon.pulses(nextBlock);
-        const pulseData = pulse.toHuman();
+        const pulseData = pulse.toHuman() as any;
         if (pulseData) {
+          // Use proper type assertion for the complex structure
+          const body = pulseData['body'] as any;
           const result = new Randomness(
             nextBlock,
-            pulseData['body']?.randomness || "",
-            pulseData['body']?.signature || ""
+            body?.randomness || "",
+            body?.signature || ""
           );
           if (result.randomness !== "") {
             listOfGeneratedRandomness.push(result);
@@ -161,7 +161,7 @@ export class ExplorerService implements IExplorerService {
           const { method, signer } = extrinsic;
 
           // Find events for this extrinsic
-          const relatedEvents = events.filter(({ phase }: EventRecord) =>
+          const relatedEvents = (events as any)?.filter(({ phase }: any) =>
             phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
           );
 
@@ -180,17 +180,19 @@ export class ExplorerService implements IExplorerService {
             const { event } = record;
             const operation = `${event.section}.${event.method}`;
 
+            const eventData = event.data.map((data: any, i: number) => ({
+              type: event.typeDef[i].type,
+              value: data.toString()
+            }));
+
             const executedTransaction = new ExecutedTransaction(
               blockNumber,
               `${blockNumber}-${index}`,
               signer?.toString() || 'Unsigned',
               operation,
               status,
-              event.data.map((data, i) => ({
-                type: event.typeDef[i].type,
-                value: data.toString()
-              })),
-              event.meta.docs.map(d => d.toString().trim()),
+              eventData,
+              event.meta.docs.map((d: any) => d.toString().trim()),
               operation === "scheduler.Scheduled"
             );
 
@@ -199,11 +201,10 @@ export class ExplorerService implements IExplorerService {
         });
 
         // Handle system events
-        events
-          .filter(({ phase }) => phase.isFinalization || phase.isInitialization)
-          .forEach((record: EventRecord, index: number) => {
+        (events as any)?.filter((phase: any) => phase.isFinalization || phase.isInitialization)
+          .forEach((record: any, index: number) => {
             const { event } = record;
-            const eventData = event.data.map((data, i) => ({
+            const eventData = event.data.map((data: any, i: number) => ({
               type: event.typeDef[i].type,
               value: data.toString()
             }));
@@ -216,7 +217,7 @@ export class ExplorerService implements IExplorerService {
               operation,
               'Confirmed',
               eventData,
-              event.meta.docs.map(d => d.toString().trim()),
+              event.meta.docs.map((d: any) => d.toString().trim()),
               operation === "scheduler.Dispatched" || this.looksLikeAddress(eventData[0]?.value)
             );
 
@@ -233,8 +234,13 @@ export class ExplorerService implements IExplorerService {
 
   async getFreeBalance(signer: any): Promise<string> {
     const polkadotApi = await this.polkadotApiService.getApi();
-    const { data: balance } = await polkadotApi.query.system.account(signer.address);
-    return balance.free.toHuman();
+    // Get account info and properly handle typing
+    const accountInfo: any = await polkadotApi.query.system.account(signer.address);
+    // Access data and free balance with proper type casting
+    const balance = (accountInfo as any).data || accountInfo;
+    const freeBalance = (balance as any).free;
+    
+    return freeBalance?.toHuman() || '0';
   }
 
   async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {
