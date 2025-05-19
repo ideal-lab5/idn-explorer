@@ -22,21 +22,19 @@ import { IChainStateService } from '../services/IChainStateService';
 import { ChainStateService } from '../services/ChainStateService';
 import { IExplorerService } from '../services/IExplorerService';
 import { ExplorerService } from '../services/ExplorerService';
+import { ISubscriptionService } from '../services/ISubscriptionService';
+import { MockSubscriptionService } from '../services/MockSubscriptionService';
 
 // Only register services if we're in a browser environment
 if (typeof window !== 'undefined') {
   // Register services
-  container.register<IPolkadotApiService>('IPolkadotApiService', {
-    useClass: PolkadotApiService
-  });
+  container.registerSingleton<IPolkadotApiService>('IPolkadotApiService', PolkadotApiService);
 
-  container.register<IChainStateService>('IChainStateService', {
-    useClass: ChainStateService
-  });
+  container.registerSingleton<IChainStateService>('IChainStateService', ChainStateService);
 
-  container.register<IExplorerService>('IExplorerService', {
-    useClass: ExplorerService
-  });
+  container.registerSingleton<IExplorerService>('IExplorerService', ExplorerService);
+
+  container.registerSingleton<ISubscriptionService>('ISubscriptionService', MockSubscriptionService);
 }
 
 export { container };

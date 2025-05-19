@@ -15,8 +15,8 @@
  */
 
 import { ISubscriptionService, UpdateSubscriptionParams } from './ISubscriptionService';
-import { Subscription, SubscriptionState, SubscriptionDetails, PulseFilter } from '../domain/Subscription';
-
+import { Subscription, SubscriptionState, PulseFilter } from '../domain/Subscription';
+import { injectable } from 'tsyringe';
 /**
  * Mock implementation of the subscription service.
  * This class provides a working implementation that stores subscriptions in memory,
@@ -28,9 +28,75 @@ import { Subscription, SubscriptionState, SubscriptionDetails, PulseFilter } fro
  * - Manages subscription lifecycle
  * - Simulates both extrinsic and RPC calls to the blockchain
  */
+@injectable()
 export class MockSubscriptionService implements ISubscriptionService {
     /** In-memory storage of subscriptions, keyed by subscription ID */
     private subscriptions: Map<string, Subscription> = new Map();
+    
+    constructor() {
+        // Initialize with sample subscriptions for demo purposes
+        this.initializeSampleSubscriptions();
+    }
+    
+    /**
+     * Initialize sample subscription data for demonstration purposes
+     */
+    private initializeSampleSubscriptions() {
+        const mockAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY';
+        
+        // Sample subscription 1: Active parachain randomness service
+        const sub1 = Subscription.create(
+            mockAddress,
+            100000,
+            'para(2004)/pallet-randomness/0x1234567890abcdef',
+            100,
+            'Parachain Randomness',
+            undefined,
+            2.5
+        );
+        sub1.creditsConsumed = 85000;
+        sub1.creditsLeft = 15000;
+        // Force a unique ID
+        sub1.id = 'sub-1-parachain-randomness';
+        
+        // Sample subscription 2: Paused VRF service
+        const sub2 = Subscription.create(
+            mockAddress,
+            50000,
+            'para(2012)/pallet-vrf/0xabcdef1234567890',
+            50,
+            'VRF Service',
+            undefined,
+            1.8
+        );
+        sub2.creditsConsumed = 41500;
+        sub2.creditsLeft = 8500;
+        sub2.state = SubscriptionState.Paused;
+        // Force a unique ID
+        sub2.id = 'sub-2-vrf-service';
+        
+        // Sample subscription 3: Active smart contract randomness
+        const sub3 = Subscription.create(
+            mockAddress,
+            200000,
+            'para(2008)/pallet-contracts/0x9876543210fedcba',
+            200,
+            'Smart Contract RNG',
+            undefined,
+            3.2
+        );
+        sub3.creditsConsumed = 175000;
+        sub3.creditsLeft = 25000;
+        // Force a unique ID
+        sub3.id = 'sub-3-smart-contract-rng';
+        
+        // Add the sample subscriptions to our map
+        this.subscriptions.set(sub1.id, sub1);
+        this.subscriptions.set(sub2.id, sub2);
+        this.subscriptions.set(sub3.id, sub3);
+        
+        console.log(`Initialized ${this.subscriptions.size} sample subscriptions`);
+    }
 
     /**
      * Creates a new subscription with the given parameters.
@@ -176,19 +242,27 @@ export class MockSubscriptionService implements ISubscriptionService {
         return amount * baseRate;
     }
     
-
-    
-    // getSubscriptionInfo method has been removed - using runtime API's get_subscription instead
-    
     /**
      * Retrieves all subscriptions for a specific account.
+     * In this mock implementation, we return all subscriptions for easier testing/demo.
      * 
-     * @param accountId Account ID to fetch subscriptions for
-     * @returns Array of subscriptions owned by the account
+     * @param accountId Account ID to fetch subscriptions for (ignored in this mock)
+     * @returns Array of all sample subscriptions
      */
     async getSubscriptionsForAccount(accountId: string): Promise<Subscription[]> {
-        return Array.from(this.subscriptions.values())
-            .filter(sub => sub.details.subscriber === accountId);
+        // For demo/testing purposes, return all subscriptions without filtering
+        return Array.from(this.subscriptions.values());
+    }
+    
+    /**
+     * Retrieves all subscriptions in the system.
+     * Useful for dashboard and analytics views.
+     * 
+     * @returns Array of all subscriptions
+     */
+    async getAllSubscriptions(): Promise<Subscription[]> {
+        console.log(`Returning all ${this.subscriptions.size} subscriptions for dashboard`);
+        return Array.from(this.subscriptions.values());
     }
     
     /**

@@ -95,7 +95,6 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
             try {
                 unsubscribe = await chainStateService.subscribeToBlocks((blockNumber) => {
                     setLatestBlock(blockNumber);
-                    console.log("BLOCK", blockNumber);
                     // Update other state based on new blocks
                     if (signerAddress) {
                         chainStateService.getBalance(signerAddress)
@@ -107,13 +106,13 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                     Promise.all([
                         chainStateService.getSessionInfo(),
                         chainStateService.getEpochIndex(),
-                        explorerClient.getScheduledTransactions(),
-                        explorerClient.queryHistoricalEvents(
+                        explorerClient?.getScheduledTransactions(),
+                        explorerClient?.queryHistoricalEvents(
                             blockNumber > NUMBER_BLOCKS_EXECUTED ? 
                             blockNumber - NUMBER_BLOCKS_EXECUTED : 0, 
                             blockNumber
                         ),
-                        explorerClient.getRandomness(blockNumber, RAMDOMNESS_SAMPLE)
+                        explorerClient?.getRandomness(blockNumber, RAMDOMNESS_SAMPLE)
                     ]).then(([
                         sessionInfo,
                         epochIndex,
@@ -126,9 +125,9 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                         setEraProgress(sessionInfo.eraProgress);
                         setSessionsPerEra(sessionInfo.sessionsPerEra);
                         setEpochIndex(epochIndex);
-                        setScheduledTransactions(scheduled);
-                        setExecutedTransactions(executed);
-                        setGeneratedRandomness(randomness);
+                        setScheduledTransactions(scheduled || []);
+                        setExecutedTransactions(executed || []);
+                        setGeneratedRandomness(randomness || []);
                     }).catch(console.error);
                 });
             } catch (error) {
