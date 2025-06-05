@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import 'reflect-metadata'; // Required for tsyringe dependency injection
 import '@/styles/tailwind.css'
 import type { Metadata } from 'next'
 import type React from 'react'

@@ -138,4 +138,12 @@ export interface ISubscriptionService {
      * @returns Array of subscriptions owned by the account
      */
     getSubscriptionsForAccount(accountId: string): Promise<Subscription[]>;
+    
+    /**
+     * Retrieves all subscriptions in the system.
+     * Useful for dashboard and analytics views.
+     * 
+     * @returns Array of all subscriptions
+     */
+    getAllSubscriptions(): Promise<Subscription[]>;
 }

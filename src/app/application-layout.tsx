@@ -16,7 +16,7 @@
 
 'use client'
 import { Avatar } from '@/components/avatar'
-import { BlockHeaders } from '@/components/timelock/latestBlocks'
+import { BlockHeaders } from '@/components/idn/latestBlocks'
 import {
   Dropdown,
   DropdownButton,
@@ -37,11 +37,13 @@ import {
   QuestionMarkCircleIcon,
   SparklesIcon,
   ClockIcon,
-  CubeIcon
+  CubeIcon,
+  BoltIcon,
+  ChartBarIcon
 } from '@heroicons/react/20/solid'
 import { usePathname } from 'next/navigation'
 import { ConnectedWalletProvider } from "@/components/contexts/connectedWalletContext";
-import { ConnectWallet, AccountDropdownMenu } from "@/components/timelock/connectWallet";
+import { ConnectWallet, AccountDropdownMenu } from "@/components/idn/connectWallet";
 
 export function ApplicationLayout({
   children,
@@ -77,16 +79,31 @@ export function ApplicationLayout({
               </Dropdown>
             </SidebarHeader>
             <SidebarBody>
-              <SidebarSection>
-                <SidebarItem href="/" current={pathname === '/'}>
-                  <SparklesIcon />
-                  <SidebarLabel>Explore</SidebarLabel>
+
+            <SidebarSection>
+                <SidebarHeading>Randomness</SidebarHeading>
+                <SidebarItem href="/subscriptions/dashboard" current={pathname === '/' || pathname === '/subscriptions/dashboard'}>
+                  <ChartBarIcon />
+                  <SidebarLabel>Delivery Monitor</SidebarLabel>
                 </SidebarItem>
-                <SidebarItem href="/compose" current={pathname.startsWith('/compose')}>
-                  <ClockIcon />
-                  <SidebarLabel>Compose</SidebarLabel>
+                <SidebarItem href="/subscriptions" current={pathname === '/subscriptions' || (pathname.startsWith('/subscriptions/') && pathname !== '/subscriptions/dashboard')}>
+                  <BoltIcon />
+                  <SidebarLabel>My Subscriptions</SidebarLabel>
                 </SidebarItem>
               </SidebarSection>
+
+              <SidebarSection>
+                <SidebarHeading>Timelock</SidebarHeading>
+                <SidebarItem href="/network-activity" current={pathname === '/network-activity'}>
+                  <SparklesIcon />
+                  <SidebarLabel>Activity Hub</SidebarLabel>
+                </SidebarItem>
+                <SidebarItem href="/timelock" current={pathname.startsWith('/timelock')}>
+                  <ClockIcon />
+                  <SidebarLabel>My Transactions</SidebarLabel>
+                </SidebarItem>
+              </SidebarSection>
+              
               <SidebarSection className="max-lg:hidden">
                 <SidebarHeading>Status</SidebarHeading>
                 <SidebarItem>

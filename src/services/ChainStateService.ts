@@ -15,11 +15,11 @@
  */
 
 import { formatBalance } from '@polkadot/util';
-import { inject, singleton } from 'tsyringe';
+import { inject, injectable } from 'tsyringe';
 import type { IChainStateService, SessionInfo, BlockHeader } from './IChainStateService';
 import type { IPolkadotApiService } from './IPolkadotApiService';
 
-@singleton()
+@injectable()
 export class ChainStateService implements IChainStateService {
   constructor(
     @inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService
@@ -28,11 +28,16 @@ export class ChainStateService implements IChainStateService {
   async getBalance(address: string): Promise<string> {
     try {
       const api = await this.polkadotApiService.getApi();
-      const { data: balance } = await api.query.system.account(address);
-      return formatBalance(balance.free, { withUnit: true });
+      // Get account info and access balance directly
+      const accountInfo: any = await api.query.system.account(address);
+      // Access the free balance from the account info based on the API structure
+      // Handle both older and newer Polkadot API versions with proper type casting
+      const freeBalance = (accountInfo as any).data?.free || (accountInfo as any).free;
+      
+      return formatBalance(freeBalance, { withUnit: true });
     } catch (error) {
       console.error('Error fetching balance:', error);
-      throw error;
+      return '0'; // Return a default value on error
     }
   }
 
@@ -70,7 +75,8 @@ export class ChainStateService implements IChainStateService {
   async getEpochIndex(): Promise<number> {
     const api = await this.polkadotApiService.getApi();
     const epochInfo = await api.query.babe.epochIndex();
-    return epochInfo.toNumber();
+    // Handle type correctly
+    return Number(epochInfo.toString());
   }
 
   async subscribeToBalanceChanges(
@@ -80,11 +86,15 @@ export class ChainStateService implements IChainStateService {
     const api = await this.polkadotApiService.getApi();
     const unsubscribe = await api.query.system.account(
       address,
-      ({ data: balance }) => {
-        callback(formatBalance(balance.free, { withUnit: true }));
+      (accountInfo: any) => {
+        // Access the free balance from the account info based on the API structure
+        // This handles both older and newer Polkadot API versions
+        const freeBalance = accountInfo.data?.free || accountInfo.free;
+        callback(formatBalance(freeBalance, { withUnit: true }));
       }
     );
-    return unsubscribe;
+    // Cast to the expected return type
+    return unsubscribe as unknown as () => void;
   }
 
   async getPallets(): Promise<{ text: string; value: string; }[]> {

@@ -15,10 +15,10 @@
  */
 
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { singleton } from 'tsyringe';
+import { injectable } from 'tsyringe';
 import { IPolkadotApiService } from './IPolkadotApiService';
 
-@singleton()
+@injectable()
 export class PolkadotApiService implements IPolkadotApiService {
   private api: ApiPromise | null = null;
   private wsProvider: WsProvider | null = null;

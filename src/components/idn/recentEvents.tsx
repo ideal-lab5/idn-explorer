@@ -34,8 +34,12 @@ export default function LatestEvents() {
 
         const subscribeToBlocks = async () => {
             unsubscribe = await chainStateService.subscribeToBlocks(async (blockNumber) => {
-                const result = await explorerClient.queryHistoricalEvents(blockNumber, blockNumber);
-                setEvents(result);
+                if (explorerClient) {
+                    const result = await explorerClient.queryHistoricalEvents(blockNumber, blockNumber);
+                    setEvents(result);
+                } else {
+                    console.error('Explorer client is not initialized');
+                }
             });
         };
 
@@ -52,7 +56,7 @@ export default function LatestEvents() {
         <>
             {!events?.length && <SidebarItem><SidebarLabel><Badge color="purple">No events found</Badge></SidebarLabel></SidebarItem>}
             {events.map((event, index) => (
-                <SidebarItem href={`/compose/${event.id}_OP_${event.operation}`} key={index}>
+                <SidebarItem href={`/timelock/${event.id}_OP_${event.operation}`} key={index}>
                     <SidebarLabel><Badge color="purple">{event.id} {event.operation}</Badge>
                         <p className="text-xs pl-1 truncate">
                             {event?.metadata[0]}</p>
