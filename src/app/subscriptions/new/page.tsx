@@ -5,16 +5,21 @@ import { Input } from "@/components/input"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeftIcon, ArrowPathIcon, ExclamationCircleIcon } from "@heroicons/react/20/solid"
 import { useConnectedWallet } from "@/components/contexts/connectedWalletContext"
 import { useSubscription } from "@/components/contexts/subscriptionContext"
 import { ConnectWallet } from "@/components/idn/connectWallet"
+import XcmLocationBuilder, { XcmLocation } from '@/components/xcm/XcmLocationBuilder'
+import { ArrowLeftIcon, ArrowPathIcon, ExclamationCircleIcon } from "@heroicons/react/20/solid"
 
 export default function NewSubscriptionPage() {
   // State for form feedback and loading
   const [feedback, setFeedback] = useState<{message: string, type: 'success' | 'error'} | null>(null)
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [xcmLocation, setXcmLocation] = useState<XcmLocation>({
+    parents: 1,
+    interior: { x1: [{ type: 'parachain', value: { parachain: 2000 } }] }
+  })
   const { signer, isConnected } = useConnectedWallet();
   const { createSubscription } = useSubscription();
 
@@ -26,36 +31,36 @@ export default function NewSubscriptionPage() {
     try {
       const formData = new FormData(e.currentTarget)
       const name = formData.get("name") as string
-      const parachainId = formData.get("parachainId") as string
-      const amount = formData.get("duration") as string
-      const target = formData.get("xcmLocation") as string || `{v2{parents:1,interior:{x1:{parachain:${parachainId}}}}}` 
+      const credits = formData.get("credits") as string
       const frequency = formData.get("frequency") as string
+      
+      // Extract call index parameters
+      const palletIndex = parseInt(formData.get("palletIndex") as string)
+      const callIndexValue = parseInt(formData.get("callIndex") as string)
+      
+      // Build call index array
+      const callIndex: [number, number] = [palletIndex, callIndexValue]
       
       // Create the subscription using the service
       await createSubscription(
         signer,
-        parseInt(amount),
-        target,
+        parseInt(credits),
+        xcmLocation,
+        callIndex,
         parseInt(frequency), 
         name // Using name as metadata
       )
       
-      setFeedback({
-        message: `Subscription "${name}" created successfully`,
-        type: 'success'
-      })
+      // Use Next.js router for navigation to maintain client-side state
+      // This preserves the wallet connection state
+      router.push('/subscriptions')
       
-      // Navigate back to subscriptions page after short delay
-      setTimeout(() => {
-        router.push("/subscriptions")
-      }, 1500)
     } catch (err) {
       console.error('Failed to create subscription:', err)
       setFeedback({
         message: `Failed to create subscription: ${err instanceof Error ? err.message : 'Unknown error'}`,
         type: 'error'
       })
-    } finally {
       setLoading(false)
     }
   }
@@ -96,14 +101,6 @@ export default function NewSubscriptionPage() {
                 </div>
                 
                 <div className="px-6 py-5 space-y-4">
-                  {feedback && (
-                    <div className={`p-4 rounded-lg ${feedback.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>
-                      <div className="flex">
-                        {feedback.type === 'error' && <ExclamationCircleIcon className="h-5 w-5 mr-2 flex-shrink-0" />}
-                        {feedback.message}
-                      </div>
-                    </div>
-                  )}
                   <div className="space-y-2">
                     <label 
                       htmlFor="name" 
@@ -122,44 +119,25 @@ export default function NewSubscriptionPage() {
                     </p>
                   </div>
                   
-                  <div className="space-y-2">
-                    <label 
-                      htmlFor="parachainId" 
-                      className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                    >
-                      Parachain ID
-                    </label>
-                    <Input 
-                      id="parachainId" 
-                      name="parachainId" 
-                      type="number"
-                      required 
-                      min="2000"
-                      max="2999"
-                      placeholder="Enter your parachain ID (2000-2999)" 
-                    />
-                    <p className="text-sm text-zinc-500">
-                      The ID of your parachain in the Polkadot network (2000-2999)
-                    </p>
-                  </div>
+
                   
                   <div className="space-y-2">
                     <label 
-                      htmlFor="duration" 
+                      htmlFor="credits" 
                       className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
                     >
-                      Duration (blocks)
+                      Credits (Random Values)
                     </label>
                     <Input 
-                      id="duration" 
-                      name="duration" 
+                      id="credits" 
+                      name="credits" 
                       type="number" 
                       required 
                       min="1"
-                      placeholder="Enter duration in blocks" 
+                      placeholder="Enter number of random values" 
                     />
                     <p className="text-sm text-zinc-500">
-                      How many blocks you want to receive randomness for
+                      Total number of random values you want to receive
                     </p>
                   </div>
                   
@@ -183,24 +161,89 @@ export default function NewSubscriptionPage() {
                     </p>
                   </div>
                   
-                  <div className="space-y-2">
-                    <label 
-                      htmlFor="xcmLocation" 
-                      className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                    >
-                      Target XCM Location
-                    </label>
-                    <Input 
-                      id="xcmLocation" 
-                      name="xcmLocation" 
-                      required 
-                      placeholder="Enter XCM location" 
-                    />
-                    <p className="text-sm text-zinc-500">
-                      The XCM location where randomness will be delivered
+                  {/* XCM Location Configuration */}
+                  <div className="space-y-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                    <h3 className="text-md font-semibold text-zinc-900 dark:text-zinc-100">
+                      XCM Target Configuration
+                    </h3>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      Configure the target location for your subscription using XCM multilocation format
                     </p>
+                    
+                    <XcmLocationBuilder 
+                      value={xcmLocation}
+                      onChange={setXcmLocation}
+                    />
                   </div>
+                  
+                  {/* Call Index Configuration */}
+                  <div className="space-y-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                    <h3 className="text-md font-semibold text-zinc-900 dark:text-zinc-100">
+                      XCM Call Index Configuration
+                    </h3>
+                    <p className="text-sm text-zinc-500">
+                      Specifies which pallet and function to call on the target parachain
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label 
+                          htmlFor="palletIndex" 
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Pallet Index
+                        </label>
+                        <Input 
+                          id="palletIndex" 
+                          name="palletIndex" 
+                          type="number" 
+                          required 
+                          min="0"
+                          max="255"
+                          defaultValue="42"
+                          placeholder="Enter pallet index (0-255)" 
+                        />
+                        <p className="text-sm text-zinc-500">
+                          Index of the target pallet in destination runtime
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label 
+                          htmlFor="callIndex" 
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Call Index
+                        </label>
+                        <Input 
+                          id="callIndex" 
+                          name="callIndex" 
+                          type="number" 
+                          required 
+                          min="0"
+                          max="255"
+                          defaultValue="3"
+                          placeholder="Enter call index (0-255)" 
+                        />
+                        <p className="text-sm text-zinc-500">
+                          Index of the function within the pallet
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Using auto-generated subscription IDs */}
                 </div>
+                
+                {/* Error/Success message moved to bottom */}
+                {feedback && (
+                  <div className={`px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 ${feedback.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}>
+                    <div className="flex items-center">
+                      {feedback.type === 'error' && <ExclamationCircleIcon className="h-5 w-5 mr-2 flex-shrink-0" />}
+                      {feedback.message}
+                    </div>
+                  </div>
+                )}
                 
                 <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-2">
                   <Link href="/subscriptions">

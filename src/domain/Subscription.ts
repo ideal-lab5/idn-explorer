@@ -86,6 +86,8 @@ export class SubscriptionDetails {
         public target: string,
         /** Additional data associated with the subscription */
         public metadata: string,
+        /** Call index in hex format (e.g., '0x2a03') */
+        public callIndex: string,
         /** The storage deposit locked for this subscription */
         public deposit: number = 0,
         /** Optional filter for which pulses to receive */
@@ -135,6 +137,7 @@ export class Subscription {
         target: string,
         frequency: number,
         metadata: string = '',
+        callIndex: string = '',
         pulseFilter?: PulseFilter,
         deposit: number = 0
     ): Subscription {
@@ -147,6 +150,7 @@ export class Subscription {
             frequency,
             target,
             metadata,
+            callIndex,
             deposit,
             pulseFilter
         );

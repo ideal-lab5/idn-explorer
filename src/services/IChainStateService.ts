@@ -33,7 +33,7 @@ export interface IChainStateService {
   getBalance(address: string): Promise<string>;
   subscribeToBlocks(callback: (blockNumber: number) => void): Promise<() => void>;
   getSessionInfo(): Promise<SessionInfo>;
-  getEpochIndex(): Promise<number>;
+  getSessionIndex(): Promise<number>;
   subscribeToBalanceChanges(address: string, callback: (balance: string) => void): Promise<() => void>;
   subscribeToNewHeaders(callback: (header: BlockHeader) => void): Promise<() => void>;
   getPallets(): Promise<{ text: string; value: string; }[]>;

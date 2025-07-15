@@ -6,16 +6,16 @@ export interface UiSubscription {
   id: string;
   name: string;
   parachainId: number;
-  duration: number;
+  totalCredits: number;        // Total credits purchased
+  creditsRemaining: number;    // Credits remaining
+  creditsConsumed: number;     // Credits already consumed
   frequency: number;
   xcmLocation: string;
+  rawTarget?: any;                     // Raw XCM location data for sophisticated viewing
   status: string;
-  remainingAmount: number;
-  lastRandomValue?: string;
-  createdAt: string;
+  callIndex: { pallet: number; call: number }; // Parsed call index
   usageHistory: Array<{
-    date: string;
     blocks: number;
-    tokens: number;
+    credits: number;           // Changed from tokens to credits
   }>;
 }

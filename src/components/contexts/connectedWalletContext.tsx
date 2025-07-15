@@ -27,8 +27,8 @@ interface ConnectedWalletContextType {
     setScheduledTransactions: React.Dispatch<React.SetStateAction<DelayedTransaction[]>>;
     generatedRandomness: Randomness[];
     setGeneratedRandomness: React.Dispatch<React.SetStateAction<Randomness[]>>;
-    epochIndex: number | null;
-    setEpochIndex: React.Dispatch<React.SetStateAction<number | null>>;
+    sessionIndex: number | null;
+    setSessionIndex: React.Dispatch<React.SetStateAction<number | null>>;
     sessionProgress: number | null;
     setSessionProgress: React.Dispatch<React.SetStateAction<number | null>>;
     sessionLength: number | null;
@@ -67,7 +67,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     const [executedTransactions, setExecutedTransactions] = useState<ExecutedTransaction[]>([]);
     const [scheduledTransactions, setScheduledTransactions] = useState<DelayedTransaction[]>([]);
     const [generatedRandomness, setGeneratedRandomness] = useState<Randomness[]>([]);
-    const [epochIndex, setEpochIndex] = useState<number | null>(null);
+    const [sessionIndex, setSessionIndex] = useState<number | null>(null);
     const [sessionProgress, setSessionProgress] = useState<number | null>(null);
     const [sessionLength, setSessionLength] = useState<number | null>(null);
     const [eraProgress, setEraProgress] = useState<number | null>(null);
@@ -105,7 +105,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                     // Get session and era progress
                     Promise.all([
                         chainStateService.getSessionInfo(),
-                        chainStateService.getEpochIndex(),
+                        chainStateService.getSessionIndex(),
                         explorerClient?.getScheduledTransactions(),
                         explorerClient?.queryHistoricalEvents(
                             blockNumber > NUMBER_BLOCKS_EXECUTED ? 
@@ -115,7 +115,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                         explorerClient?.getRandomness(blockNumber, RAMDOMNESS_SAMPLE)
                     ]).then(([
                         sessionInfo,
-                        epochIndex,
+                        sessionIndex,
                         scheduled,
                         executed,
                         randomness
@@ -124,7 +124,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
                         setSessionLength(sessionInfo.sessionLength);
                         setEraProgress(sessionInfo.eraProgress);
                         setSessionsPerEra(sessionInfo.sessionsPerEra);
-                        setEpochIndex(epochIndex);
+                        setSessionIndex(sessionIndex);
                         setScheduledTransactions(scheduled || []);
                         setExecutedTransactions(executed || []);
                         setGeneratedRandomness(randomness || []);
@@ -161,8 +161,8 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
         setScheduledTransactions,
         generatedRandomness,
         setGeneratedRandomness,
-        epochIndex,
-        setEpochIndex,
+        sessionIndex,
+        setSessionIndex,
         sessionProgress,
         setSessionProgress,
         sessionLength,
@@ -190,7 +190,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
         executedTransactions,
         scheduledTransactions,
         generatedRandomness,
-        epochIndex,
+        sessionIndex,
         sessionProgress,
         sessionLength,
         eraProgress,

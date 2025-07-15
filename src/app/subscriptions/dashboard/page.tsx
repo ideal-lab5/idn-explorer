@@ -69,7 +69,7 @@ export default function DashboardPage() {
         });
         
         setUiSubscriptions(convertedSubscriptions);
-        console.log(`Dashboard loaded ${convertedSubscriptions.length} subscriptions`);
+
       } catch (err: any) {
         console.error('Failed to load dashboard data:', err);
         setError(err?.message || 'Failed to load subscription data');
@@ -83,9 +83,9 @@ export default function DashboardPage() {
   
   // Calculate stats from real data
   const activeSubscriptions = uiSubscriptions.filter((sub: UiSubscription) => sub.status === "active").length;
-  const totalTokens = uiSubscriptions.reduce((sum: number, sub: UiSubscription) => sum + (sub.duration - sub.remainingAmount), 0);
-  const avgDuration = uiSubscriptions.length > 0 ? 
-    Math.round(uiSubscriptions.reduce((sum: number, sub: UiSubscription) => sum + sub.duration, 0) / uiSubscriptions.length) : 0;
+  const totalCreditsUsed = uiSubscriptions.reduce((sum: number, sub: UiSubscription) => sum + sub.creditsConsumed, 0);
+  const avgTotalCredits = uiSubscriptions.length > 0 ? 
+    Math.round(uiSubscriptions.reduce((sum: number, sub: UiSubscription) => sum + sub.totalCredits, 0) / uiSubscriptions.length) : 0;
   
   return (
     <main className="flex-1 w-full">
@@ -111,37 +111,37 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          {/* Total Tokens Card */}
+          {/* Total Credits Used Card */}
           <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
             <div className="p-6">
               <div className="flex flex-row items-center justify-between space-y-0">
                 <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                  Total Tokens Spent
+                  Total Credits Used
                 </h3>
                 <CreditCardIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
               </div>
               <div className="mt-2">
-                <div className="text-2xl font-bold">{totalTokens.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{totalCreditsUsed.toLocaleString()}</div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  +{Math.floor(totalTokens * 0.15).toLocaleString()} from last month
+                  +{Math.floor(totalCreditsUsed * 0.15).toLocaleString()} from last month
                 </p>
               </div>
             </div>
           </div>
           
-          {/* Average Duration Card */}
+          {/* Average Credits Card */}
           <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
             <div className="p-6">
               <div className="flex flex-row items-center justify-between space-y-0">
                 <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                  Average Duration
+                  Average Total Credits
                 </h3>
                 <ClockIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
               </div>
               <div className="mt-2">
-                <div className="text-2xl font-bold">{avgDuration.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{avgTotalCredits.toLocaleString()}</div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  blocks per subscription
+                  credits per subscription
                 </p>
               </div>
             </div>
@@ -216,15 +216,13 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="rounded-md">
-            <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b border-zinc-200 dark:border-zinc-700">
+            <div className="grid grid-cols-3 gap-4 p-4 font-medium border-b border-zinc-200 dark:border-zinc-700">
               <div>Subscription</div>
-              <div>Date</div>
               <div>Block</div>
-              <div>Tokens</div>
+              <div>Credits</div>
             </div>
             {loading ? (
-              <div className="grid grid-cols-4 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700">
-                <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
+              <div className="grid grid-cols-3 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700">
                 <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
                 <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
                 <div className="animate-pulse bg-zinc-200 dark:bg-zinc-700 h-6 rounded"></div>
@@ -232,18 +230,16 @@ export default function DashboardPage() {
             ) : error ? (
               <div className="p-4 text-red-500">Error loading subscription data</div>
             ) : uiSubscriptions.flatMap((sub: UiSubscription) => 
-              sub.usageHistory.map((usage: { date: string; blocks: number; tokens: number }) => ({
+              sub.usageHistory.map((usage: { blocks: number; credits: number }) => ({
                 subscription: sub.name,
                 ...usage
               })))
-            .sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 5)
-            .map((delivery: { subscription: string; date: string; blocks: number; tokens: number }, index: number) => (
-              <div key={index} className="grid grid-cols-4 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700 last:border-0">
+            .map((delivery: { subscription: string; blocks: number; credits: number }, index: number) => (
+              <div key={index} className="grid grid-cols-3 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700 last:border-0">
                 <div>{delivery.subscription}</div>
-                <div>{delivery.date}</div>
                 <div>{delivery.blocks}</div>
-                <div>{delivery.tokens}</div>
+                <div>{delivery.credits}</div>
               </div>
             ))}
           </div>

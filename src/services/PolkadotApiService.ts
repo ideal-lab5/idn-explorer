@@ -42,12 +42,10 @@ export class PolkadotApiService implements IPolkadotApiService {
         
         // Set up event handlers before creating API
         this.wsProvider.on('connected', () => {
-          console.log('Connected to node:', this.getNodeUrl());
           this.notifyReady();
         });
 
         this.wsProvider.on('disconnected', () => {
-          console.log('Disconnected from node');
           // Clear the API instance on disconnect so we can reconnect fresh
           this.api = null;
           this.connectionPromise = null;

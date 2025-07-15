@@ -23,7 +23,7 @@ import { ChainStateService } from '../services/ChainStateService';
 import { IExplorerService } from '../services/IExplorerService';
 import { ExplorerService } from '../services/ExplorerService';
 import { ISubscriptionService } from '../services/ISubscriptionService';
-import { MockSubscriptionService } from '../services/MockSubscriptionService';
+import { IdnSubscriptionService } from '../services/IdnSubscriptionService';
 
 // Only register services if we're in a browser environment
 if (typeof window !== 'undefined') {
@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
 
   container.registerSingleton<IExplorerService>('IExplorerService', ExplorerService);
 
-  container.registerSingleton<ISubscriptionService>('ISubscriptionService', MockSubscriptionService);
+  container.registerSingleton<ISubscriptionService>('ISubscriptionService', IdnSubscriptionService);
 }
 
 export { container };

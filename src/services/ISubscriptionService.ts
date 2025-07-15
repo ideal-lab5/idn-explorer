@@ -17,6 +17,14 @@
 import { Subscription, PulseFilter } from '../domain/Subscription';
 
 /**
+ * XCM Location structure for subscription targets
+ */
+export interface XcmLocation {
+    parents: number;
+    interior: any; // XCM Junctions - can be expanded as needed
+}
+
+/**
  * Parameters for updating a subscription with optional fields.
  * When a field is undefined, it remains unchanged.
  */
@@ -42,23 +50,27 @@ export interface UpdateSubscriptionParams {
 export interface ISubscriptionService {
     
     /**
-     * Creates a new subscription for randomness delivery.
-     * 
-     * @param signer - Account that will own the subscription
-     * @param amount - Total number of random values to receive
-     * @param target - XCM location where random values will be delivered
-     * @param frequency - Number of blocks between each delivery
-     * @param metadata - Optional additional data for the subscription
-     * @param pulseFilter - Optional filter for which pulses to receive
-     */
-    createSubscription(
-        signer: any, 
-        amount: number,
-        target: string,
-        frequency: number,
-        metadata?: string,
-        pulseFilter?: PulseFilter
-    ): Promise<void>;
+   * Creates a new subscription for randomness delivery.
+   * This is a transaction method that requires a signer and will submit an extrinsic.
+   * 
+   * @param signer - The account that will sign and pay for the transaction
+   * @param credits - Number of credits (random values) to purchase for the subscription
+   * @param target - XCM Location structure for randomness delivery
+   * @param callIndex - Two-byte array [pallet_index, call_index] for XCM dispatch
+   * @param frequency - How often to receive randomness (in blocks)
+   * @param metadata - Optional metadata to store with the subscription
+   * @param subscriptionId - Optional subscription ID, auto-generated if not provided
+   * @throws Error if the subscription creation fails
+   */
+  createSubscription(
+    signer: any, 
+    credits: number, 
+    target: XcmLocation, 
+    callIndex: [number, number],
+    frequency: number, 
+    metadata?: string,
+    subscriptionId?: string
+  ): Promise<void>;
     
     /**
      * Temporarily suspends randomness delivery for a subscription.

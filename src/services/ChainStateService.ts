@@ -72,11 +72,27 @@ export class ChainStateService implements IChainStateService {
     };
   }
 
-  async getEpochIndex(): Promise<number> {
+  async getSessionIndex(): Promise<number> {
     const api = await this.polkadotApiService.getApi();
-    const epochInfo = await api.query.babe.epochIndex();
-    // Handle type correctly
-    return Number(epochInfo.toString());
+    
+    // Ideal Network uses Aura consensus with sessions
+    try {
+      // Check if session pallet is available
+      if (api.query.session?.currentIndex) {
+        const sessionIndex = await api.query.session.currentIndex();
+        return Number(sessionIndex.toString());
+      }
+      
+      // Fallback: use current block number divided by session length as rough session
+      const header = await api.rpc.chain.getHeader();
+      const blockNumber = Number(header.number.toString());
+      // Assume roughly 600 blocks per session (10 minutes at 1 block per second)
+      return Math.floor(blockNumber / 600);
+    } catch (error: any) {
+      console.warn('Unable to determine session index for Aura consensus:', error?.message || error);
+      // Return current timestamp as fallback session indicator
+      return Math.floor(Date.now() / (1000 * 60 * 10)); // 10-minute sessions
+    }
   }
 
   async subscribeToBalanceChanges(

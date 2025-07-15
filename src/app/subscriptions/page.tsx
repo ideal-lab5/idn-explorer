@@ -17,9 +17,7 @@ export default function SubscriptionsPage() {
   
   // Convert domain subscriptions to UI subscriptions when dependencies change
   useEffect(() => {
-    console.log('subscriptions changed:', subscriptions);
-    if (subscriptions.length > 0) {
-      console.log(`Mapping ${subscriptions.length} domain subscriptions to UI model`);
+    if (subscriptions && subscriptions.length > 0) {
       const mappedSubscriptions = subscriptions.map(domainToUiSubscription);
       setUiSubscriptions(mappedSubscriptions);
     } else {
@@ -28,7 +26,7 @@ export default function SubscriptionsPage() {
   }, [subscriptions]);
 
   useEffect(() => {
-    console.log('SubscriptionProvider effect triggered with signerAddress:', signerAddress);
+
     if (!signerAddress) return;
     refreshSubscriptions(signerAddress);
   }, [signerAddress]);
@@ -81,7 +79,12 @@ export default function SubscriptionsPage() {
                 <div key={sub.id} className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-2">
-                      <h2 className="text-lg font-semibold">{sub.name}</h2>
+                      <div>
+                        <h2 className="text-lg font-semibold">
+                          {sub.name || `Randomness Subscription`}
+                        </h2>
+                        <p className="text-xs text-zinc-400 font-mono">{sub.id.slice(0, 16)}...</p>
+                      </div>
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         sub.status === "active" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300" : 
                         sub.status === "paused" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" :
@@ -90,16 +93,37 @@ export default function SubscriptionsPage() {
                         {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
                       </span>
                     </div>
-                    <p className="text-sm text-zinc-500 mb-4">Created on {sub.createdAt}</p>
+                    
+                    {/* Credit Usage Progress */}
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-zinc-500">Credits Used</span>
+                        <span className="font-medium">{sub.creditsConsumed} / {sub.totalCredits}</span>
+                      </div>
+                      <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+                        <div 
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${sub.totalCredits > 0 ? (sub.creditsConsumed / sub.totalCredits) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-xs text-zinc-400 mt-1">
+                        <span>{sub.creditsRemaining} remaining</span>
+                        <span>{sub.totalCredits > 0 ? Math.round((sub.creditsConsumed / sub.totalCredits) * 100) : 0}% used</span>
+                      </div>
+                    </div>
                     
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-zinc-500">Remaining:</span>
-                        <span>{sub.remainingAmount} tokens</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
                         <span className="text-zinc-500">Frequency:</span>
                         <span>Every {sub.frequency} blocks</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-500">Target:</span>
+                        <span className="text-xs font-mono truncate" title={sub.xcmLocation}>{sub.xcmLocation}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-500">Call Index:</span>
+                        <span className="text-xs font-mono">Pallet {sub.callIndex.pallet}, Call {sub.callIndex.call}</span>
                       </div>
                     </div>
                     

@@ -6,13 +6,15 @@ import {
   PlayIcon, 
   PauseIcon, 
   XMarkIcon, 
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  DocumentDuplicateIcon
 } from "@heroicons/react/20/solid"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import type { UiSubscription } from "../types/UiSubscription"
 import { useConnectedWallet } from "@/components/contexts/connectedWalletContext"
+import XcmLocationViewer from "@/components/xcm/XcmLocationViewer"
 import { useSubscription } from "@/components/contexts/subscriptionContext"
 import { domainToUiSubscription } from "@/utils/subscriptionMapper"
 import { ConnectWallet } from "@/components/idn/connectWallet"
@@ -25,6 +27,7 @@ interface SubscriptionDetailsProps {
 export function SubscriptionDetails({ id, subscription: initialData }: SubscriptionDetailsProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [subscription, setSubscription] = useState<UiSubscription>(initialData)
   const [feedback, setFeedback] = useState<{message: string, visible: boolean, type: 'success' | 'error'} | null>(null)
@@ -58,6 +61,11 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
     try {
       setIsLoading(true)
       setFeedback(null)
+      
+      if (action === "cancel") {
+        // Set specific cancelling state for the dialog
+        setIsCancelling(true)
+      }
       
       if (action === "pause") {
         await pauseSubscription(signer, id)
@@ -105,6 +113,7 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
     } finally {
       setIsLoading(false)
       if (action === "cancel") {
+        setIsCancelling(false)
         setIsDialogOpen(false)
       }
     }
@@ -185,7 +194,20 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
         </Link>
         <div>
           <h1 className="text-3xl font-bold">{subscription.name}</h1>
-          <p className="text-zinc-500">Parachain {subscription.parachainId} • ID: {id}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-zinc-400 font-mono break-all">
+              ID: {id}
+            </p>
+            <DocumentDuplicateIcon 
+              className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer transition-colors"
+              title="Copy subscription ID"
+              onClick={() => {
+                navigator.clipboard.writeText(id);
+                setFeedback({ message: 'Subscription ID copied to clipboard!', visible: true, type: 'success' });
+                setTimeout(() => setFeedback(null), 3000);
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -213,36 +235,39 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
                   {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
                 </p>
               </div>
+
               <div>
-                <p className="text-sm text-zinc-500">Created On</p>
-                <p className="font-medium">{subscription.createdAt}</p>
+                <p className="text-sm text-zinc-500">Total Credits</p>
+                <p className="font-medium">{subscription.totalCredits.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-zinc-500">Duration</p>
-                <p className="font-medium">{subscription.duration.toLocaleString()} blocks</p>
+                <p className="text-sm text-zinc-500">Credits Remaining</p>
+                <p className="font-medium">{subscription.creditsRemaining.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500">Credits Consumed</p>
+                <p className="font-medium">{subscription.creditsConsumed.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-sm text-zinc-500">Frequency</p>
                 <p className="font-medium">Every {subscription.frequency.toLocaleString()} blocks</p>
               </div>
-              <div>
-                <p className="text-sm text-zinc-500">Balance</p>
-                <p className="font-medium">{subscription.remainingAmount.toLocaleString()} tokens</p>
+              <div className="col-span-2">
+                <p className="text-sm text-zinc-500 mb-3">XCM Location</p>
+                <XcmLocationViewer 
+                  location={subscription.rawTarget || subscription.xcmLocation} 
+                  showRaw={true} 
+                />
               </div>
-              <div>
-                <p className="text-sm text-zinc-500">XCM Location</p>
-                <p className="font-medium font-mono text-sm break-all">{subscription.xcmLocation}</p>
-              </div>
+              {subscription.callIndex && (
+                <div>
+                  <p className="text-sm text-zinc-500">Call Index</p>
+                  <p className="font-medium">Pallet {subscription.callIndex.pallet}, Call {subscription.callIndex.call}</p>
+                </div>
+              )}
             </div>
 
-            {subscription.status === "active" && subscription.lastRandomValue && (
-              <div>
-                <p className="text-sm text-zinc-500 mb-1">Latest Random Value</p>
-                <div className="p-2 bg-zinc-100 dark:bg-zinc-800/50 rounded-md text-sm font-mono break-all">
-                  {subscription.lastRandomValue}
-                </div>
-              </div>
-            )}
+
           </div>
           <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-2">
             {subscription.status === "active" ? (
@@ -277,16 +302,14 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
           </div>
           <div className="px-6 py-5">
             <div className="rounded-md border border-zinc-200 dark:border-zinc-700">
-              <div className="grid grid-cols-3 gap-4 p-4 font-medium border-b border-zinc-200 dark:border-zinc-700">
-                <div>Date</div>
+              <div className="grid grid-cols-2 gap-4 p-4 font-medium border-b border-zinc-200 dark:border-zinc-700">
                 <div>Block</div>
-                <div>Tokens Used</div>
+                <div>Credits Used</div>
               </div>
               {subscription.usageHistory.map((usage, index) => (
-                <div key={index} className="grid grid-cols-3 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700 last:border-0">
-                  <div>{usage.date}</div>
+                <div key={index} className="grid grid-cols-2 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-700 last:border-0">
                   <div>{usage.blocks}</div>
-                  <div>{usage.tokens}</div>
+                  <div>{usage.credits}</div>
                 </div>
               ))}
             </div>
@@ -305,19 +328,27 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
               </div>
               <p className="mb-4">
                 Are you sure you want to cancel this subscription? This action cannot be undone,
-                and any remaining tokens will be forfeited.
+                and any remaining credits will be forfeited.
               </p>
               <div className="flex justify-end gap-2">
                 <Button
                   onClick={() => setIsDialogOpen(false)}
+                  disabled={isCancelling}
                 >
                   Keep Subscription
                 </Button>
                 <Button
                   onClick={() => handleAction("cancel")}
+                  disabled={isCancelling}
                 >
-                  <ExclamationTriangleIcon className="h-4 w-4 mr-2" />
-                  Cancel Subscription
+                  {isCancelling ? (
+                    <>Processing...</>
+                  ) : (
+                    <>
+                      <ExclamationTriangleIcon className="h-4 w-4 mr-2" />
+                      Cancel Subscription
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

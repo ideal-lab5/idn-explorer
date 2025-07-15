@@ -65,6 +65,7 @@ export default function NetworkActivityPage() {
     executedTransactions,
     scheduledTransactions,
     generatedRandomness,
+    sessionIndex,
     sessionProgress,
     sessionLength,
     delayedOnly,
@@ -118,7 +119,7 @@ export default function NetworkActivityPage() {
         <h1 className="text-3xl font-bold mb-6">IDN Network Activity Hub <Badge>{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</Badge></h1>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Stat title="Last Block" value={latestBlock >= 0 ? `#${formatNumber(latestBlock)}` : "..."} change="" helpText="" />
-          <Stat title="Epoch" value={`${sessionProgress && sessionLength ? formatNumber((sessionProgress / sessionLength) * 100) + "%" : "..."}`} change="" helpText="" />
+          <Stat title="Session" value={`${sessionIndex !== null && sessionIndex >= 0 ? `#${sessionIndex}` : "..."}${sessionProgress && sessionLength ? ` (${formatNumber((sessionProgress / sessionLength) * 100)}%)` : ""}`} change="" helpText="" />
           <Stat title="Events" value={formatNumber(executedTransactions.filter(element => (delayedOnly && element.delayedTx) || !delayedOnly).filter(element => searchTermExecuted == "" || (element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.operation.toLowerCase().includes(searchTermExecuted.toLowerCase()) || element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase()))).length)} change={`Last ${NUMBER_BLOCKS_EXECUTED} blocks`} helpText="" />
           <Stat title="Scheduled" value={formatNumber(scheduledTransactions.filter(element => searchTermScheduled == "" || (element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) || element.operation.toLowerCase().includes(searchTermScheduled.toLowerCase()) || element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase()))).length)} change="Upcoming txs" helpText="" />
         </div>

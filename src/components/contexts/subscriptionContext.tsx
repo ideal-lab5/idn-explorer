@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { container } from '@/lib/di-container';
-import { ISubscriptionService } from '@/services/ISubscriptionService';
+import { ISubscriptionService, XcmLocation } from '@/services/ISubscriptionService';
 import { Subscription, SubscriptionState, PulseFilter } from '@/domain/Subscription';
 import { useConnectedWallet } from './connectedWalletContext';
 
@@ -12,11 +12,12 @@ interface SubscriptionContextType {
   error: string | null;
   createSubscription: (
     signer: any,
-    amount: number,
-    target: string,
+    credits: number,
+    target: XcmLocation,
+    callIndex: [number, number],
     frequency: number,
     metadata?: string,
-    pulseFilter?: PulseFilter
+    subscriptionId?: string
   ) => Promise<void>;
   pauseSubscription: (signer: any, id: string) => Promise<void>;
   reactivateSubscription: (signer: any, id: string) => Promise<void>;
@@ -36,23 +37,19 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const subscriptionService = container.resolve<ISubscriptionService>('ISubscriptionService');
 
   const refreshSubscriptions = useCallback(async (address?: string) => {
-    console.log('refreshSubscriptions called, address:', address);
+    if (!address) {
+      setSubscriptions([]);
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
-      if (address) {
-        let userSubscriptions: Subscription[] = [];
-        console.log('Fetching subscriptions for connected wallet:', address);
-        userSubscriptions = await subscriptionService.getSubscriptionsForAccount(address);
-        console.log(`Received ${userSubscriptions.length} subscriptions from service`);
-        setSubscriptions(userSubscriptions);
-      }
-      else {
-        console.log('No signer or signerAddress available');
-        setSubscriptions([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch subscriptions:', err);
+      const userSubscriptions = await subscriptionService.getSubscriptionsForAccount(address);
+      setSubscriptions(userSubscriptions);
+    } catch (error) {
+      console.error('Failed to fetch subscriptions:', error);
       setError('Failed to load subscriptions');
       setSubscriptions([]);
     } finally {
@@ -62,15 +59,16 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const createSubscription = useCallback(async (
     signer: any,
-    amount: number,
-    target: string,
+    credits: number,
+    target: XcmLocation,
+    callIndex: [number, number],
     frequency: number,
     metadata?: string,
-    pulseFilter?: PulseFilter
+    subscriptionId?: string
   ) => {
     try {
       await subscriptionService.createSubscription(
-        signer, amount, target, frequency, metadata, pulseFilter
+        signer, credits, target, callIndex, frequency, metadata, subscriptionId
       );
       await refreshSubscriptions(signer.address);
     } catch (err) {
@@ -132,7 +130,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading(true);
       setError(null);
       const allSubscriptions = await subscriptionService.getAllSubscriptions();
-      console.log(`Retrieved ${allSubscriptions.length} subscriptions for dashboard`);
+
       return allSubscriptions;
     } catch (err) {
       console.error('Failed to get all subscriptions:', err);

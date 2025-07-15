@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-import { ISubscriptionService, UpdateSubscriptionParams } from './ISubscriptionService';
-import { Subscription, SubscriptionState, PulseFilter } from '../domain/Subscription';
+import type { ISubscriptionService, UpdateSubscriptionParams, XcmLocation } from './ISubscriptionService';
+import type { Subscription, PulseFilter, SubscriptionDetails } from '../domain/Subscription';
+import { Subscription as SubscriptionClass, SubscriptionState, PulseFilter as PulseFilterClass, SubscriptionDetails as SubscriptionDetailsClass } from '../domain/Subscription';
 import { injectable } from 'tsyringe';
+
 /**
  * Mock implementation of the subscription service.
  * This class provides a working implementation that stores subscriptions in memory,
@@ -45,90 +47,114 @@ export class MockSubscriptionService implements ISubscriptionService {
         const mockAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY';
         
         // Sample subscription 1: Active parachain randomness service
-        const sub1 = Subscription.create(
+        const details1 = new SubscriptionDetailsClass(
             mockAddress,
+            Date.now(),
+            Date.now(),
             100000,
+            120,
             'para(2004)/pallet-randomness/0x1234567890abcdef',
-            100,
             'Parachain Randomness',
-            undefined,
-            2.5
+            '0x2a05'  // Call index as hex string
         );
-        sub1.creditsConsumed = 85000;
-        sub1.creditsLeft = 15000;
-        // Force a unique ID
-        sub1.id = 'sub-1-parachain-randomness';
+        const sub1 = new SubscriptionClass(
+            'sub-1-parachain-randomness',
+            details1,
+            15000, // creditsLeft = amount - consumed
+            SubscriptionState.Active,
+            85000 // creditsConsumed
+        );
         
         // Sample subscription 2: Paused VRF service
-        const sub2 = Subscription.create(
+        const details2 = new SubscriptionDetailsClass(
             mockAddress,
+            Date.now(),
+            Date.now(),
             50000,
+            60,
             'para(2012)/pallet-vrf/0xabcdef1234567890',
-            50,
             'VRF Service',
-            undefined,
-            1.8
+            '0x1b02'  // Call index as hex string
         );
-        sub2.creditsConsumed = 41500;
-        sub2.creditsLeft = 8500;
-        sub2.state = SubscriptionState.Paused;
-        // Force a unique ID
-        sub2.id = 'sub-2-vrf-service';
+        const sub2 = new SubscriptionClass(
+            'sub-2-vrf-service',
+            details2,
+            8500, // creditsLeft = amount - consumed
+            SubscriptionState.Paused,
+            41500 // creditsConsumed
+        );
         
         // Sample subscription 3: Active smart contract randomness
-        const sub3 = Subscription.create(
+        const details3 = new SubscriptionDetailsClass(
             mockAddress,
+            Date.now(),
+            Date.now(),
             200000,
+            90,
             'para(2008)/pallet-contracts/0x9876543210fedcba',
-            200,
             'Smart Contract RNG',
-            undefined,
-            3.2
+            '0x3c07'  // Call index as hex string
         );
-        sub3.creditsConsumed = 175000;
-        sub3.creditsLeft = 25000;
-        // Force a unique ID
-        sub3.id = 'sub-3-smart-contract-rng';
+        const sub3 = new SubscriptionClass(
+            'sub-3-smart-contract-rng',
+            details3,
+            25000, // creditsLeft = amount - consumed
+            SubscriptionState.Active,
+            175000 // creditsConsumed
+        );
         
         // Add the sample subscriptions to our map
         this.subscriptions.set(sub1.id, sub1);
         this.subscriptions.set(sub2.id, sub2);
         this.subscriptions.set(sub3.id, sub3);
         
-        console.log(`Initialized ${this.subscriptions.size} sample subscriptions`);
+
     }
 
     /**
-     * Creates a new subscription with the given parameters.
+     * Creates a new subscription for randomness delivery.
      * 
-     * @param signer The signer of the subscription.
-     * @param amount The amount of the subscription.
-     * @param target The target of the subscription.
-     * @param frequency The frequency of the subscription.
-     * @param metadata Optional metadata for the subscription.
-     * @param pulseFilter Optional filter for which pulses to receive
+     * @param signer Account that will own the subscription
+     * @param credits Total number of random values to receive (was amount)
+     * @param target XCM location where random values will be delivered
+     * @param callIndex Two-byte array [pallet_index, call_index] for XCM dispatch
+     * @param frequency Number of blocks between each delivery
+     * @param metadata Optional additional data for the subscription
+     * @param subscriptionId Optional subscription ID, auto-generated if not provided
      */
     async createSubscription(
         signer: any,
-        amount: number,
-        target: string,
+        credits: number,
+        target: XcmLocation,
+        callIndex: [number, number],
         frequency: number,
         metadata?: string,
-        pulseFilter?: PulseFilter
+        subscriptionId?: string
     ): Promise<void> {
         // Calculate a mock deposit based on the parameters
-        const deposit = this.calculateStorageDeposit(amount, target, metadata, pulseFilter);
+        const targetString = `XCM:${target.parents}:${JSON.stringify(target.interior)}`;
+        const deposit = this.calculateStorageDeposit(credits, targetString, metadata);
         
-        const subscription = Subscription.create(
-            signer.address,
-            amount,
-            target,
+        const newId = subscriptionId || `sub-${Date.now()}`;
+        const details = new SubscriptionDetailsClass(
+            signer.address || 'unknown',
+            Date.now(),
+            Date.now(),
+            credits,
             frequency,
-            metadata,
-            pulseFilter,
-            deposit
+            targetString,
+            metadata || '',
+            '0x0000'  // Default call index as hex string
         );
-
+        const subscription = new SubscriptionClass(
+            newId,
+            details,
+            credits, // creditsLeft starts as full amount
+            SubscriptionState.Active,
+            0, // creditsConsumed starts at 0
+            0 // feesPaid starts at 0
+        );
+        
         this.subscriptions.set(subscription.id, subscription);
     }
 
@@ -261,7 +287,7 @@ export class MockSubscriptionService implements ISubscriptionService {
      * @returns Array of all subscriptions
      */
     async getAllSubscriptions(): Promise<Subscription[]> {
-        console.log(`Returning all ${this.subscriptions.size} subscriptions for dashboard`);
+
         return Array.from(this.subscriptions.values());
     }
     
