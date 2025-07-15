@@ -556,8 +556,6 @@ export class IdnSubscriptionService implements ISubscriptionService {
                 // Try to use the runtime API to get subscription by ID
                 if ((api.rpc as any).idnManagerApi?.getSubscription) {
                     subscriptionData = await (api.rpc as any).idnManagerApi.getSubscription(subscriptionId);
-                } else if (api.call && (api.call as any).idnManagerApi?.getSubscription) {
-                    subscriptionData = await (api.call as any).idnManagerApi.getSubscription(subscriptionId);
                 } else {
                     throw new Error('Runtime API not available');
                 }
@@ -615,8 +613,6 @@ export class IdnSubscriptionService implements ISubscriptionService {
             // Try to use the runtime API getSubscriptionsForSubscriber method
             if ((api.rpc as any).idnManagerApi?.getSubscriptionsForSubscriber) {
                 result = await (api.rpc as any).idnManagerApi.getSubscriptionsForSubscriber(accountId);
-            } else if (api.call && (api.call as any).idnManagerApi?.getSubscriptionsForSubscriber) {
-                result = await (api.call as any).idnManagerApi.getSubscriptionsForSubscriber(accountId);
             } else {
                 // Fallback to storage query if runtime API not available
                 const subscriptions = await this.getSubscriptionsViaStorage(accountId);
@@ -785,16 +781,12 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
     /**
      * Retrieves all subscriptions in the system.
-     * Currently not implemented as there's no way to get all subscriptions from the ideal network chain.
+     * Currently not implemented.
      */
     async getAllSubscriptions(): Promise<Subscription[]> {
-        // As specified in the requirements, this method is not implemented
-        // because there's no way to get all subscriptions from the ideal network chain
-        console.warn('getAllSubscriptions is not implemented - no chain API available');
+        console.warn('getAllSubscriptions is not implemented');
         return [];
     }
-
-
 
     /**
      * Extracts metadata string from various formats (hex, bytes, string, etc.)
@@ -852,20 +844,17 @@ export class IdnSubscriptionService implements ISubscriptionService {
      * Converts a pallet subscription to our domain Subscription model
      */
     private palletSubscriptionToSubscription(palletSub: any): Subscription {
-        // Defensive programming - handle different possible structures
         if (!palletSub) {
             throw new Error('Pallet subscription data is null or undefined');
         }
         
-        // Based on actual blockchain data structure:
         // Root level: id, creditsLeft, state, createdAt, updatedAt, credits, frequency, metadata, lastDelivered
         // Nested under details: subscriber, target, callIndex
         const details = palletSub.details;
-        
         if (!details) {
             throw new Error('Subscription details not found in pallet data');
         }
-        
+
         const subscriptionDetails = new SubscriptionDetailsClass(
             details.subscriber ? details.subscriber.toString() : 'unknown',
             palletSub.createdAt ? Number(palletSub.createdAt) : Date.now(),
