@@ -144,5 +144,5 @@ export function getCountries() {
         'Armed Forces Pacific',
       ],
     },
-  ]
+  ];
 }

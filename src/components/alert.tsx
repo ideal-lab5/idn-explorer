@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import * as Headless from '@headlessui/react'
-import clsx from 'clsx'
-import type React from 'react'
-import { Text } from './text'
+import * as Headless from '@headlessui/react';
+import clsx from 'clsx';
+import type React from 'react';
+import { Text } from './text';
 
 const sizes = {
   xs: 'sm:max-w-xs',
@@ -29,7 +29,7 @@ const sizes = {
   '3xl': 'sm:max-w-3xl',
   '4xl': 'sm:max-w-4xl',
   '5xl': 'sm:max-w-5xl',
-}
+};
 
 export function Alert({
   open,
@@ -80,7 +80,7 @@ export function Alert({
         </div>
       </Headless.Dialog>
     </Headless.Transition>
-  )
+  );
 }
 
 export function AlertTitle({
@@ -95,7 +95,7 @@ export function AlertTitle({
         'text-balance text-center text-base/6 font-semibold text-zinc-950 sm:text-wrap sm:text-left sm:text-sm/6 dark:text-white'
       )}
     />
-  )
+  );
 }
 
 export function AlertDescription({
@@ -108,11 +108,11 @@ export function AlertDescription({
       {...props}
       className={clsx(className, 'mt-2 text-pretty text-center sm:text-left')}
     />
-  )
+  );
 }
 
 export function AlertBody({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
-  return <div {...props} className={clsx(className, 'mt-4')} />
+  return <div {...props} className={clsx(className, 'mt-4')} />;
 }
 
 export function AlertActions({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
@@ -124,5 +124,5 @@ export function AlertActions({ className, ...props }: React.ComponentPropsWithou
         'mt-6 flex flex-col-reverse items-center justify-end gap-3 *:w-full sm:mt-4 sm:flex-row sm:*:w-auto'
       )}
     />
-  )
+  );
 }

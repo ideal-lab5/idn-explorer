@@ -22,11 +22,11 @@ export interface SessionInfo {
 }
 
 export interface BlockHeader {
-    blockNumber: number;
-    blockHash: string;
-    parentHash: string;
-    stateRoot: string;
-    extrinsicsRoot: string;
+  blockNumber: number;
+  blockHash: string;
+  parentHash: string;
+  stateRoot: string;
+  extrinsicsRoot: string;
 }
 
 export interface IChainStateService {
@@ -34,9 +34,15 @@ export interface IChainStateService {
   subscribeToBlocks(callback: (blockNumber: number) => void): Promise<() => void>;
   getSessionInfo(): Promise<SessionInfo>;
   getSessionIndex(): Promise<number>;
-  subscribeToBalanceChanges(address: string, callback: (balance: string) => void): Promise<() => void>;
+  subscribeToBalanceChanges(
+    address: string,
+    callback: (balance: string) => void
+  ): Promise<() => void>;
   subscribeToNewHeaders(callback: (header: BlockHeader) => void): Promise<() => void>;
-  getPallets(): Promise<{ text: string; value: string; }[]>;
+  getPallets(): Promise<{ text: string; value: string }[]>;
   getExtrinsics(pallet: string): Promise<string[]>;
-  getExtrinsicParameters(pallet: string, extrinsic: string): Promise<{ name: string; type: string; typeName: string; }[]>;
+  getExtrinsicParameters(
+    pallet: string,
+    extrinsic: string
+  ): Promise<{ name: string; type: string; typeName: string }[]>;
 }

@@ -30,13 +30,13 @@ Finally, open [http://localhost:3000](http://localhost:3000) in your browser to 
 
 To build the docker image included in this repo, you must specify a websocket URL of an Ideal Network node:
 
-``` shell
+```shell
 docker build -t ideallabs/etf-explorer --build-arg NEXT_PUBLIC_NODE_WS="ws://172.14.1.1:9944"  .
 ```
 
 then run
 
-``` shell
+```shell
 docker run -p 3000:3000 ideallabs/etf-explorer
 ```
 

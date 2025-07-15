@@ -1,10 +1,10 @@
-"use client"
+'use client';
 
-import { SubscriptionDetails } from "./subscription-details"
-import { useState, useEffect } from "react"
-import { useSubscription } from "@/components/contexts/subscriptionContext"
-import { domainToUiSubscription } from "@/utils/subscriptionMapper"
-import { UiSubscription } from "../types/UiSubscription"
+import { useSubscription } from '@/components/contexts/subscriptionContext';
+import { domainToUiSubscription } from '@/utils/subscriptionMapper';
+import { useEffect, useState } from 'react';
+import { UiSubscription } from '../types/UiSubscription';
+import { SubscriptionDetails } from './subscription-details';
 
 // This would be used for static site generation, but we're using dynamic data now
 // export function generateStaticParams() {
@@ -17,7 +17,7 @@ export default function Page({ params }: { params: { id: string } }) {
   const [subscription, setSubscription] = useState<UiSubscription | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { getSubscription } = useSubscription();
-  
+
   useEffect(() => {
     async function loadSubscription() {
       try {
@@ -31,17 +31,17 @@ export default function Page({ params }: { params: { id: string } }) {
         setInitialLoading(false);
       }
     }
-    
+
     loadSubscription();
   }, [params.id, getSubscription]);
-  
+
   return (
-    <main className="flex-1 w-full">
+    <main className="w-full flex-1">
       <div className="w-full px-8 py-8">
         {initialLoading ? (
-          <div className="animate-pulse bg-zinc-100 dark:bg-zinc-800 rounded-lg h-64"></div>
+          <div className="h-64 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800"></div>
         ) : error ? (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-8 text-center">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-center dark:border-red-800 dark:bg-red-900/20">
             <p className="text-red-600 dark:text-red-400">{error}</p>
           </div>
         ) : subscription ? (

@@ -6,9 +6,6 @@ module.exports = {
   trailingComma: 'es5',
   bracketSpacing: true,
   arrowParens: 'avoid',
-  plugins: [
-    'prettier-plugin-organize-imports',
-    'prettier-plugin-tailwindcss',
-  ],
+  plugins: ['prettier-plugin-organize-imports', 'prettier-plugin-tailwindcss'],
   organizeImportsSkipDestructiveCodeActions: true,
 };

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import * as Headless from '@headlessui/react'
-import clsx from 'clsx'
-import type React from 'react'
-import { Text } from './text'
+import * as Headless from '@headlessui/react';
+import clsx from 'clsx';
+import type React from 'react';
+import { Text } from './text';
 
 const sizes = {
   xs: 'sm:max-w-xs',
@@ -29,7 +29,7 @@ const sizes = {
   '3xl': 'sm:max-w-3xl',
   '4xl': 'sm:max-w-4xl',
   '5xl': 'sm:max-w-5xl',
-}
+};
 
 export function Dialog({
   open,
@@ -80,7 +80,7 @@ export function Dialog({
         </div>
       </Headless.Dialog>
     </Headless.Transition>
-  )
+  );
 }
 
 export function DialogTitle({
@@ -90,20 +90,25 @@ export function DialogTitle({
   return (
     <Headless.DialogTitle
       {...props}
-      className={clsx(className, 'text-balance text-lg/6 font-semibold text-zinc-950 sm:text-base/6 dark:text-white')}
+      className={clsx(
+        className,
+        'text-balance text-lg/6 font-semibold text-zinc-950 sm:text-base/6 dark:text-white'
+      )}
     />
-  )
+  );
 }
 
 export function DialogDescription({
   className,
   ...props
 }: { className?: string } & Omit<Headless.DescriptionProps<typeof Text>, 'className'>) {
-  return <Headless.Description as={Text} {...props} className={clsx(className, 'mt-2 text-pretty')} />
+  return (
+    <Headless.Description as={Text} {...props} className={clsx(className, 'mt-2 text-pretty')} />
+  );
 }
 
 export function DialogBody({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
-  return <div {...props} className={clsx(className, 'mt-6')} />
+  return <div {...props} className={clsx(className, 'mt-6')} />;
 }
 
 export function DialogActions({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
@@ -115,5 +120,5 @@ export function DialogActions({ className, ...props }: React.ComponentPropsWitho
         'mt-8 flex flex-col-reverse items-center justify-end gap-3 *:w-full sm:flex-row sm:*:w-auto'
       )}
     />
-  )
+  );
 }

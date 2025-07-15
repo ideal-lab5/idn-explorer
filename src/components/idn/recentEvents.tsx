@@ -14,55 +14,60 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useState } from 'react';
-import { Badge } from '@/components/badge'
-import {
-    SidebarItem,
-    SidebarLabel
-} from '@/components/sidebar'
+import { Badge } from '@/components/badge';
+import { SidebarItem, SidebarLabel } from '@/components/sidebar';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
-import { container } from 'tsyringe';
-import { IChainStateService } from '@/services/IChainStateService';
 import { explorerClient } from '@/lib/explorer-client';
+import { IChainStateService } from '@/services/IChainStateService';
+import React, { useEffect, useState } from 'react';
+import { container } from 'tsyringe';
 
 export default function LatestEvents() {
-    const [events, setEvents] = useState<ExecutedTransaction[]>([]);
-    const chainStateService = container.resolve<IChainStateService>('IChainStateService');
+  const [events, setEvents] = useState<ExecutedTransaction[]>([]);
+  const chainStateService = container.resolve<IChainStateService>('IChainStateService');
 
-    useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
 
-        const subscribeToBlocks = async () => {
-            unsubscribe = await chainStateService.subscribeToBlocks(async (blockNumber) => {
-                if (explorerClient) {
-                    const result = await explorerClient.queryHistoricalEvents(blockNumber, blockNumber);
-                    setEvents(result);
-                } else {
-                    console.error('Explorer client is not initialized');
-                }
-            });
-        };
+    const subscribeToBlocks = async () => {
+      unsubscribe = await chainStateService.subscribeToBlocks(async blockNumber => {
+        if (explorerClient) {
+          const result = await explorerClient.queryHistoricalEvents(blockNumber, blockNumber);
+          setEvents(result);
+        } else {
+          console.error('Explorer client is not initialized');
+        }
+      });
+    };
 
-        subscribeToBlocks().catch(console.error);
+    subscribeToBlocks().catch(console.error);
 
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        };
-    }, [chainStateService]);
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [chainStateService]);
 
-    return (
-        <>
-            {!events?.length && <SidebarItem><SidebarLabel><Badge color="purple">No events found</Badge></SidebarLabel></SidebarItem>}
-            {events.map((event, index) => (
-                <SidebarItem href={`/timelock/${event.id}_OP_${event.operation}`} key={index}>
-                    <SidebarLabel><Badge color="purple">{event.id} {event.operation}</Badge>
-                        <p className="text-xs pl-1 truncate">
-                            {event?.metadata[0]}</p>
-                    </SidebarLabel>
-                </SidebarItem>
-            ))}
-        </>
-    );
-};
+  return (
+    <>
+      {!events?.length && (
+        <SidebarItem>
+          <SidebarLabel>
+            <Badge color="purple">No events found</Badge>
+          </SidebarLabel>
+        </SidebarItem>
+      )}
+      {events.map((event, index) => (
+        <SidebarItem href={`/timelock/${event.id}_OP_${event.operation}`} key={index}>
+          <SidebarLabel>
+            <Badge color="purple">
+              {event.id} {event.operation}
+            </Badge>
+            <p className="truncate pl-1 text-xs">{event?.metadata[0]}</p>
+          </SidebarLabel>
+        </SidebarItem>
+      ))}
+    </>
+  );
+}

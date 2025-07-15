@@ -14,65 +14,73 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useState } from 'react';
 import { Badge } from '@/components/badge';
 import { SidebarItem, SidebarLabel } from '@/components/sidebar';
-import { formatNumber } from '@polkadot/util';
-import { container } from 'tsyringe';
 import { ChainStateService } from '@/services/ChainStateService';
 import type { BlockHeader } from '@/services/IChainStateService';
+import { formatNumber } from '@polkadot/util';
+import React, { useEffect, useState } from 'react';
+import { container } from 'tsyringe';
 
 export const BlockHeaders: React.FC = () => {
-    const [headers, setHeaders] = useState<BlockHeader[]>([]);
-    const chainStateService = container.resolve(ChainStateService);
+  const [headers, setHeaders] = useState<BlockHeader[]>([]);
+  const chainStateService = container.resolve(ChainStateService);
 
-    useEffect(() => {
-        let unsubscribe: () => void;
+  useEffect(() => {
+    let unsubscribe: () => void;
 
-        async function subscribeHeaders() {
-            unsubscribe = await chainStateService.subscribeToNewHeaders((newHeader) => {
-                setHeaders((prevHeaders) => {
-                    // Filter out duplicates based on block number
-                    const filteredHeaders = prevHeaders.filter(
-                        (header) => header.blockNumber !== newHeader.blockNumber
-                    );
+    async function subscribeHeaders() {
+      unsubscribe = await chainStateService.subscribeToNewHeaders(newHeader => {
+        setHeaders(prevHeaders => {
+          // Filter out duplicates based on block number
+          const filteredHeaders = prevHeaders.filter(
+            header => header.blockNumber !== newHeader.blockNumber
+          );
 
-                    // Add the new header and sort by block number in descending order
-                    const updatedHeaders = [newHeader, ...filteredHeaders].sort(
-                        (a, b) => b.blockNumber - a.blockNumber
-                    );
+          // Add the new header and sort by block number in descending order
+          const updatedHeaders = [newHeader, ...filteredHeaders].sort(
+            (a, b) => b.blockNumber - a.blockNumber
+          );
 
-                    // Keep only the most recent 5 headers
-                    return updatedHeaders.slice(0, 5);
-                });
-            });
-        }
+          // Keep only the most recent 5 headers
+          return updatedHeaders.slice(0, 5);
+        });
+      });
+    }
 
-        subscribeHeaders();
+    subscribeHeaders();
 
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        };
-    }, []);
-
-    // Helper function to format the blockHash
-    const formatHash = (hash: string) => {
-        const start = hash.slice(0, 6);
-        const end = hash.slice(-6);
-        return `${start}...${end}`;
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
+  }, []);
 
-    return (
-        <>
-            {!headers?.length && <SidebarItem><SidebarLabel><Badge color="lime">Loading recent blocks...</Badge></SidebarLabel></SidebarItem>}
-            {headers.map((header, index) => (
-                <SidebarItem key={index}>
-                    <SidebarLabel><Badge color="lime">{formatNumber(header.blockNumber)}</Badge> </SidebarLabel>
-                    <SidebarLabel className="text-xs pl-1 truncate">{`${formatHash(header.blockHash)}`}</SidebarLabel>
-                </SidebarItem>
-            ))}
-        </>
-    );
+  // Helper function to format the blockHash
+  const formatHash = (hash: string) => {
+    const start = hash.slice(0, 6);
+    const end = hash.slice(-6);
+    return `${start}...${end}`;
+  };
+
+  return (
+    <>
+      {!headers?.length && (
+        <SidebarItem>
+          <SidebarLabel>
+            <Badge color="lime">Loading recent blocks...</Badge>
+          </SidebarLabel>
+        </SidebarItem>
+      )}
+      {headers.map((header, index) => (
+        <SidebarItem key={index}>
+          <SidebarLabel>
+            <Badge color="lime">{formatNumber(header.blockNumber)}</Badge>{' '}
+          </SidebarLabel>
+          <SidebarLabel className="truncate pl-1 text-xs">{`${formatHash(header.blockHash)}`}</SidebarLabel>
+        </SidebarItem>
+      ))}
+    </>
+  );
 };

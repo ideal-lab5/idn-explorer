@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
+import '@/styles/tailwind.css';
+import type { Metadata } from 'next';
+import type React from 'react';
 import 'reflect-metadata'; // Required for tsyringe dependency injection
-import '@/styles/tailwind.css'
-import type { Metadata } from 'next'
-import type React from 'react'
-import { ClientLayout } from './client-layout'
+import { ClientLayout } from './client-layout';
 
 export const metadata: Metadata = {
   title: {
@@ -26,10 +26,9 @@ export const metadata: Metadata = {
     default: 'Ideal Network Explorer',
   },
   description: '',
-}
+};
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-
   return (
     <html
       lang="en"
@@ -40,8 +39,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
       </head>
       <body>
-      <ClientLayout>{children}</ClientLayout>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
-  )
+  );
 }

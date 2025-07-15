@@ -16,14 +16,14 @@
 
 import 'reflect-metadata';
 import { container } from 'tsyringe';
-import { IPolkadotApiService } from '../services/IPolkadotApiService';
-import { PolkadotApiService } from '../services/PolkadotApiService';
-import { IChainStateService } from '../services/IChainStateService';
 import { ChainStateService } from '../services/ChainStateService';
-import { IExplorerService } from '../services/IExplorerService';
 import { ExplorerService } from '../services/ExplorerService';
+import { IChainStateService } from '../services/IChainStateService';
+import { IExplorerService } from '../services/IExplorerService';
+import { IPolkadotApiService } from '../services/IPolkadotApiService';
 import { ISubscriptionService } from '../services/ISubscriptionService';
 import { IdnSubscriptionService } from '../services/IdnSubscriptionService';
+import { PolkadotApiService } from '../services/PolkadotApiService';
 
 // Only register services if we're in a browser environment
 if (typeof window !== 'undefined') {

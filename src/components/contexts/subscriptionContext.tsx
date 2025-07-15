@@ -1,9 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { PulseFilter, Subscription, SubscriptionState } from '@/domain/Subscription';
 import { container } from '@/lib/di-container';
 import { ISubscriptionService, XcmLocation } from '@/services/ISubscriptionService';
-import { Subscription, SubscriptionState, PulseFilter } from '@/domain/Subscription';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useConnectedWallet } from './connectedWalletContext';
 
 interface SubscriptionContextType {
@@ -36,95 +36,110 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Get service instance from the container with error handling
   const subscriptionService = container.resolve<ISubscriptionService>('ISubscriptionService');
 
-  const refreshSubscriptions = useCallback(async (address?: string) => {
-    if (!address) {
-      setSubscriptions([]);
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError(null);
-      const userSubscriptions = await subscriptionService.getSubscriptionsForAccount(address);
-      setSubscriptions(userSubscriptions);
-    } catch (error) {
-      console.error('Failed to fetch subscriptions:', error);
-      setError('Failed to load subscriptions');
-      setSubscriptions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [subscriptionService]);
+  const refreshSubscriptions = useCallback(
+    async (address?: string) => {
+      if (!address) {
+        setSubscriptions([]);
+        setLoading(false);
+        return;
+      }
 
-  const createSubscription = useCallback(async (
-    signer: any,
-    credits: number,
-    target: XcmLocation,
-    callIndex: [number, number],
-    frequency: number,
-    metadata?: string,
-    subscriptionId?: string
-  ) => {
-    try {
-      await subscriptionService.createSubscription(
-        signer, credits, target, callIndex, frequency, metadata, subscriptionId
-      );
-      await refreshSubscriptions(signer.address);
-    } catch (err) {
-      console.error('Failed to create subscription:', err);
-      throw err;
-    }
-  }, [subscriptionService]);
+      try {
+        setLoading(true);
+        setError(null);
+        const userSubscriptions = await subscriptionService.getSubscriptionsForAccount(address);
+        setSubscriptions(userSubscriptions);
+      } catch (error) {
+        console.error('Failed to fetch subscriptions:', error);
+        setError('Failed to load subscriptions');
+        setSubscriptions([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [subscriptionService]
+  );
 
-  const pauseSubscription = useCallback(async (
-    signer: any,
-    id: string
-  ) => {
-    try {
-      await subscriptionService.pauseSubscription(signer, id);
-      await refreshSubscriptions(signer.address);
-    } catch (err) {
-      console.error('Failed to pause subscription:', err);
-      throw err;
-    }
-  }, [subscriptionService]);
+  const createSubscription = useCallback(
+    async (
+      signer: any,
+      credits: number,
+      target: XcmLocation,
+      callIndex: [number, number],
+      frequency: number,
+      metadata?: string,
+      subscriptionId?: string
+    ) => {
+      try {
+        await subscriptionService.createSubscription(
+          signer,
+          credits,
+          target,
+          callIndex,
+          frequency,
+          metadata,
+          subscriptionId
+        );
+        await refreshSubscriptions(signer.address);
+      } catch (err) {
+        console.error('Failed to create subscription:', err);
+        throw err;
+      }
+    },
+    [subscriptionService]
+  );
 
-  const reactivateSubscription = useCallback(async (
-    signer: any,
-    id: string
-  ) => {
-    try {
-      await subscriptionService.reactivateSubscription(signer, id);
-      await refreshSubscriptions(signer.address);
-    } catch (err) {
-      console.error('Failed to resume subscription:', err);
-      throw err;
-    }
-  }, [subscriptionService]);
+  const pauseSubscription = useCallback(
+    async (signer: any, id: string) => {
+      try {
+        await subscriptionService.pauseSubscription(signer, id);
+        await refreshSubscriptions(signer.address);
+      } catch (err) {
+        console.error('Failed to pause subscription:', err);
+        throw err;
+      }
+    },
+    [subscriptionService]
+  );
 
-  const killSubscription = useCallback(async (
-    signer: any,
-    id: string
-  ) => {
-    try {
-      await subscriptionService.killSubscription(signer, id);
-      await refreshSubscriptions(signer.address);
-    } catch (err) {
-      console.error('Failed to cancel subscription:', err);
-      throw err;
-    }
-  }, [subscriptionService]);
+  const reactivateSubscription = useCallback(
+    async (signer: any, id: string) => {
+      try {
+        await subscriptionService.reactivateSubscription(signer, id);
+        await refreshSubscriptions(signer.address);
+      } catch (err) {
+        console.error('Failed to resume subscription:', err);
+        throw err;
+      }
+    },
+    [subscriptionService]
+  );
 
-  const getSubscription = useCallback(async (id: string) => {
-    try {
-      return await subscriptionService.getSubscription(id);
-    } catch (err) {
-      console.error('Failed to get subscription:', err);
-      throw err;
-    }
-  }, [subscriptionService]);
-  
+  const killSubscription = useCallback(
+    async (signer: any, id: string) => {
+      try {
+        await subscriptionService.killSubscription(signer, id);
+        await refreshSubscriptions(signer.address);
+      } catch (err) {
+        console.error('Failed to cancel subscription:', err);
+        throw err;
+      }
+    },
+    [subscriptionService]
+  );
+
+  const getSubscription = useCallback(
+    async (id: string) => {
+      try {
+        return await subscriptionService.getSubscription(id);
+      } catch (err) {
+        console.error('Failed to get subscription:', err);
+        throw err;
+      }
+    },
+    [subscriptionService]
+  );
+
   const getAllSubscriptions = useCallback(async () => {
     try {
       setLoading(true);
@@ -151,14 +166,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     killSubscription,
     getSubscription,
     refreshSubscriptions,
-    getAllSubscriptions
+    getAllSubscriptions,
   };
 
-  return (
-    <SubscriptionContext.Provider value={value}>
-      {children}
-    </SubscriptionContext.Provider>
-  );
+  return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
 };
 
 export const useSubscription = () => {
