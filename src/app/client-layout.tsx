@@ -1,5 +1,9 @@
 'use client';
 
+// Import client initialization to ensure reflect-metadata is loaded first
+import '@/lib/client-init';
+import 'reflect-metadata';
+
 import { ConnectedWalletProvider } from '@/components/contexts/connectedWalletContext';
 import { PolkadotProvider } from '@/components/contexts/polkadotContext';
 import { SubscriptionProvider } from '@/components/contexts/subscriptionContext';

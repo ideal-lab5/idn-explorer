@@ -43,7 +43,8 @@ import {
 import { usePathname } from 'next/navigation';
 
 export function ApplicationLayout({ children }: { children: React.ReactNode }) {
-  let pathname = usePathname();
+  // Get the current pathname and provide a fallback to prevent null issues
+  const pathname = usePathname() || '';
 
   return (
     <ConnectedWalletProvider>
@@ -76,18 +77,18 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
                 <SidebarHeading>Randomness</SidebarHeading>
                 <SidebarItem
                   href="/subscriptions/dashboard"
-                  current={pathname === '/' || pathname === '/subscriptions/dashboard'}
+                  current={Boolean(pathname === '/' || pathname === '/subscriptions/dashboard')}
                 >
                   <ChartBarIcon />
                   <SidebarLabel>Delivery Monitor</SidebarLabel>
                 </SidebarItem>
                 <SidebarItem
                   href="/subscriptions"
-                  current={
+                  current={Boolean(
                     pathname === '/subscriptions' ||
-                    (pathname.startsWith('/subscriptions/') &&
-                      pathname !== '/subscriptions/dashboard')
-                  }
+                      (pathname.startsWith('/subscriptions/') &&
+                        pathname !== '/subscriptions/dashboard')
+                  )}
                 >
                   <BoltIcon />
                   <SidebarLabel>My Subscriptions</SidebarLabel>
@@ -96,11 +97,14 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
 
               <SidebarSection>
                 <SidebarHeading>Timelock</SidebarHeading>
-                <SidebarItem href="/network-activity" current={pathname === '/network-activity'}>
+                <SidebarItem
+                  href="/network-activity"
+                  current={Boolean(pathname === '/network-activity')}
+                >
                   <SparklesIcon />
                   <SidebarLabel>Activity Hub</SidebarLabel>
                 </SidebarItem>
-                <SidebarItem href="/timelock" current={pathname.startsWith('/timelock')}>
+                <SidebarItem href="/timelock" current={Boolean(pathname.startsWith('/timelock'))}>
                   <ClockIcon />
                   <SidebarLabel>My Transactions</SidebarLabel>
                 </SidebarItem>

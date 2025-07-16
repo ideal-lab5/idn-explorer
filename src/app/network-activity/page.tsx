@@ -88,7 +88,8 @@ export default function NetworkActivityPage() {
   const [executedTxPage, setExecutedTxPage] = useState<number>(0);
   const [scheduledTxPage, setScheduledTxPage] = useState<number>(0);
   const [randomnessPage, setRandomnessPage] = useState<number>(0);
-  const searchParams = useSearchParams();
+  // Provide a fallback URLSearchParams object if searchParams is null
+  const searchParams = useSearchParams() || new URLSearchParams();
   const [copyStatus, setCopyStatus] = useState(false); // To indicate if the text was copied
 
   const onCopyText = () => {
@@ -99,8 +100,8 @@ export default function NetworkActivityPage() {
   useEffect(() => {
     async function processParam(paramName: any, setFunction: any, itemsSize: number) {
       try {
-        const pExecutedTxPage =
-          (searchParams.get(paramName) && parseInt(searchParams.get(paramName) as string)) || 0;
+        const paramValue = searchParams.get(paramName);
+        const pExecutedTxPage = paramValue ? parseInt(paramValue) : 0;
         if (pExecutedTxPage * PAGE_SIZE < itemsSize)
           setFunction(
             pExecutedTxPage * PAGE_SIZE < executedTransactions.length ? pExecutedTxPage : 0
