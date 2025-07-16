@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-// Import reflect-metadata from dedicated file to ensure it's loaded first
-import '@/lib/reflect-metadata';
+// Load reflect-metadata first, directly - don't use import from another file
+import 'reflect-metadata';
+// Now import the container after reflect-metadata is loaded
 import { container } from 'tsyringe';
 import { ChainStateService } from '../services/ChainStateService';
 import { ExplorerService } from '../services/ExplorerService';
