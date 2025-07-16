@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
+import '@/lib/reflect-metadata'; // Import reflect-metadata first for tsyringe dependency injection
 import '@/styles/tailwind.css';
 import type { Metadata } from 'next';
 import type React from 'react';
-import 'reflect-metadata'; // Required for tsyringe dependency injection
 import { ClientLayout } from './client-layout';
 
 export const metadata: Metadata = {
