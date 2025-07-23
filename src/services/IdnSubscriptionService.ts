@@ -15,14 +15,8 @@
  */
 
 import { inject, injectable } from 'tsyringe';
-import type {
-  PulseFilter,
-  Subscription,
-  SubscriptionDetails,
-  SubscriptionState,
-} from '../domain/Subscription';
+import type { Subscription, SubscriptionDetails, SubscriptionState } from '../domain/Subscription';
 import {
-  PulseFilter as PulseFilterClass,
   Subscription as SubscriptionClass,
   SubscriptionDetails as SubscriptionDetailsClass,
   SubscriptionState as SubscriptionStateEnum,
@@ -906,8 +900,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
       details.target ? JSON.stringify(details.target) : '', // serialize the target object
       this.extractMetadataString(palletSub.metadata), // metadata is at root level
       details.callIndex ? details.callIndex.toString() : '', // callIndex is in details
-      0, // deposit - not present in this structure
-      undefined // pulseFilter - not present in this structure
+      0 // deposit - not present in this structure
     );
 
     return new SubscriptionClass(
@@ -937,17 +930,6 @@ export class IdnSubscriptionService implements ISubscriptionService {
     } else {
       return SubscriptionStateEnum.Active; // Default fallback
     }
-  }
-
-  /**
-   * Converts pallet pulse filter to our domain PulseFilter
-   */
-  private palletPulseFilterToPulseFilter(palletFilter: any): PulseFilter {
-    return new PulseFilterClass(
-      palletFilter.round ? Number(palletFilter.round) : undefined,
-      palletFilter.hashPrefix ? palletFilter.hashPrefix.toString() : undefined,
-      palletFilter.customExpression ? palletFilter.customExpression.toString() : undefined
-    );
   }
 
   /**

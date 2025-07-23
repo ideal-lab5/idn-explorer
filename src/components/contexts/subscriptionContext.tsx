@@ -1,6 +1,6 @@
 'use client';
 
-import { PulseFilter, Subscription, SubscriptionState } from '@/domain/Subscription';
+import { Subscription, SubscriptionState } from '@/domain/Subscription';
 import { container } from '@/lib/di-container';
 import { ISubscriptionService, XcmLocation } from '@/services/ISubscriptionService';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';

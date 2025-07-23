@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { PulseFilter, Subscription } from '../domain/Subscription';
+import { Subscription } from '../domain/Subscription';
 
 /**
  * XCM Location structure for subscription targets
@@ -33,7 +33,7 @@ export interface UpdateSubscriptionParams {
   amount?: number; // Optional new amount
   frequency?: number; // Optional new frequency
   metadata?: string; // Optional new metadata
-  pulseFilter?: PulseFilter; // Optional new pulse filter
+  // No additional filter parameters
 }
 
 /**

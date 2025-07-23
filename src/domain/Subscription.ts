@@ -30,40 +30,7 @@ export enum SubscriptionState {
   Paused = 'Paused',
 }
 
-/**
- * Defines criteria for which pulses should be delivered to a subscription.
- * This allows subscribers to filter the random values they receive.
- */
-export class PulseFilter {
-  constructor(
-    /** Optional filter by round number */
-    public round?: number,
-    /** Optional filter by pulse hash prefix */
-    public hashPrefix?: string,
-    /** Custom filter expression (advanced usage) */
-    public customExpression?: string
-  ) {}
-
-  /**
-   * Checks if a pulse matches this filter criteria
-   *
-   * @param pulse The pulse to check against filter criteria
-   * @returns True if the pulse matches the filter or if no filter is set
-   */
-  matches(pulse: any): boolean {
-    // Simple mock implementation - in real code, this would check against actual pulse properties
-    if (!this.round && !this.hashPrefix && !this.customExpression) return true;
-
-    if (this.round && pulse.round !== this.round) return false;
-    if (this.hashPrefix && !pulse.hash.startsWith(this.hashPrefix)) return false;
-    if (this.customExpression) {
-      // In a real implementation, this would evaluate the expression
-      console.warn('Custom expression filters not implemented in mock');
-    }
-
-    return true;
-  }
-}
+// PulseFilter implementation removed
 
 /**
  * Contains the immutable details of a subscription.
@@ -89,9 +56,7 @@ export class SubscriptionDetails {
     /** Call index in hex format (e.g., '0x2a03') */
     public callIndex: string,
     /** The storage deposit locked for this subscription */
-    public deposit: number = 0,
-    /** Optional filter for which pulses to receive */
-    public pulseFilter?: PulseFilter
+    public deposit: number = 0
   ) {}
 }
 
@@ -138,7 +103,6 @@ export class Subscription {
     frequency: number,
     metadata: string = '',
     callIndex: string = '',
-    pulseFilter?: PulseFilter,
     deposit: number = 0
   ): Subscription {
     const now = Date.now();
@@ -151,8 +115,7 @@ export class Subscription {
       target,
       metadata,
       callIndex,
-      deposit,
-      pulseFilter
+      deposit
     );
 
     return new Subscription(

@@ -84,15 +84,15 @@ export class ChainStateService implements IChainStateService {
       // Fallback: use current block number divided by session length as rough session
       const header = await api.rpc.chain.getHeader();
       const blockNumber = Number(header.number.toString());
-      // Assume roughly 600 blocks per session (10 minutes at 1 block per second)
-      return Math.floor(blockNumber / 600);
+      // Ideal Network sessions last 3,600 blocks (6 hours at 6 seconds per block)
+      return Math.floor(blockNumber / 3600);
     } catch (error: any) {
       console.warn(
         'Unable to determine session index for Aura consensus:',
         error?.message || error
       );
       // Return current timestamp as fallback session indicator
-      return Math.floor(Date.now() / (1000 * 60 * 10)); // 10-minute sessions
+      return Math.floor(Date.now() / (1000 * 60 * 60 * 6)); // 6-hour sessions
     }
   }
 

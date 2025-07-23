@@ -15,9 +15,8 @@
  */
 
 import { injectable } from 'tsyringe';
-import type { PulseFilter, Subscription, SubscriptionDetails } from '../domain/Subscription';
+import type { Subscription, SubscriptionDetails } from '../domain/Subscription';
 import {
-  PulseFilter as PulseFilterClass,
   Subscription as SubscriptionClass,
   SubscriptionDetails as SubscriptionDetailsClass,
   SubscriptionState,
@@ -224,9 +223,7 @@ export class MockSubscriptionService implements ISubscriptionService {
       subscription.details.metadata = params.metadata;
     }
 
-    if (params.pulseFilter !== undefined) {
-      subscription.details.pulseFilter = params.pulseFilter;
-    }
+    // PulseFilter support removed
 
     subscription.details.updatedAt = Date.now();
     this.subscriptions.set(params.subscriptionId, subscription);
@@ -301,15 +298,9 @@ export class MockSubscriptionService implements ISubscriptionService {
    * @param amount Number of random values
    * @param target XCM target location
    * @param metadata Optional metadata string
-   * @param pulseFilter Optional pulse filter
    * @returns The calculated storage deposit amount
    */
-  private calculateStorageDeposit(
-    amount: number,
-    target: string,
-    metadata?: string,
-    pulseFilter?: PulseFilter
-  ): number {
+  private calculateStorageDeposit(amount: number, target: string, metadata?: string): number {
     // Base deposit
     let deposit = 1.0;
 
@@ -321,10 +312,7 @@ export class MockSubscriptionService implements ISubscriptionService {
       deposit += metadata.length * 0.005;
     }
 
-    // Add for pulse filter if present
-    if (pulseFilter) {
-      deposit += 0.5;
-    }
+    // No longer using pulse filter
 
     return deposit;
   }
