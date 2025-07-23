@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-'use client'
-import { Avatar } from '@/components/avatar'
-import { BlockHeaders } from '@/components/idn/latestBlocks'
-import {
-  Dropdown,
-  DropdownButton,
-} from '@/components/dropdown'
-import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from '@/components/navbar'
+'use client';
+import { Avatar } from '@/components/avatar';
+import { ConnectedWalletProvider } from '@/components/contexts/connectedWalletContext';
+import { Dropdown, DropdownButton } from '@/components/dropdown';
+import { AccountDropdownMenu, ConnectWallet } from '@/components/idn/connectWallet';
+import { BlockHeaders } from '@/components/idn/latestBlocks';
+import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from '@/components/navbar';
 import {
   Sidebar,
   SidebarBody,
@@ -31,26 +30,21 @@ import {
   SidebarLabel,
   SidebarSection,
   SidebarSpacer,
-} from '@/components/sidebar'
-import { SidebarLayout } from '@/components/sidebar-layout'
+} from '@/components/sidebar';
+import { SidebarLayout } from '@/components/sidebar-layout';
 import {
-  QuestionMarkCircleIcon,
-  SparklesIcon,
+  BoltIcon,
+  ChartBarIcon,
   ClockIcon,
   CubeIcon,
-  BoltIcon,
-  ChartBarIcon
-} from '@heroicons/react/20/solid'
-import { usePathname } from 'next/navigation'
-import { ConnectedWalletProvider } from "@/components/contexts/connectedWalletContext";
-import { ConnectWallet, AccountDropdownMenu } from "@/components/idn/connectWallet";
+  QuestionMarkCircleIcon,
+  SparklesIcon,
+} from '@heroicons/react/20/solid';
+import { usePathname } from 'next/navigation';
 
-export function ApplicationLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  let pathname = usePathname();
+export function ApplicationLayout({ children }: { children: React.ReactNode }) {
+  // Get the current pathname and provide a fallback to prevent null issues
+  const pathname = usePathname() || '';
 
   return (
     <ConnectedWalletProvider>
@@ -79,14 +73,23 @@ export function ApplicationLayout({
               </Dropdown>
             </SidebarHeader>
             <SidebarBody>
-
-            <SidebarSection>
+              <SidebarSection>
                 <SidebarHeading>Randomness</SidebarHeading>
-                <SidebarItem href="/subscriptions/dashboard" current={pathname === '/' || pathname === '/subscriptions/dashboard'}>
+                <SidebarItem
+                  href="/subscriptions/dashboard"
+                  current={Boolean(pathname === '/' || pathname === '/subscriptions/dashboard')}
+                >
                   <ChartBarIcon />
                   <SidebarLabel>Delivery Monitor</SidebarLabel>
                 </SidebarItem>
-                <SidebarItem href="/subscriptions" current={pathname === '/subscriptions' || (pathname.startsWith('/subscriptions/') && pathname !== '/subscriptions/dashboard')}>
+                <SidebarItem
+                  href="/subscriptions"
+                  current={Boolean(
+                    pathname === '/subscriptions' ||
+                      (pathname.startsWith('/subscriptions/') &&
+                        pathname !== '/subscriptions/dashboard')
+                  )}
+                >
                   <BoltIcon />
                   <SidebarLabel>My Subscriptions</SidebarLabel>
                 </SidebarItem>
@@ -94,16 +97,19 @@ export function ApplicationLayout({
 
               <SidebarSection>
                 <SidebarHeading>Timelock</SidebarHeading>
-                <SidebarItem href="/network-activity" current={pathname === '/network-activity'}>
+                <SidebarItem
+                  href="/network-activity"
+                  current={Boolean(pathname === '/network-activity')}
+                >
                   <SparklesIcon />
                   <SidebarLabel>Activity Hub</SidebarLabel>
                 </SidebarItem>
-                <SidebarItem href="/timelock" current={pathname.startsWith('/timelock')}>
+                <SidebarItem href="/timelock" current={Boolean(pathname.startsWith('/timelock'))}>
                   <ClockIcon />
                   <SidebarLabel>My Transactions</SidebarLabel>
                 </SidebarItem>
               </SidebarSection>
-              
+
               <SidebarSection className="max-lg:hidden">
                 <SidebarHeading>Status</SidebarHeading>
                 <SidebarItem>
@@ -114,7 +120,7 @@ export function ApplicationLayout({
               </SidebarSection>
               <SidebarSpacer />
               <SidebarSection>
-                <SidebarItem href="https://docs.idealabs.network/docs/intro" target='blank'>
+                <SidebarItem href="https://docs.idealabs.network/docs/intro" target="blank">
                   <QuestionMarkCircleIcon />
                   <SidebarLabel>Documentation</SidebarLabel>
                 </SidebarItem>
@@ -128,5 +134,5 @@ export function ApplicationLayout({
         {children}
       </SidebarLayout>
     </ConnectedWalletProvider>
-  )
+  );
 }

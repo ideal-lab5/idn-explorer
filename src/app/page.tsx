@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 /**
  * Home page that redirects to the Randomness Delivery Monitor dashboard
  */
 export default function Home() {
   const router = useRouter();
-  
+
   useEffect(() => {
     router.push('/subscriptions/dashboard');
   }, [router]);
-  
+
   return null;
 }

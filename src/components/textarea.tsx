@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import * as Headless from '@headlessui/react'
-import { clsx } from 'clsx'
-import { forwardRef } from 'react'
+import * as Headless from '@headlessui/react';
+import { clsx } from 'clsx';
+import { forwardRef } from 'react';
 
 export const Textarea = forwardRef(function Textarea(
   {
@@ -66,5 +66,5 @@ export const Textarea = forwardRef(function Textarea(
         ])}
       />
     </span>
-  )
-})
+  );
+});

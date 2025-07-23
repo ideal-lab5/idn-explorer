@@ -1,9 +1,9 @@
 'use client';
 
-import { container } from 'tsyringe';
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { IPolkadotApiService } from '@/services/IPolkadotApiService';
 import { IChainStateService } from '@/services/IChainStateService';
+import { IPolkadotApiService } from '@/services/IPolkadotApiService';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { container } from 'tsyringe';
 
 interface PolkadotContextType {
   polkadotApiService: IPolkadotApiService;
@@ -29,12 +29,8 @@ export const PolkadotProvider = ({ children }: { children: React.ReactNode }) =>
     return null;
   }
 
-  return (
-    <PolkadotContext.Provider value={services}>
-      {children}
-    </PolkadotContext.Provider>
-  );
-}
+  return <PolkadotContext.Provider value={services}>{children}</PolkadotContext.Provider>;
+};
 
 export function usePolkadot() {
   const context = useContext(PolkadotContext);

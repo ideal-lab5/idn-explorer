@@ -14,35 +14,30 @@
  * limitations under the License.
  */
 
-import { injectable, inject } from "tsyringe";
-import type { IExplorerService } from "./IExplorerService";
-import type { IPolkadotApiService } from "./IPolkadotApiService";
-import {SupportedCurve, Timelock} from "@ideallabs/timelock.js";
-import { Randomness } from "@/domain/Randomness";
-import { DelayedTransaction } from "@/domain/DelayedTransaction";
-import { ExecutedTransaction } from "@/domain/ExecutedTransaction";
-import { DelayedTransactionDetails } from "@/domain/DelayedTransactionDetails";
+import { DelayedTransaction } from '@/domain/DelayedTransaction';
+import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails';
+import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
+import { Randomness } from '@/domain/Randomness';
+import { SupportedCurve, Timelock } from '@ideallabs/timelock.js';
 import { EventRecord } from '@polkadot/types/interfaces';
+import { inject, injectable } from 'tsyringe';
+import type { IExplorerService } from './IExplorerService';
+import type { IPolkadotApiService } from './IPolkadotApiService';
 
 @injectable()
 export class ExplorerService implements IExplorerService {
   private tLockApi: Timelock | null = null;
   private featureScheduleTransaction: boolean = false;
 
-  constructor(
-    @inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService
-  ) {
-
+  constructor(@inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService) {
     if (process.env.FEATURE_SCHEDULE_TRANSACTION) {
-      this.featureScheduleTransaction = process.env.FEATURE_SCHEDULE_TRANSACTION == "enabled";
+      this.featureScheduleTransaction = process.env.FEATURE_SCHEDULE_TRANSACTION == 'enabled';
     }
-    this.initializeTlock().then(()=> {
-      console.log("TLock WASM has been initialized");
-    })
+    this.initializeTlock();
   }
 
   async initializeTlock() {
-    if(!this.tLockApi) {
+    if (!this.tLockApi) {
       this.tLockApi = await Timelock.build(SupportedCurve.BLS12_381);
     }
   }
@@ -52,12 +47,11 @@ export class ExplorerService implements IExplorerService {
     let listOfGeneratedRandomness: Randomness[] = [];
 
     if (!polkadotApi?.query?.randomnessBeacon?.pulses) {
-      console.log("Network Without Randomness Beacon");
       return listOfGeneratedRandomness;
     }
 
     let i: number = 0;
-    while (i < size && (blockNumber - i >= 0)) {
+    while (i < size && blockNumber - i >= 0) {
       let nextBlock: number = blockNumber - i;
       try {
         const pulse = await polkadotApi.query.randomnessBeacon.pulses(nextBlock);
@@ -65,38 +59,38 @@ export class ExplorerService implements IExplorerService {
         if (pulseData) {
           // Use proper type assertion for the complex structure
           const body = pulseData['body'] as any;
-          const result = new Randomness(
-            nextBlock,
-            body?.randomness || "",
-            body?.signature || ""
-          );
-          if (result.randomness !== "") {
+          const result = new Randomness(nextBlock, body?.randomness || '', body?.signature || '');
+          if (result.randomness !== '') {
             listOfGeneratedRandomness.push(result);
           }
         }
-      } catch (e) {
-        console.error(`Error fetching randomness for block ${nextBlock}:`, e);
+      } catch (e: any) {
+        console.error(`Error fetching randomness for block ${nextBlock}:`, e?.message || e);
       }
       i++;
     }
     return listOfGeneratedRandomness;
   }
 
-  async scheduleTransaction(signer: any, transactionDetails: DelayedTransactionDetails): Promise<void> {
-    if(this.featureScheduleTransaction) {
-
+  async scheduleTransaction(
+    signer: any,
+    transactionDetails: DelayedTransactionDetails
+  ): Promise<void> {
+    if (this.featureScheduleTransaction) {
       const polkadotApi = await this.polkadotApiService.getApi();
 
       // Get the inner call using Polkadot API
       const tx = polkadotApi.tx[transactionDetails.pallet][transactionDetails.extrinsic];
       if (!tx) {
-        throw new Error(`Invalid extrinsic: ${transactionDetails.pallet}.${transactionDetails.extrinsic}`);
+        throw new Error(
+          `Invalid extrinsic: ${transactionDetails.pallet}.${transactionDetails.extrinsic}`
+        );
       }
 
       // Parse parameters
       const params = transactionDetails.params.map(param => {
-        if (param.value === "true") return true;
-        if (param.value === "false") return false;
+        if (param.value === 'true') return true;
+        if (param.value === 'false') return false;
         if (!isNaN(param.value)) return Number(param.value);
         return param.value;
       });
@@ -110,21 +104,18 @@ export class ExplorerService implements IExplorerService {
       // Sign and send using Polkadot API
       await outerCall.signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
         if (result.status.isInBlock) {
-          console.log('Transaction in block:', result.status.asInBlock.toHex());
+          // Transaction confirmed in block
         }
       });
-
     } else {
-      console.error("The Schedule Transaction Feature is not currently implemented");
+      console.error('The Schedule Transaction Feature is not currently implemented');
     }
-    
   }
 
   async getScheduledTransactions(): Promise<DelayedTransaction[]> {
     const polkadotApi = await this.polkadotApiService.getApi();
     let listOfTransactions: DelayedTransaction[] = [];
     if (!polkadotApi?.query?.scheduler?.agenda) {
-      console.log("Network Without Randomness Beacon");
       return listOfTransactions;
     }
     const entries = await polkadotApi.query.scheduler.agenda.entries();
@@ -132,10 +123,10 @@ export class ExplorerService implements IExplorerService {
       for (const humanValue of value.map((v: any) => v.toHuman())) {
         if (humanValue.maybeCiphertext) {
           const delayedTx = new DelayedTransaction(
-            "NA",
+            'NA',
             humanValue.maybeId,
             humanValue.origin.system.Signed,
-            "Extrinsic Call",
+            'Extrinsic Call',
             key.toHuman()[0]
           );
           listOfTransactions.push(delayedTx);
@@ -145,86 +136,101 @@ export class ExplorerService implements IExplorerService {
     return listOfTransactions;
   }
 
-  async queryHistoricalEvents(startBlock: number, endBlock: number): Promise<ExecutedTransaction[]> {
+  async queryHistoricalEvents(
+    startBlock: number,
+    endBlock: number
+  ): Promise<ExecutedTransaction[]> {
     const polkadotApi = await this.polkadotApiService.getApi();
     let listOfEvents: ExecutedTransaction[] = [];
 
+    // Define IDN pallet names we're interested in
+    const idnPallets = ['idnManager', 'randBeacon', 'randomnessBeacon'];
+
     for (let blockNumber = startBlock; blockNumber <= endBlock; blockNumber++) {
       try {
-        // Get the block hash and block
+        // Get the block hash and events only (skip complex extrinsic decoding)
         const blockHash = await polkadotApi.rpc.chain.getBlockHash(blockNumber);
-        const signedBlock = await polkadotApi.rpc.chain.getBlock(blockHash);
         const events = await polkadotApi.query.system.events.at(blockHash);
 
-        // Process extrinsics and their events
-        signedBlock.block.extrinsics.forEach((extrinsic, index) => {
-          const { method, signer } = extrinsic;
-
-          // Find events for this extrinsic
-          const relatedEvents = (events as any)?.filter(({ phase }: any) =>
-            phase.isApplyExtrinsic && phase.asApplyExtrinsic.eq(index)
-          );
-
-          // Determine transaction status
-          let status = 'Pending';
-          relatedEvents.forEach((record: EventRecord) => {
-            const { event } = record;
-            if (event.section === 'system') {
-              if (event.method === 'ExtrinsicSuccess') status = 'Confirmed';
-              else if (event.method === 'ExtrinsicFailed') status = 'Failed';
-            }
-          });
-
-          // Process each event
-          relatedEvents.forEach((record: EventRecord) => {
-            const { event } = record;
+        // Process events directly, focusing on IDN pallets
+        (events as any)?.forEach((record: EventRecord, index: number) => {
+          try {
+            const { event, phase } = record;
             const operation = `${event.section}.${event.method}`;
 
-            const eventData = event.data.map((data: any, i: number) => ({
-              type: event.typeDef[i].type,
-              value: data.toString()
-            }));
+            // Focus on IDN pallet events or important system events
+            const isIdnEvent = idnPallets.some(pallet =>
+              event.section.toLowerCase().includes(pallet.toLowerCase())
+            );
+            const isImportantSystemEvent =
+              event.section === 'system' &&
+              ['ExtrinsicSuccess', 'ExtrinsicFailed', 'NewAccount'].includes(event.method);
+            const isSchedulerEvent = event.section === 'scheduler';
+
+            if (!isIdnEvent && !isImportantSystemEvent && !isSchedulerEvent) {
+              return; // Skip non-IDN events to reduce noise
+            }
+
+            let eventData: any[] = [];
+            try {
+              eventData = event.data.map((data: any, i: number) => ({
+                type: event.typeDef?.[i]?.type || 'Unknown',
+                value: data.toString(),
+              }));
+            } catch (e: any) {
+              // Fallback for events that can't be properly decoded
+              eventData = [
+                { type: 'DecodingError', value: e?.message || 'Unable to decode event data' },
+              ];
+            }
+
+            // Determine transaction status and signer
+            let status = 'Confirmed';
+            let signer = 'System';
+            let extrinsicIndex = 'sys';
+
+            if ((phase as any)?.isApplyExtrinsic) {
+              try {
+                extrinsicIndex = (phase as any).asApplyExtrinsic.toString();
+
+                // Try to determine signer from event data if it looks like an address
+                const potentialSigner = eventData.find(
+                  data => typeof data.value === 'string' && this.looksLikeAddress(data.value)
+                );
+                if (potentialSigner) {
+                  signer = potentialSigner.value;
+                }
+              } catch (e: any) {
+                // Fallback for phase decoding issues
+                extrinsicIndex = 'unknown';
+              }
+            }
 
             const executedTransaction = new ExecutedTransaction(
               blockNumber,
-              `${blockNumber}-${index}`,
-              signer?.toString() || 'Unsigned',
+              `${blockNumber}-${extrinsicIndex}-${index}`,
+              signer,
               operation,
               status,
               eventData,
-              event.meta.docs.map((d: any) => d.toString().trim()),
-              operation === "scheduler.Scheduled"
+              event.meta?.docs?.map((d: any) => d.toString().trim()) || [],
+              isSchedulerEvent || isIdnEvent
             );
 
             listOfEvents.push(executedTransaction);
-          });
+          } catch (e: any) {
+            // Only log if it's an IDN event that failed
+            if (
+              idnPallets.some(pallet =>
+                record?.event?.section?.toLowerCase().includes(pallet.toLowerCase())
+              )
+            ) {
+              console.warn(`Error processing IDN event ${blockNumber}-${index}:`, e?.message || e);
+            }
+          }
         });
-
-        // Handle system events
-        (events as any)?.filter((phase: any) => phase.isFinalization || phase.isInitialization)
-          .forEach((record: any, index: number) => {
-            const { event } = record;
-            const eventData = event.data.map((data: any, i: number) => ({
-              type: event.typeDef[i].type,
-              value: data.toString()
-            }));
-
-            const operation = `${event.section}.${event.method}`;
-            const executedTransaction = new ExecutedTransaction(
-              blockNumber,
-              `${blockNumber}-sys-${index}`,
-              this.looksLikeAddress(eventData[0]?.value) ? eventData[0].value : "System",
-              operation,
-              'Confirmed',
-              eventData,
-              event.meta.docs.map((d: any) => d.toString().trim()),
-              operation === "scheduler.Dispatched" || this.looksLikeAddress(eventData[0]?.value)
-            );
-
-            listOfEvents.push(executedTransaction);
-          });
-      } catch (e) {
-        console.error(`Error processing block ${blockNumber}:`, e);
+      } catch (e: any) {
+        console.error(`Error processing block ${blockNumber}:`, e?.message || e);
       }
     }
 
@@ -239,19 +245,18 @@ export class ExplorerService implements IExplorerService {
     // Access data and free balance with proper type casting
     const balance = (accountInfo as any).data || accountInfo;
     const freeBalance = (balance as any).free;
-    
+
     return freeBalance?.toHuman() || '0';
   }
 
   async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {
     const polkadotApi = await this.polkadotApiService.getApi();
-    console.log('Canceling transaction', blockNumber, index, signer);
 
     return new Promise((resolve, reject) => {
-      polkadotApi.tx.scheduler.cancel(blockNumber, index)
+      polkadotApi.tx.scheduler
+        .cancel(blockNumber, index)
         .signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
           if (result.status.isInBlock) {
-            console.log('Transaction included in block:', result.status.asInBlock.toHex());
             resolve();
           }
 

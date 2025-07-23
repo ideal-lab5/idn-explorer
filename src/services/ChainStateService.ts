@@ -16,14 +16,12 @@
 
 import { formatBalance } from '@polkadot/util';
 import { inject, injectable } from 'tsyringe';
-import type { IChainStateService, SessionInfo, BlockHeader } from './IChainStateService';
+import type { BlockHeader, IChainStateService, SessionInfo } from './IChainStateService';
 import type { IPolkadotApiService } from './IPolkadotApiService';
 
 @injectable()
 export class ChainStateService implements IChainStateService {
-  constructor(
-    @inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService
-  ) {}
+  constructor(@inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService) {}
 
   async getBalance(address: string): Promise<string> {
     try {
@@ -33,7 +31,7 @@ export class ChainStateService implements IChainStateService {
       // Access the free balance from the account info based on the API structure
       // Handle both older and newer Polkadot API versions with proper type casting
       const freeBalance = (accountInfo as any).data?.free || (accountInfo as any).free;
-      
+
       return formatBalance(freeBalance, { withUnit: true });
     } catch (error) {
       console.error('Error fetching balance:', error);
@@ -42,12 +40,12 @@ export class ChainStateService implements IChainStateService {
   }
 
   async subscribeToBlocks(callback: (blockNumber: number) => void): Promise<() => void> {
-    return this.subscribeToNewHeaders((header) => callback(header.blockNumber));
+    return this.subscribeToNewHeaders(header => callback(header.blockNumber));
   }
 
   async subscribeToNewHeaders(callback: (header: BlockHeader) => void): Promise<() => void> {
     const api = await this.polkadotApiService.getApi();
-    const unsubscribe = await api.rpc.chain.subscribeNewHeads((lastHeader) => {
+    const unsubscribe = await api.rpc.chain.subscribeNewHeads(lastHeader => {
       const header: BlockHeader = {
         blockNumber: lastHeader.number.toNumber(),
         blockHash: lastHeader.hash.toHex(),
@@ -63,20 +61,39 @@ export class ChainStateService implements IChainStateService {
   async getSessionInfo(): Promise<SessionInfo> {
     const api = await this.polkadotApiService.getApi();
     const progress = await api.derive.session.progress();
-    
+
     return {
       sessionProgress: progress.sessionProgress.toNumber(),
       sessionLength: progress.sessionLength.toNumber(),
       eraProgress: progress.eraProgress.toNumber(),
-      sessionsPerEra: progress.sessionsPerEra.toNumber()
+      sessionsPerEra: progress.sessionsPerEra.toNumber(),
     };
   }
 
-  async getEpochIndex(): Promise<number> {
+  async getSessionIndex(): Promise<number> {
     const api = await this.polkadotApiService.getApi();
-    const epochInfo = await api.query.babe.epochIndex();
-    // Handle type correctly
-    return Number(epochInfo.toString());
+
+    // Ideal Network uses Aura consensus with sessions
+    try {
+      // Check if session pallet is available
+      if (api.query.session?.currentIndex) {
+        const sessionIndex = await api.query.session.currentIndex();
+        return Number(sessionIndex.toString());
+      }
+
+      // Fallback: use current block number divided by session length as rough session
+      const header = await api.rpc.chain.getHeader();
+      const blockNumber = Number(header.number.toString());
+      // Ideal Network sessions last 3,600 blocks (6 hours at 6 seconds per block)
+      return Math.floor(blockNumber / 3600);
+    } catch (error: any) {
+      console.warn(
+        'Unable to determine session index for Aura consensus:',
+        error?.message || error
+      );
+      // Return current timestamp as fallback session indicator
+      return Math.floor(Date.now() / (1000 * 60 * 60 * 6)); // 6-hour sessions
+    }
   }
 
   async subscribeToBalanceChanges(
@@ -84,28 +101,25 @@ export class ChainStateService implements IChainStateService {
     callback: (balance: string) => void
   ): Promise<() => void> {
     const api = await this.polkadotApiService.getApi();
-    const unsubscribe = await api.query.system.account(
-      address,
-      (accountInfo: any) => {
-        // Access the free balance from the account info based on the API structure
-        // This handles both older and newer Polkadot API versions
-        const freeBalance = accountInfo.data?.free || accountInfo.free;
-        callback(formatBalance(freeBalance, { withUnit: true }));
-      }
-    );
+    const unsubscribe = await api.query.system.account(address, (accountInfo: any) => {
+      // Access the free balance from the account info based on the API structure
+      // This handles both older and newer Polkadot API versions
+      const freeBalance = accountInfo.data?.free || accountInfo.free;
+      callback(formatBalance(freeBalance, { withUnit: true }));
+    });
     // Cast to the expected return type
     return unsubscribe as unknown as () => void;
   }
 
-  async getPallets(): Promise<{ text: string; value: string; }[]> {
+  async getPallets(): Promise<{ text: string; value: string }[]> {
     const api = await this.polkadotApiService.getApi();
     return Object.keys(api.tx)
-      .filter((s) => !s.startsWith('$'))
+      .filter(s => !s.startsWith('$'))
       .sort()
       .filter((name): number => Object.keys(api.tx[name]).length)
-      .map((name) => ({
+      .map(name => ({
         text: name,
-        value: name
+        value: name,
       }));
   }
 
@@ -118,13 +132,16 @@ export class ChainStateService implements IChainStateService {
     return [];
   }
 
-  async getExtrinsicParameters(pallet: string, extrinsic: string): Promise<{ name: string; type: string; typeName: string; }[]> {
+  async getExtrinsicParameters(
+    pallet: string,
+    extrinsic: string
+  ): Promise<{ name: string; type: string; typeName: string }[]> {
     const api = await this.polkadotApiService.getApi();
     const extrinsicMeta = api.tx[pallet][extrinsic].meta;
-    return extrinsicMeta.args.map((arg) => ({
+    return extrinsicMeta.args.map(arg => ({
       name: arg.name.toString(),
       type: arg.type.toString(),
-      typeName: arg.typeName.unwrapOrDefault().toString()
+      typeName: arg.typeName.unwrapOrDefault().toString(),
     }));
   }
 }

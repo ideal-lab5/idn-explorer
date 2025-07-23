@@ -32,22 +32,20 @@ export class PolkadotApiService implements IPolkadotApiService {
   }
 
   private getNodeUrl(): string {
-    return process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io'
+    return process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io';
   }
 
   private async initApi(): Promise<ApiPromise> {
     try {
       if (!this.wsProvider) {
         this.wsProvider = new WsProvider(this.getNodeUrl());
-        
+
         // Set up event handlers before creating API
         this.wsProvider.on('connected', () => {
-          console.log('Connected to node:', this.getNodeUrl());
           this.notifyReady();
         });
 
         this.wsProvider.on('disconnected', () => {
-          console.log('Disconnected from node');
           // Clear the API instance on disconnect so we can reconnect fresh
           this.api = null;
           this.connectionPromise = null;
@@ -63,9 +61,9 @@ export class PolkadotApiService implements IPolkadotApiService {
         });
       }
 
-      this.api = await ApiPromise.create({ 
+      this.api = await ApiPromise.create({
         provider: this.wsProvider,
-        throwOnConnect: true // Make connection errors more explicit
+        throwOnConnect: true, // Make connection errors more explicit
       });
 
       await this.api.isReady;

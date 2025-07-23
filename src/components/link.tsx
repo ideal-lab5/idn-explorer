@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import * as Headless from '@headlessui/react'
-import NextLink, { type LinkProps } from 'next/link'
-import React from 'react'
+import * as Headless from '@headlessui/react';
+import NextLink, { type LinkProps } from 'next/link';
+import React from 'react';
 
 export const Link = React.forwardRef(function Link(
   props: LinkProps & React.ComponentPropsWithoutRef<'a'>,
@@ -26,5 +26,5 @@ export const Link = React.forwardRef(function Link(
     <Headless.DataInteractive>
       <NextLink {...props} ref={ref} />
     </Headless.DataInteractive>
-  )
-})
+  );
+});

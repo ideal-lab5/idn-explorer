@@ -2,9 +2,11 @@
 
 # dependencies
 /node_modules
+/.vscode
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+package-lock.json
 
 # testing
 /coverage

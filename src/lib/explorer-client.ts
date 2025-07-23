@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { IExplorerService } from "@/services/IExplorerService";
+import type { IExplorerService } from '@/services/IExplorerService';
 import { container } from './di-container';
 
 // Only create the client in browser environment
