@@ -61,6 +61,86 @@ export class IdnSubscriptionService implements ISubscriptionService {
   constructor(@inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService) {}
 
   /**
+   * Formats XCM location from UI builder format to Polkadot.js API format
+   * @param target The XCM location to format
+   * @returns The formatted XCM location
+   */
+  private formatXcmLocation(target: XcmLocation): any {
+    let formattedInterior;
+
+    if (
+      typeof target.interior === 'string' &&
+      (target.interior as string).toLowerCase() === 'here'
+    ) {
+      formattedInterior = 'Here';
+    } else if (typeof target.interior === 'object' && target.interior !== null) {
+      // Handle interior object like { x1: [...junctions...] }
+      const interiorKey = Object.keys(target.interior)[0]; // e.g., 'x1', 'x2', etc.
+      const junctions = target.interior[interiorKey];
+
+      if (Array.isArray(junctions)) {
+        // Transform each junction from UI format to Polkadot.js format
+        const transformedJunctions = junctions.map((junction: any) => {
+          if (junction.type && junction.value) {
+            // Convert from { type: 'parachain', value: { parachain: 2000 } }
+            // to { Parachain: 2000 }
+            switch (junction.type.toLowerCase()) {
+              case 'parachain':
+                return { Parachain: junction.value.parachain };
+              case 'palletinstance':
+                return { PalletInstance: junction.value.palletInstance };
+              case 'accountid32':
+                return {
+                  AccountId32: {
+                    network: junction.value.network || null,
+                    id: junction.value.id,
+                  },
+                };
+              case 'accountkey20':
+                return {
+                  AccountKey20: {
+                    network: junction.value.network || null,
+                    key: junction.value.key,
+                  },
+                };
+              case 'generalindex':
+                return { GeneralIndex: junction.value.generalIndex };
+              case 'generalkey':
+                return { GeneralKey: junction.value.generalKey };
+              case 'onlychild':
+                return 'OnlyChild';
+              case 'plurality':
+                return {
+                  Plurality: {
+                    id: junction.value.id,
+                    part: junction.value.part,
+                  },
+                };
+              default:
+                return junction;
+            }
+          }
+          return junction;
+        });
+
+        // Reconstruct interior with transformed junctions
+        formattedInterior = {
+          [interiorKey.charAt(0).toUpperCase() + interiorKey.slice(1)]: transformedJunctions,
+        };
+      } else {
+        formattedInterior = target.interior;
+      }
+    } else {
+      formattedInterior = target.interior;
+    }
+
+    return {
+      parents: target.parents,
+      interior: formattedInterior,
+    };
+  }
+
+  /**
    * Invalidates the subscription cache for a specific account or all accounts.
    */
   private invalidateCache(accountId?: string): void {
@@ -93,79 +173,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
     try {
       const api = await this.polkadotApiService.getApi();
 
-      // Transform XCM location from UI builder format to Polkadot.js API format
-      let formattedInterior;
-
-      if (
-        typeof target.interior === 'string' &&
-        (target.interior as string).toLowerCase() === 'here'
-      ) {
-        formattedInterior = 'Here';
-      } else if (typeof target.interior === 'object' && target.interior !== null) {
-        // Handle interior object like { x1: [...junctions...] }
-        const interiorKey = Object.keys(target.interior)[0]; // e.g., 'x1', 'x2', etc.
-        const junctions = target.interior[interiorKey];
-
-        if (Array.isArray(junctions)) {
-          // Transform each junction from UI format to Polkadot.js format
-          const transformedJunctions = junctions.map((junction: any) => {
-            if (junction.type && junction.value) {
-              // Convert from { type: 'parachain', value: { parachain: 2000 } }
-              // to { Parachain: 2000 }
-              switch (junction.type.toLowerCase()) {
-                case 'parachain':
-                  return { Parachain: junction.value.parachain };
-                case 'palletinstance':
-                  return { PalletInstance: junction.value.palletInstance };
-                case 'accountid32':
-                  return {
-                    AccountId32: {
-                      network: junction.value.network || null,
-                      id: junction.value.id,
-                    },
-                  };
-                case 'accountkey20':
-                  return {
-                    AccountKey20: {
-                      network: junction.value.network || null,
-                      key: junction.value.key,
-                    },
-                  };
-                case 'generalindex':
-                  return { GeneralIndex: junction.value.generalIndex };
-                case 'generalkey':
-                  return { GeneralKey: junction.value.generalKey };
-                case 'onlychild':
-                  return 'OnlyChild';
-                case 'plurality':
-                  return {
-                    Plurality: {
-                      id: junction.value.id,
-                      part: junction.value.part,
-                    },
-                  };
-                default:
-                  return junction;
-              }
-            }
-            return junction;
-          });
-
-          // Reconstruct interior with transformed junctions
-          formattedInterior = {
-            [interiorKey.charAt(0).toUpperCase() + interiorKey.slice(1)]: transformedJunctions,
-          };
-        } else {
-          formattedInterior = target.interior;
-        }
-      } else {
-        formattedInterior = target.interior;
-      }
-
-      const formattedTarget = {
-        parents: target.parents,
-        interior: formattedInterior,
-      };
+      const formattedTarget = this.formatXcmLocation(target);
 
       // Ensure call_index is properly formatted as [u8; 2] array
       const formattedCallIndex =
