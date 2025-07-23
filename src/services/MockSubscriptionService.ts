@@ -91,7 +91,6 @@ export class MockSubscriptionService implements ISubscriptionService {
       SubscriptionState.Paused,
       41500 // creditsConsumed
     );
-
     // Sample subscription 3: Active smart contract randomness
     const details3 = new SubscriptionDetailsClass(
       mockAddress,

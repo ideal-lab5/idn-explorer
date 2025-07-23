@@ -350,7 +350,7 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
               </div>
               <p className="mb-4">
                 Are you sure you want to cancel this subscription? This action cannot be undone, and
-                any remaining credits will be forfeited.
+                any remaining credits will be refunded.
               </p>
               <div className="flex justify-end gap-2">
                 <Button onClick={() => setIsDialogOpen(false)} disabled={isCancelling}>
