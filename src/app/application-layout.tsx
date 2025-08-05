@@ -18,6 +18,7 @@
 import { Avatar } from '@/components/avatar';
 import { ConnectedWalletProvider } from '@/components/contexts/connectedWalletContext';
 import { Dropdown, DropdownButton } from '@/components/dropdown';
+import { WalletIcon } from '@heroicons/react/24/outline';
 import { AccountDropdownMenu, ConnectWallet } from '@/components/idn/connectWallet';
 import { BlockHeaders } from '@/components/idn/latestBlocks';
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from '@/components/navbar';
@@ -41,10 +42,21 @@ import {
   SparklesIcon,
 } from '@heroicons/react/20/solid';
 import { usePathname } from 'next/navigation';
+import { useConnectedWallet } from '@/components/contexts/connectedWalletContext';
+import { useEffect, useState } from 'react';
 
 export function ApplicationLayout({ children }: { children: React.ReactNode }) {
   // Get the current pathname and provide a fallback to prevent null issues
   const pathname = usePathname() || '';
+  const { isConnected, signerAddress, signerBalance } = useConnectedWallet();
+  
+  // Track connection status with local state to ensure UI updates
+  const [walletConnected, setWalletConnected] = useState(false);
+  
+  // Update local state when global connection state changes
+  useEffect(() => {
+    setWalletConnected(isConnected);
+  }, [isConnected]);
 
   return (
     <ConnectedWalletProvider>
@@ -53,12 +65,21 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
           <Navbar>
             <NavbarSpacer />
             <NavbarSection>
-              <Dropdown>
-                <DropdownButton as={NavbarItem}>
-                  <Avatar src="/users/erica.jpg" square />
-                </DropdownButton>
-                <AccountDropdownMenu anchor="bottom end" />
-              </Dropdown>
+              {walletConnected ? (
+                // When connected, show the dropdown with disconnect option
+                <Dropdown>
+                  <DropdownButton as={NavbarItem}>
+                    <Avatar src="/ideal/sticker-vertical.png" className="size-8" square alt="" />
+                    <span className="sr-only md:not-sr-only md:ml-2 text-sm text-zinc-600 dark:text-zinc-400">
+                      {signerAddress ? `${signerAddress.substring(0, 4)}...` : 'Connected'}
+                    </span>
+                  </DropdownButton>
+                  <AccountDropdownMenu anchor="bottom end" />
+                </Dropdown>
+              ) : (
+                // When not connected, show the connect button
+                <ConnectWallet buttonOnly={true} />
+              )}
             </NavbarSection>
           </Navbar>
         }

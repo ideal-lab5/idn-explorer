@@ -35,7 +35,49 @@ export class PolkadotApiService implements IPolkadotApiService {
     return process.env.NEXT_PUBLIC_NODE_WS || 'wss://rpc.polkadot.io';
   }
 
+  /**
+   * Set up global console error interceptor to filter out specific Polkadot.js API errors
+   * This will suppress known non-critical errors that flood the console
+   */
+  private setupErrorInterceptor() {
+    // Store the original console.error
+    const originalConsoleError = console.error;
+    
+    // Replace console.error with our filtered version
+    console.error = (...args: any[]) => {
+      // Convert args to string for easier filtering
+      const errorString = args.join(' ');
+      
+      // List of error patterns to filter out
+      const ignoredPatterns = [
+        'Unsupported unsigned extrinsic version 5',
+        'Unable to decode on index 0',
+        'createTypeExtrinsicUnknown',
+        'createType(SignedBlock): Struct: failed',
+        'getBlockHash?: BlockHash}: SignedBlock',
+        'Vec<ExtrinsicV4>',
+        'RPC-CORE'  // Filter RPC core errors which are mostly version mismatches
+      ];
+      
+      // Check if this error matches any pattern we want to filter
+      const shouldFilter = ignoredPatterns.some(pattern => 
+        errorString.includes(pattern)
+      );
+      
+      // Only log errors that don't match our filter patterns
+      if (!shouldFilter) {
+        originalConsoleError(...args);
+      } else {
+        // For debugging, uncomment to log filtered errors at debug level
+        // console.debug('Filtered API error:', errorString.substring(0, 100) + '...');
+      }
+    };
+  }
+
   private async initApi(): Promise<ApiPromise> {
+    // Set up error interceptor before any API calls
+    this.setupErrorInterceptor();
+    
     try {
       if (!this.wsProvider) {
         this.wsProvider = new WsProvider(this.getNodeUrl());

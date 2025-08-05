@@ -115,16 +115,30 @@ export const ConnectWallet: React.FC<{ buttonOnly: boolean }> = ({ buttonOnly = 
   return (
     <>
       {buttonOnly ? (
-        <Button
-          onClick={(e: any) => {
-            e.preventDefault();
-            handleConnect();
-          }}
-          color="cyan"
-          className="cursor-pointer"
-        >
-          Connect
-        </Button>
+        isConnected ? (
+          // When connected and in buttonOnly mode, show avatar with dropdown
+          <Dropdown>
+            <DropdownButton as={Button} color="cyan" className="cursor-pointer flex items-center gap-2">
+              <Avatar src="/ideal/sticker-vertical.png" className="size-6" square alt="" />
+              <span className="text-xs">
+                {signerAddress ? `${signerAddress.substring(0, 4)}...` : ''}
+              </span>
+            </DropdownButton>
+            <AccountDropdownMenu anchor="bottom end" />
+          </Dropdown>
+        ) : (
+          // When not connected and in buttonOnly mode
+          <Button
+            onClick={(e: any) => {
+              e.preventDefault();
+              handleConnect();
+            }}
+            color="cyan"
+            className="cursor-pointer"
+          >
+            Connect
+          </Button>
+        )
       ) : (
         <SidebarFooter className="max-lg:hidden">
           {isConnected ? (

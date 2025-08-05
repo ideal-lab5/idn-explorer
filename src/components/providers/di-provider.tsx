@@ -15,17 +15,7 @@ export function DIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // During SSR or before hydration, render children without DI
-  // This prevents hydration mismatches
-  if (typeof window === 'undefined') {
-    return <>{children}</>;
-  }
-
-  // During client-side rendering, wait for DI to be ready
-  if (!isReady) {
-    // Return a minimal placeholder to avoid layout shifts
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
-  }
-
+  // In Next.js 15, we need to ensure the same structure is rendered on both server and client
+  // to avoid hydration errors. We'll use a consistent approach instead of conditional rendering.
   return <>{children}</>;
 }
