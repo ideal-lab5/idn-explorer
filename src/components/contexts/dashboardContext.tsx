@@ -96,7 +96,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         console.warn('Non-critical: Failed to fetch randomness metrics:', metricsError);
         // Continue with default metrics
       }
-      
+
       // 2. Get latest distributions
       let latestDistributions: RandomnessDistributionEvent[] = [];
       try {
@@ -106,7 +106,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         console.warn('Non-critical: Failed to fetch latest distributions:', distributionsError);
         // Continue with empty array
       }
-      
+
       // 3. Get subscriptions - handle subscription service issues
       let allSubscriptions: Subscription[] = [];
       let activeSubscriptions: Subscription[] = [];
@@ -114,19 +114,19 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // getAllSubscriptions may not be implemented, wrap in try/catch
         allSubscriptions = await subscriptionService.getAllSubscriptions();
         console.log(`Successfully fetched ${allSubscriptions.length} subscriptions`);
-        
+
         // Filter for active subscriptions - empty array is valid (no subscriptions yet)
         activeSubscriptions = allSubscriptions.filter(sub => {
           if (!sub || !sub.state) return false;
-          
+
           // Handle potential type mismatch between string and enum
           try {
             // Normalize the state string for comparison
             const state = String(sub.state).toLowerCase().trim();
-            
+
             // Log subscription state for debugging
             console.log(`Subscription ${sub.id} state: "${sub.state}" (normalized: "${state}")`);
-            
+
             // Check for any variant of 'active' state
             return state === 'active' || state === '"active"' || state.includes('active');
           } catch (err) {
@@ -135,17 +135,19 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
         });
         console.log(`Found ${activeSubscriptions.length} active subscriptions`);
-        
+
         // If we have subscriptions but none are active, log details for debugging
         if (allSubscriptions.length > 0 && activeSubscriptions.length === 0) {
-          console.log('Found subscriptions but none are active. States:', 
-            allSubscriptions.map(s => ({id: s.id, state: s.state})));
+          console.log(
+            'Found subscriptions but none are active. States:',
+            allSubscriptions.map(s => ({ id: s.id, state: s.state }))
+          );
         }
       } catch (subscriptionsError) {
         console.warn('Non-critical: Failed to fetch subscriptions:', subscriptionsError);
         // Continue with empty arrays
       }
-      
+
       // 4. Get chart distribution events with safer block range
       let distributionEvents: RandomnessDistributionEvent[] = [];
       try {
@@ -162,12 +164,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           console.log(`Using fallback block range, got ${distributionEvents.length} events`);
           throw new Error('Used fallback block range');
         }
-        
+
         // Convert block number safely
         const endBlock = parseInt(currentBlockNumber.toString());
         // Use a smaller range for less errors and better performance
         const startBlock = Math.max(1, endBlock - 100); // Reduced from 500 to 100 for faster querying
-        
+
         distributionEvents = await randomnessService.getRandomnessDistributionEvents(
           startBlock,
           endBlock
@@ -182,9 +184,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Only show critical error in UI if we have no data AND a critical connection error
-      const hasNoData = 
-        randomnessMetrics.totalDistributions === 0 && 
-        latestDistributions.length === 0 && 
+      const hasNoData =
+        randomnessMetrics.totalDistributions === 0 &&
+        latestDistributions.length === 0 &&
         distributionEvents.length === 0;
 
       setDashboardData({

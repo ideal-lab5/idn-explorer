@@ -42,12 +42,12 @@ export class PolkadotApiService implements IPolkadotApiService {
   private setupErrorInterceptor() {
     // Store the original console.error
     const originalConsoleError = console.error;
-    
+
     // Replace console.error with our filtered version
     console.error = (...args: any[]) => {
       // Convert args to string for easier filtering
       const errorString = args.join(' ');
-      
+
       // List of error patterns to filter out
       const ignoredPatterns = [
         'Unsupported unsigned extrinsic version 5',
@@ -56,14 +56,12 @@ export class PolkadotApiService implements IPolkadotApiService {
         'createType(SignedBlock): Struct: failed',
         'getBlockHash?: BlockHash}: SignedBlock',
         'Vec<ExtrinsicV4>',
-        'RPC-CORE'  // Filter RPC core errors which are mostly version mismatches
+        'RPC-CORE', // Filter RPC core errors which are mostly version mismatches
       ];
-      
+
       // Check if this error matches any pattern we want to filter
-      const shouldFilter = ignoredPatterns.some(pattern => 
-        errorString.includes(pattern)
-      );
-      
+      const shouldFilter = ignoredPatterns.some(pattern => errorString.includes(pattern));
+
       // Only log errors that don't match our filter patterns
       if (!shouldFilter) {
         originalConsoleError(...args);
@@ -77,7 +75,7 @@ export class PolkadotApiService implements IPolkadotApiService {
   private async initApi(): Promise<ApiPromise> {
     // Set up error interceptor before any API calls
     this.setupErrorInterceptor();
-    
+
     try {
       if (!this.wsProvider) {
         this.wsProvider = new WsProvider(this.getNodeUrl());

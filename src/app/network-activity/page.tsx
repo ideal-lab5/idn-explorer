@@ -94,6 +94,7 @@ export default function NetworkActivityPage() {
   // Provide a fallback URLSearchParams object if searchParams is null
   const searchParams = useSearchParams() || new URLSearchParams();
   const [copyStatus, setCopyStatus] = useState(false); // To indicate if the text was copied
+  const [refreshTrigger, setRefreshTrigger] = useState(false);
 
   const onCopyText = () => {
     setCopyStatus(true);

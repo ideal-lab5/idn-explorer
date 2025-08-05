@@ -2,7 +2,7 @@
 
 import { useSubscription } from '@/components/contexts/subscriptionContext';
 import { domainToUiSubscription } from '@/utils/subscriptionMapper';
-import { useEffect, useState, use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { UiSubscription } from '../types/UiSubscription';
 import { SubscriptionDetails } from './subscription-details';
 

@@ -39,10 +39,10 @@ export default function ExecutedTransaction(props: { params: Promise<{ id: strin
   // Unwrap Promise-based params using React's use() hook
   const params = use(props.params);
   const { executedTransactions } = useConnectedWallet();
-  
+
   // Direct access to params.id since we're already using the use() hook
   const id = params.id;
-  
+
   // Check if id exists
   if (!id || !id[0]) {
     notFound();
@@ -61,10 +61,7 @@ export default function ExecutedTransaction(props: { params: Promise<{ id: strin
       <div className="w-full px-8 py-8">
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 flex items-center">
-            <Link
-              href={id[1] === 'compose' ? '/timelock' : '/network-activity'}
-              className="mr-4"
-            >
+            <Link href={id[1] === 'compose' ? '/timelock' : '/network-activity'} className="mr-4">
               <Button className="rounded-full p-2">
                 <ArrowLeftIcon className="h-4 w-4" />
               </Button>

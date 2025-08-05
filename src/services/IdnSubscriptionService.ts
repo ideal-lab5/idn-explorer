@@ -825,7 +825,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
   /**
    * Retrieves all subscriptions in the system.
    * This implementation attempts to get real data from the blockchain without fallbacks.
-   * 
+   *
    * Note: Empty subscription lists (when no subscriptions exist yet) are considered normal,
    * not an error condition.
    */
@@ -833,7 +833,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
     try {
       // Try to get the API
       const api = await this.polkadotApiService.getApi();
-      
+
       // Attempt to query via the runtime API if available
       if (api.call?.idnManagerApi?.getAllSubscriptions) {
         console.log('Using runtime API getAllSubscriptions');
@@ -847,10 +847,10 @@ export class IdnSubscriptionService implements ISubscriptionService {
           // Continue to storage fallback
         }
       }
-      
+
       // Fallback to storage query approach if runtime API doesn't exist or fails
       console.log('Using storage queries for subscriptions');
-      
+
       // Get latest subscriptions via chain storage
       let subscriptionIds;
       try {
@@ -859,25 +859,25 @@ export class IdnSubscriptionService implements ISubscriptionService {
         console.log('Storage query for subscription keys failed:', storageErr);
         return []; // Return empty array as this is a valid state (no subscriptions yet)
       }
-      
+
       // Having no subscriptions is a valid state, not an error
       if (!subscriptionIds || !Array.isArray(subscriptionIds) || subscriptionIds.length === 0) {
         console.log('No subscriptions found in storage (this is normal for a new network)');
         return [];
       }
-      
+
       console.log(`Found ${subscriptionIds.length} subscriptions in storage`);
       const subscriptions: Subscription[] = [];
-      
+
       // Process a limited number to avoid overwhelming the node
       const maxToProcess = Math.min(50, subscriptionIds.length);
-      
+
       for (let i = 0; i < maxToProcess; i++) {
         try {
           const idKey = subscriptionIds[i];
           const subId = idKey.args[0].toString();
           const subData = await api.query.idnManager.subscriptions(subId);
-          
+
           if (subData && !subData.isEmpty) {
             const sub = this.palletSubscriptionToSubscription(subData);
             subscriptions.push(sub);
@@ -887,7 +887,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
           // Continue with next subscription
         }
       }
-      
+
       return subscriptions;
     } catch (error) {
       console.error('Failed to get subscriptions:', error);
@@ -959,7 +959,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
       // Log the full structure for debugging
       console.log('Raw subscription data:', JSON.stringify(palletSub, null, 2));
-      
+
       // Check if we have a format with details as a separate field or flat structure
       // Handle both formats flexibly
       let details = palletSub.details;
@@ -972,7 +972,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
       let creditsLeft = 0;
       let state = SubscriptionStateEnum.Active;
       let id = 'unknown';
-      
+
       // Handle ID field - could be at root or in toHuman()
       if (palletSub.id) {
         id = palletSub.id.toString();
@@ -980,16 +980,16 @@ export class IdnSubscriptionService implements ISubscriptionService {
         // Try using toHuman() for Substrate codec objects
         const human = palletSub.toHuman();
         console.log('Human readable form:', human);
-        
+
         if (human.id) {
           id = human.id.toString();
         }
-        
+
         // Extract other fields from human readable form
         if (human.state) {
           state = this.palletStateToSubscriptionState(human.state);
         }
-        
+
         // Extract credits and creditsLeft
         if (human.credits) {
           credits = Number(human.credits.replace(/,/g, ''));
@@ -997,18 +997,18 @@ export class IdnSubscriptionService implements ISubscriptionService {
         if (human.creditsLeft) {
           creditsLeft = Number(human.creditsLeft.replace(/,/g, ''));
         }
-        
+
         // Extract frequency
         if (human.frequency) {
           frequency = Number(human.frequency.replace(/,/g, ''));
         }
-        
+
         // Extract details from human form
         if (human.details) {
           details = human.details;
         }
       }
-      
+
       // Process details field if it exists
       if (details) {
         // Could be directly accessible or might need toHuman()
@@ -1016,7 +1016,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
         if (details.toHuman && typeof details.toHuman === 'function') {
           detailsObj = details.toHuman();
         }
-        
+
         subscriber = detailsObj.subscriber ? detailsObj.subscriber.toString() : 'unknown';
         target = detailsObj.target ? JSON.stringify(detailsObj.target) : '';
         callIndex = detailsObj.callIndex ? detailsObj.callIndex.toString() : '';
@@ -1026,7 +1026,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
         target = palletSub.target ? JSON.stringify(palletSub.target) : '';
         callIndex = palletSub.callIndex ? palletSub.callIndex.toString() : '';
       }
-      
+
       // Extract date fields if they exist
       if (palletSub.createdAt) {
         createdAt = Number(palletSub.createdAt);
@@ -1034,7 +1034,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
       if (palletSub.updatedAt) {
         updatedAt = Number(palletSub.updatedAt);
       }
-      
+
       // Extract credits fields if at root level
       if (palletSub.credits) {
         credits = Number(palletSub.credits);
@@ -1045,12 +1045,12 @@ export class IdnSubscriptionService implements ISubscriptionService {
       if (palletSub.frequency) {
         frequency = Number(palletSub.frequency);
       }
-      
+
       // Handle metadata
       if (palletSub.metadata) {
         metadata = this.extractMetadataString(palletSub.metadata);
       }
-      
+
       // Create subscription details object
       const subscriptionDetails = new SubscriptionDetailsClass(
         subscriber,
@@ -1076,12 +1076,20 @@ export class IdnSubscriptionService implements ISubscriptionService {
       );
     } catch (error) {
       console.error('Error converting pallet subscription:', error);
-      
+
       // Create a minimal valid subscription to prevent breaking UI
       const fallbackDetails = new SubscriptionDetailsClass(
-        'unknown', Date.now(), Date.now(), 0, 1, '', '', '', 0
+        'unknown',
+        Date.now(),
+        Date.now(),
+        0,
+        1,
+        '',
+        '',
+        '',
+        0
       );
-      
+
       return new SubscriptionClass(
         palletSub?.id?.toString() || 'unknown',
         fallbackDetails,

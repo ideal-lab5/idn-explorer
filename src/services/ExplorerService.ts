@@ -154,18 +154,18 @@ export class ExplorerService implements IExplorerService {
         try {
           // Safer approach that avoids full block decoding
           const blockHash = await polkadotApi.rpc.chain.getBlockHash(blockNumber);
-          
+
           // Suppress console errors during this call to keep console clean
           const originalConsoleError = console.error;
           console.error = () => {}; // Temporarily disable console.error
-          
+
           try {
             events = await polkadotApi.query.system.events.at(blockHash);
           } catch (eventErr) {
             // If events query fails, we'll just have an empty events array
             // No need to log this error as it's expected with some Substrate versions
           }
-          
+
           // Restore console.error
           console.error = originalConsoleError;
         } catch (blockErr) {
@@ -175,13 +175,13 @@ export class ExplorerService implements IExplorerService {
 
         // If we have no events, skip processing this block
         if (!events || !events.length) continue;
-        
+
         // Process events directly, focusing on IDN pallets
         events.forEach((record: EventRecord, index: number) => {
           try {
             const { event, phase } = record;
             if (!event || !event.section || !event.method) return;
-            
+
             const operation = `${event.section}.${event.method}`;
 
             // Focus on IDN pallet events or important system events
@@ -205,9 +205,7 @@ export class ExplorerService implements IExplorerService {
               }));
             } catch (e: any) {
               // Fallback for events that can't be properly decoded
-              eventData = [
-                { type: 'DecodingError', value: 'Unable to decode event data' },
-              ];
+              eventData = [{ type: 'DecodingError', value: 'Unable to decode event data' }];
             }
 
             // Determine transaction status and signer

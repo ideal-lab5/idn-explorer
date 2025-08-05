@@ -40,25 +40,25 @@ export class RandomnessService implements IRandomnessService {
     if (this.eventCache.has(cacheKey) && now - this.lastRefreshTime < this.cacheTTL) {
       return this.eventCache.get(cacheKey) || [];
     }
-    
+
     try {
       // IMPORTANT: Instead of querying historical blocks (which seems to be causing errors),
       // we'll only query for events at the current head
       const api = await this.apiService.getApi();
       const events: RandomnessDistributionEvent[] = [];
-      
+
       try {
         // Get current head info
         const finalizedHead = await api.rpc.chain.getFinalizedHead();
         const apiAtBlock = await api.at(finalizedHead);
-        
+
         // Try to get current events only
         const apiEvents = (await apiAtBlock.query.system.events()) as unknown as Vec<EventRecord>;
-        
+
         // Get current block number
         const header = await api.rpc.chain.getHeader(finalizedHead);
         const blockNum = header.number.toNumber();
-        
+
         // Get timestamp if possible
         let timestamp: Date | undefined;
         try {
@@ -72,11 +72,11 @@ export class RandomnessService implements IRandomnessService {
         } catch {
           timestamp = new Date(); // Fallback to current time
         }
-        
+
         // Filter for randomness distribution events
         apiEvents.forEach((eventRecord: EventRecord, eventIdx: number) => {
           const { event } = eventRecord;
-          
+
           if (
             (event.section === 'randBeacon' || event.section === 'randomnessBeacon') &&
             event.method === 'RandomnessDistributed'
@@ -98,11 +98,11 @@ export class RandomnessService implements IRandomnessService {
         console.error('Error processing current head:', err);
         // No fallback data - let UI handle empty state
       }
-      
+
       // Update cache
       this.eventCache.set(cacheKey, events);
       this.lastRefreshTime = now;
-      
+
       return events;
     } catch (err) {
       console.error('Error fetching randomness distribution events:', err);
@@ -117,22 +117,22 @@ export class RandomnessService implements IRandomnessService {
   async getRandomnessMetrics(): Promise<RandomnessMetrics> {
     try {
       const api = await this.apiService.getApi();
-      
+
       // Get current head and events
       const finalizedHead = await api.rpc.chain.getFinalizedHead();
       const header = await api.rpc.chain.getHeader(finalizedHead);
       const currentBlockNum = header.number.toNumber();
-      
-      // Get a sample of recent events 
+
+      // Get a sample of recent events
       const recentEvents = await this.getRandomnessDistributionEvents(
         currentBlockNum - 100,
         currentBlockNum
       );
-      
+
       // Calculate metrics from available events
       const uniqueSubscriptions = new Set(recentEvents.map(event => event.subscriptionId));
       const blocksWithRandomness = new Set(recentEvents.map(event => event.blockNumber));
-      
+
       return {
         totalDistributions: recentEvents.length,
         totalSubscriptionsServed: uniqueSubscriptions.size,
@@ -142,7 +142,7 @@ export class RandomnessService implements IRandomnessService {
       };
     } catch (err) {
       console.error('Error calculating randomness metrics:', err);
-      
+
       // Return empty metrics
       return {
         totalDistributions: 0,

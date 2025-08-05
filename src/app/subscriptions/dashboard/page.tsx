@@ -35,12 +35,12 @@ export default function DashboardPage() {
   // Use the dashboard context for real blockchain data
   const { dashboardData, refreshData } = useDashboard();
   const loading = dashboardData.isLoading;
-  
+
   // Client-side only states to prevent hydration mismatches
   const [showError, setShowError] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
   // Mark when component has mounted on client
   useEffect(() => {
     setIsClient(true);
@@ -262,17 +262,19 @@ export default function DashboardPage() {
               <div className="p-4 text-center text-zinc-500">No randomness distributions found</div>
             )}
           </div>
-          <div className="border-t border-zinc-200 p-4 flex justify-between items-center dark:border-zinc-800">
+          <div className="flex items-center justify-between border-t border-zinc-200 p-4 dark:border-zinc-800">
             {showError ? (
               <div className="text-sm text-amber-600">
-                <span className="inline-block mr-2">⚠️</span>
+                <span className="mr-2 inline-block">⚠️</span>
                 Connection issues detected. Data may be limited.
               </div>
             ) : (
-              <div className="text-sm text-zinc-500 italic">
-                {!loading && dashboardData.latestDistributions?.length === 0 && 
+              <div className="text-sm italic text-zinc-500">
+                {!loading &&
+                  dashboardData.latestDistributions?.length === 0 &&
                   'No randomness distributions found yet. This is normal for a new network.'}
-                {!loading && dashboardData.activeSubscriptions?.length === 0 &&
+                {!loading &&
+                  dashboardData.activeSubscriptions?.length === 0 &&
                   'No active subscriptions found.'}
               </div>
             )}

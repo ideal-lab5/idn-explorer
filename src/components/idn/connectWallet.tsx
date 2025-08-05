@@ -118,7 +118,11 @@ export const ConnectWallet: React.FC<{ buttonOnly: boolean }> = ({ buttonOnly = 
         isConnected ? (
           // When connected and in buttonOnly mode, show avatar with dropdown
           <Dropdown>
-            <DropdownButton as={Button} color="cyan" className="cursor-pointer flex items-center gap-2">
+            <DropdownButton
+              as={Button}
+              color="cyan"
+              className="flex cursor-pointer items-center gap-2"
+            >
               <Avatar src="/ideal/sticker-vertical.png" className="size-6" square alt="" />
               <span className="text-xs">
                 {signerAddress ? `${signerAddress.substring(0, 4)}...` : ''}
