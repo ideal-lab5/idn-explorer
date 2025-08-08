@@ -158,7 +158,6 @@ export class ExplorerService implements IExplorerService {
             // If events query fails, we'll just have an empty events array
             // No need to log this error as it's expected with some Substrate versions
           }
-
         } catch (blockErr) {
           // If we can't get the block hash, skip this block
           continue;

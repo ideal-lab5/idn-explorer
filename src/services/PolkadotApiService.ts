@@ -63,8 +63,7 @@ export class PolkadotApiService implements IPolkadotApiService {
       const shouldFilter = ignoredPatterns.some(pattern => errorString.includes(pattern));
 
       // Only log errors that don't match our filter patterns
-      if (!shouldFilter)
-        originalConsoleError(...args);
+      if (!shouldFilter) originalConsoleError(...args);
     };
   }
 
