@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Ideal Labs.
+// Copyright 2023-2025 Ideal Labs.
 // SPDX-License-Identifier: Apache-2.0
 
 import { ApiPromise } from '@polkadot/api';
