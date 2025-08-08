@@ -148,16 +148,9 @@ export class ExplorerService implements IExplorerService {
 
     for (let blockNumber = startBlock; blockNumber <= endBlock; blockNumber++) {
       try {
-        // Use a more resilient approach to avoid block decoding errors
-        // We'll use Promise.any to try different methods of getting events
         let events: EventRecord[] = [];
         try {
-          // Safer approach that avoids full block decoding
           const blockHash = await polkadotApi.rpc.chain.getBlockHash(blockNumber);
-
-          // Suppress console errors during this call to keep console clean
-          const originalConsoleError = console.error;
-          console.error = () => {}; // Temporarily disable console.error
 
           try {
             events = await polkadotApi.query.system.events.at(blockHash);
@@ -166,8 +159,6 @@ export class ExplorerService implements IExplorerService {
             // No need to log this error as it's expected with some Substrate versions
           }
 
-          // Restore console.error
-          console.error = originalConsoleError;
         } catch (blockErr) {
           // If we can't get the block hash, skip this block
           continue;
@@ -243,7 +234,6 @@ export class ExplorerService implements IExplorerService {
 
             listOfEvents.push(executedTransaction);
           } catch (e: any) {
-            // Silently handle event processing errors to avoid console noise
             // Only errors from IDN-related events would be worth logging
             if (
               record?.event?.section &&
@@ -257,7 +247,6 @@ export class ExplorerService implements IExplorerService {
           }
         });
       } catch (e: any) {
-        // Silently skip blocks that can't be processed to reduce console noise
         console.debug(`Skipping block ${blockNumber}`);
       }
     }
