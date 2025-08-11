@@ -16,7 +16,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
-    <body className={inter.className}>
+    <div className={inter.className}>
       <DIProvider>
         <PolkadotProvider>
           <ConnectedWalletProvider>
@@ -26,6 +26,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           </ConnectedWalletProvider>
         </PolkadotProvider>
       </DIProvider>
-    </body>
+    </div>
   );
 }

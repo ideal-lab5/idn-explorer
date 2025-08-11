@@ -2,7 +2,7 @@
 
 import { useSubscription } from '@/components/contexts/subscriptionContext';
 import { domainToUiSubscription } from '@/utils/subscriptionMapper';
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { UiSubscription } from '../types/UiSubscription';
 import { SubscriptionDetails } from './subscription-details';
 
@@ -12,7 +12,10 @@ import { SubscriptionDetails } from './subscription-details';
 // }
 
 // This is now a client component due to the context usage
-export default function Page({ params }: { params: { id: string } }) {
+// Updated for Next.js 15 Promise-based params
+export default function Page(props: { params: Promise<{ id: string }> }) {
+  // Unwrap Promise-based params using React's use() hook
+  const params = use(props.params);
   const [initialLoading, setInitialLoading] = useState(true);
   const [subscription, setSubscription] = useState<UiSubscription | null>(null);
   const [error, setError] = useState<string | null>(null);
