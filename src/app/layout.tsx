@@ -17,8 +17,11 @@
 import '@/lib/reflect-metadata'; // Import reflect-metadata first for tsyringe dependency injection
 import '@/styles/tailwind.css';
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import type React from 'react';
 import { ClientLayout } from './client-layout';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: {
@@ -38,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="preconnect" href="https://rsms.me/" />
         <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
       </head>
-      <body>
+      <body className={inter.className}>
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

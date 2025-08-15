@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
-/**
- * This is the DelayedTransactionDetails domain class.
- */
-
-export interface Parameter {
-  name: string;
-  type: string;
-  value: any;
+export interface DrandBeacon {
+  round: number;
+  randomness: string;
+  signature: string;
+  previous_signature: string;
 }
 
-export class DelayedTransactionDetails {
-  round: number;
-  pallet: string;
-  extrinsic: string;
-  params: Parameter[];
+export interface DrandChainInfo {
+  public_key: string;
+  period: number;
+  genesis_time: number;
+  hash: string;
+  groupHash: string;
+  schemeID: string;
+  metadata: {
+    beaconID: string;
+  };
+}
 
-  constructor(round: number, pallet: string, extrinsic: string, params: Parameter[]) {
-    this.round = round;
-    this.pallet = pallet;
-    this.extrinsic = extrinsic;
-    this.params = params;
-  }
+export interface IDrandService {
+  getLatestBeacon(): Promise<DrandBeacon>;
+  getCurrentRound(): Promise<number>;
+  getChainInfo(): Promise<DrandChainInfo>;
+  getRoundAtTime(timestamp: number): number;
 }

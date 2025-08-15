@@ -19,8 +19,10 @@ import 'reflect-metadata';
 // Now import the container after reflect-metadata is loaded
 import { container } from 'tsyringe';
 import { ChainStateService } from '../services/ChainStateService';
+import { DrandService } from '../services/DrandService';
 import { ExplorerService } from '../services/ExplorerService';
 import { IChainStateService } from '../services/IChainStateService';
+import { IDrandService } from '../services/IDrandService';
 import { IExplorerService } from '../services/IExplorerService';
 import { IPolkadotApiService } from '../services/IPolkadotApiService';
 import { ISubscriptionService } from '../services/ISubscriptionService';
@@ -33,6 +35,8 @@ if (typeof window !== 'undefined') {
   container.registerSingleton<IPolkadotApiService>('IPolkadotApiService', PolkadotApiService);
 
   container.registerSingleton<IChainStateService>('IChainStateService', ChainStateService);
+
+  container.registerSingleton<IDrandService>('IDrandService', DrandService);
 
   container.registerSingleton<IExplorerService>('IExplorerService', ExplorerService);
 

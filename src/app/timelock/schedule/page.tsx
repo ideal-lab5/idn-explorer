@@ -25,27 +25,47 @@ import { Input } from '@/components/input';
 import { Link } from '@/components/link';
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails';
 import { explorerClient } from '@/lib/explorer-client';
+import { DrandService } from '@/services/DrandService';
 import { ArrowLeftIcon, ArrowPathIcon, XCircleIcon } from '@heroicons/react/20/solid';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const FUTURE_BLOCK_DEFAULT_START: number = 100;
+const FUTURE_ROUNDS_DEFAULT_START: number = 100;
 
 export default function ScheduleTransaction() {
   const router = useRouter();
-  const { latestBlock, signer, isConnected } = useConnectedWallet();
-  const [block, setBlock] = useState<number>(latestBlock + FUTURE_BLOCK_DEFAULT_START);
+  const { signer, isConnected } = useConnectedWallet();
+  const [currentRound, setCurrentRound] = useState<number>(0);
+  const [round, setRound] = useState<number>(0);
   const [extrinsicData, setExtrinsicData] = useState<DelayedTransactionDetails | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [drandService] = useState(() => new DrandService());
+
+  useEffect(() => {
+    const fetchCurrentRound = async () => {
+      try {
+        const current = await drandService.getCurrentRound();
+        setCurrentRound(current);
+        setRound(current + FUTURE_ROUNDS_DEFAULT_START);
+      } catch (error) {
+        console.error('Failed to fetch current drand round:', error);
+      }
+    };
+
+    fetchCurrentRound();
+    // Update every 3 seconds (Quicknet round duration)
+    const interval = setInterval(fetchCurrentRound, 3000);
+    return () => clearInterval(interval);
+  }, [drandService]);
 
   async function handleScheduleTransaction() {
     if (isProcessing || !signer || extrinsicData === null) {
       return;
     }
 
-    if (extrinsicData.block <= latestBlock) {
-      setLastError('Please enter a valid future block number.');
+    if (extrinsicData.round <= currentRound) {
+      setLastError('Please enter a valid future drand round.');
       return;
     }
 
@@ -105,22 +125,30 @@ export default function ScheduleTransaction() {
             <div className="space-y-4 px-6 py-5">
               <div className="space-y-2">
                 <label
-                  htmlFor="block"
+                  htmlFor="round"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
                 >
-                  Future Block
+                  Future Drand Round
                 </label>
-                <Input
-                  id="block"
-                  name="block"
-                  type="number"
-                  value={block}
-                  onChange={e => setBlock(parseInt(e.target.value))}
-                  placeholder="Future Block Number"
-                  autoFocus
-                />
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="round"
+                    name="round"
+                    type="number"
+                    value={round}
+                    onChange={e => setRound(parseInt(e.target.value))}
+                    placeholder="Future Round Number"
+                    autoFocus
+                  />
+                  {currentRound > 0 && (
+                    <span className="text-sm text-zinc-500">
+                      (Current: {currentRound.toLocaleString()})
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-zinc-500">
-                  Specify the future block number at which you want the transaction to be executed
+                  Specify the future drand round at which the transaction can be decrypted and
+                  executed
                 </p>
               </div>
 
@@ -131,7 +159,7 @@ export default function ScheduleTransaction() {
                 >
                   Pallet / Extrinsic / Arguments
                 </label>
-                <DynamicExtrinsicForm setExtrinsicData={setExtrinsicData} block={block} />
+                <DynamicExtrinsicForm setExtrinsicData={setExtrinsicData} round={round} />
                 <p className="text-sm text-zinc-500">
                   Select the pallet, extrinsic, and provide all necessary arguments
                 </p>

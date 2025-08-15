@@ -30,6 +30,7 @@ import { Navbar, NavbarItem, NavbarSection } from '@/components/navbar';
 import { Pagination, PaginationNext, PaginationPrevious } from '@/components/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table';
 import { Randomness } from '@/domain/Randomness';
+import { DrandService } from '@/services/DrandService';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import { formatNumber } from '@polkadot/util';
 import { useSearchParams } from 'next/navigation';
@@ -91,11 +92,29 @@ export default function NetworkActivityPage() {
   // Provide a fallback URLSearchParams object if searchParams is null
   const searchParams = useSearchParams() || new URLSearchParams();
   const [copyStatus, setCopyStatus] = useState(false); // To indicate if the text was copied
+  const [currentRound, setCurrentRound] = useState<number>(0);
+  const [drandService] = useState(() => new DrandService());
 
   const onCopyText = () => {
     setCopyStatus(true);
     setTimeout(() => setCopyStatus(false), 2000); // Reset status after 2 seconds
   };
+
+  useEffect(() => {
+    const fetchCurrentRound = async () => {
+      try {
+        const round = await drandService.getCurrentRound();
+        setCurrentRound(round);
+      } catch (error) {
+        console.error('Failed to fetch current drand round:', error);
+      }
+    };
+
+    fetchCurrentRound();
+    // Update every 3 seconds (Quicknet round duration)
+    const interval = setInterval(fetchCurrentRound, 3000);
+    return () => clearInterval(interval);
+  }, [drandService]);
 
   useEffect(() => {
     async function processParam(paramName: any, setFunction: any, itemsSize: number) {
@@ -130,12 +149,18 @@ export default function NetworkActivityPage() {
         <h1 className="mb-6 text-3xl font-bold">
           IDN Network Activity Hub <Badge>{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</Badge>
         </h1>
-        <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <Stat
             title="Last Block"
             value={latestBlock >= 0 ? `#${formatNumber(latestBlock)}` : '...'}
             change=""
             helpText=""
+          />
+          <Stat
+            title="Drand Round"
+            value={currentRound > 0 ? `#${formatNumber(currentRound)}` : '...'}
+            change="Quicknet"
+            helpText="3s intervals"
           />
           <Stat
             title="Session"
