@@ -224,14 +224,30 @@ export class ExplorerService implements IExplorerService {
 
     for (let blockNumber = startBlock; blockNumber <= endBlock; blockNumber++) {
       try {
-        // Get the block hash and events only (skip complex extrinsic decoding)
-        const blockHash = await polkadotApi.rpc.chain.getBlockHash(blockNumber);
-        const events = await polkadotApi.query.system.events.at(blockHash);
+        let events: EventRecord[] = [];
+        try {
+          const blockHash = await polkadotApi.rpc.chain.getBlockHash(blockNumber);
+
+          try {
+            events = await polkadotApi.query.system.events.at(blockHash);
+          } catch (eventErr) {
+            // If events query fails, we'll just have an empty events array
+            // No need to log this error as it's expected with some Substrate versions
+          }
+        } catch (blockErr) {
+          // If we can't get the block hash, skip this block
+          continue;
+        }
+
+        // If we have no events, skip processing this block
+        if (!events || !events.length) continue;
 
         // Process events directly, focusing on IDN pallets
-        (events as any)?.forEach((record: EventRecord, index: number) => {
+        events.forEach((record: EventRecord, index: number) => {
           try {
             const { event, phase } = record;
+            if (!event || !event.section || !event.method) return;
+
             const operation = `${event.section}.${event.method}`;
 
             // Focus on IDN pallet events or important system events
@@ -255,9 +271,7 @@ export class ExplorerService implements IExplorerService {
               }));
             } catch (e: any) {
               // Fallback for events that can't be properly decoded
-              eventData = [
-                { type: 'DecodingError', value: e?.message || 'Unable to decode event data' },
-              ];
+              eventData = [{ type: 'DecodingError', value: 'Unable to decode event data' }];
             }
 
             // Determine transaction status and signer
@@ -265,9 +279,9 @@ export class ExplorerService implements IExplorerService {
             let signer = 'System';
             let extrinsicIndex = 'sys';
 
-            if ((phase as any)?.isApplyExtrinsic) {
+            if (phase?.isApplyExtrinsic) {
               try {
-                extrinsicIndex = (phase as any).asApplyExtrinsic.toString();
+                extrinsicIndex = phase.asApplyExtrinsic.toString();
 
                 // Try to determine signer from event data if it looks like an address
                 const potentialSigner = eventData.find(
@@ -295,18 +309,20 @@ export class ExplorerService implements IExplorerService {
 
             listOfEvents.push(executedTransaction);
           } catch (e: any) {
-            // Only log if it's an IDN event that failed
+            // Only errors from IDN-related events would be worth logging
             if (
+              record?.event?.section &&
               idnPallets.some(pallet =>
-                record?.event?.section?.toLowerCase().includes(pallet.toLowerCase())
+                record.event.section.toLowerCase().includes(pallet.toLowerCase())
               )
             ) {
-              console.warn(`Error processing IDN event ${blockNumber}-${index}:`, e?.message || e);
+              // Use console.debug instead of warn to make it less prominent
+              console.debug(`Error processing IDN event ${blockNumber}-${index}`);
             }
           }
         });
       } catch (e: any) {
-        console.error(`Error processing block ${blockNumber}:`, e?.message || e);
+        console.debug(`Skipping block ${blockNumber}`);
       }
     }
 

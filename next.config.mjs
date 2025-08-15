@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    // Disable the bailout to prevent React hydration errors
-    missingSuspenseWithCSRBailout: false,
-  },
+  // Removed deprecated experimental flag that was causing warnings
   // Properly handle client-side only packages
   webpack: (config, { isServer }) => {
     // Fix for tsyringe and reflect-metadata

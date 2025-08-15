@@ -16,6 +16,12 @@
 
 'use client';
 
+// Required for tsyringe dependency injection
+import 'reflect-metadata';
+
+// Import the use hook for Promise-based params
+import { use } from 'react';
+
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { useConnectedWallet } from '@/components/contexts/connectedWalletContext';
@@ -29,16 +35,20 @@ import { CommandLineIcon, CubeIcon, WalletIcon } from '@heroicons/react/16/solid
 import { ArrowLeftIcon } from '@heroicons/react/20/solid';
 import { notFound } from 'next/navigation';
 
-export default function ExecutedTransaction({
-  params,
-}: {
-  readonly params: { readonly id: readonly string[] };
-}) {
+export default function ExecutedTransaction(props: { params: Promise<{ id: string[] }> }) {
+  // Unwrap Promise-based params using React's use() hook
+  const params = use(props.params);
   const { executedTransactions } = useConnectedWallet();
 
-  if (!params.id[0]) notFound();
+  // Direct access to params.id since we're already using the use() hook
+  const id = params.id;
 
-  const idComponents = params.id[0].split('_OP_');
+  // Check if id exists
+  if (!id || !id[0]) {
+    notFound();
+  }
+
+  const idComponents = id[0].split('_OP_');
   if (idComponents?.length < 2) notFound();
 
   const transaction = executedTransactions.find(
@@ -51,10 +61,7 @@ export default function ExecutedTransaction({
       <div className="w-full px-8 py-8">
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 flex items-center">
-            <Link
-              href={params.id[1] === 'compose' ? '/timelock' : '/network-activity'}
-              className="mr-4"
-            >
+            <Link href={id[1] === 'compose' ? '/timelock' : '/network-activity'} className="mr-4">
               <Button className="rounded-full p-2">
                 <ArrowLeftIcon className="h-4 w-4" />
               </Button>

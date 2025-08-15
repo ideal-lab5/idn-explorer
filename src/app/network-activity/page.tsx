@@ -16,6 +16,9 @@
 
 'use client';
 
+// Required for tsyringe dependency injection
+import 'reflect-metadata';
+
 import { Badge } from '@/components/badge';
 import { Checkbox, CheckboxField } from '@/components/checkbox';
 import {
@@ -94,6 +97,7 @@ export default function NetworkActivityPage() {
   const [copyStatus, setCopyStatus] = useState(false); // To indicate if the text was copied
   const [currentRound, setCurrentRound] = useState<number>(0);
   const [drandService] = useState(() => new DrandService());
+  const [refreshTrigger, setRefreshTrigger] = useState(false);
 
   const onCopyText = () => {
     setCopyStatus(true);

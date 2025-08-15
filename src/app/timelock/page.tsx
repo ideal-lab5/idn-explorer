@@ -16,6 +16,9 @@
 
 'use client';
 
+// Required for tsyringe dependency injection
+import 'reflect-metadata';
+
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import {
