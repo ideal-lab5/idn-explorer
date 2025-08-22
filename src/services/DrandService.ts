@@ -15,7 +15,7 @@
  */
 
 import { injectable } from 'tsyringe';
-import type { DrandBeacon, DrandChainInfo, IDrandService } from './IDrandService';
+import type { DrandChainInfo, DrandPulse, IDrandService } from './IDrandService';
 
 @injectable()
 export class DrandService implements IDrandService {
@@ -25,17 +25,17 @@ export class DrandService implements IDrandService {
   private readonly DRAND_API_URL = process.env.NEXT_PUBLIC_DRAND_API_URL || 'https://api.drand.sh';
   private chainInfo: DrandChainInfo | null = null;
 
-  async getLatestBeacon(): Promise<DrandBeacon> {
+  async getLatestPulse(): Promise<DrandPulse> {
     const response = await fetch(`${this.DRAND_API_URL}/${this.QUICKNET_CHAIN_HASH}/public/latest`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch latest beacon: ${response.statusText}`);
+      throw new Error(`Failed to fetch latest pulse: ${response.statusText}`);
     }
     return response.json();
   }
 
   async getCurrentRound(): Promise<number> {
-    const beacon = await this.getLatestBeacon();
-    return beacon.round;
+    const pulse = await this.getLatestPulse();
+    return pulse.round;
   }
 
   async getChainInfo(): Promise<DrandChainInfo> {

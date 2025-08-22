@@ -24,16 +24,14 @@ import { Button } from '@/components/button';
 import { useConnectedWallet } from '@/components/contexts/connectedWalletContext';
 import { ConnectWallet } from '@/components/idn/connectWallet';
 import { DynamicExtrinsicForm } from '@/components/idn/dynamicExtrinsicForm';
-import { Input } from '@/components/input';
 import { Link } from '@/components/link';
+import { ScheduleTimeInput } from '@/components/timelock/ScheduleTimeInput';
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails';
 import { explorerClient } from '@/lib/explorer-client';
 import { DrandService } from '@/services/DrandService';
 import { ArrowLeftIcon, ArrowPathIcon, XCircleIcon } from '@heroicons/react/20/solid';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-const FUTURE_ROUNDS_DEFAULT_START: number = 100;
 
 export default function ScheduleTransaction() {
   const router = useRouter();
@@ -50,7 +48,10 @@ export default function ScheduleTransaction() {
       try {
         const current = await drandService.getCurrentRound();
         setCurrentRound(current);
-        setRound(current + FUTURE_ROUNDS_DEFAULT_START);
+        // Set initial round if not set
+        if (round === 0) {
+          setRound(current + 100); // Default to 5 minutes from now
+        }
       } catch (error) {
         console.error('Failed to fetch current drand round:', error);
       }
@@ -60,15 +61,20 @@ export default function ScheduleTransaction() {
     // Update every 3 seconds (Quicknet round duration)
     const interval = setInterval(fetchCurrentRound, 3000);
     return () => clearInterval(interval);
-  }, [drandService]);
+  }, [drandService, round]);
 
   async function handleScheduleTransaction() {
     if (isProcessing || !signer || extrinsicData === null) {
       return;
     }
 
-    if (extrinsicData.round <= currentRound) {
-      setLastError('Please enter a valid future drand round.');
+    if (round <= currentRound) {
+      setLastError('Please select a valid future time.');
+      return;
+    }
+
+    if (round < currentRound + 100) {
+      setLastError('Schedule time must be at least 5 minutes in the future.');
       return;
     }
 
@@ -125,35 +131,12 @@ export default function ScheduleTransaction() {
               </p>
             </div>
 
-            <div className="space-y-4 px-6 py-5">
-              <div className="space-y-2">
-                <label
-                  htmlFor="round"
-                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                >
-                  Future Drand Round
-                </label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="round"
-                    name="round"
-                    type="number"
-                    value={round}
-                    onChange={e => setRound(parseInt(e.target.value))}
-                    placeholder="Future Round Number"
-                    autoFocus
-                  />
-                  {currentRound > 0 && (
-                    <span className="text-sm text-zinc-500">
-                      (Current: {currentRound.toLocaleString()})
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-zinc-500">
-                  Specify the future drand round at which the transaction can be decrypted and
-                  executed
-                </p>
-              </div>
+            <div className="space-y-6 px-6 py-5">
+              <ScheduleTimeInput
+                currentRound={currentRound}
+                onRoundChange={setRound}
+                initialRound={round > 0 ? round : undefined}
+              />
 
               <div className="space-y-2">
                 <label

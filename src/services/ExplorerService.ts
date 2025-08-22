@@ -20,6 +20,7 @@ import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
 import { DrandIdentityBuilder, SupportedCurve, Timelock, u8a } from '@ideallabs/timelock.js';
 import { EventRecord } from '@polkadot/types/interfaces';
+import * as hkdf from 'js-crypto-hkdf';
 import { inject, injectable } from 'tsyringe';
 import type { IDrandService } from './IDrandService';
 import type { IExplorerService } from './IExplorerService';
@@ -48,6 +49,23 @@ export class ExplorerService implements IExplorerService {
     } catch (error) {
       console.error('Failed to initialize Drand service:', error);
     }
+  }
+
+  /**
+   * Compute a deterministic secret key using HKDF
+   * This allows recovery of the key if the same seed is provided
+   */
+  private async computeSecretKey(seed: Uint8Array): Promise<string> {
+    const hash = 'SHA-256';
+    const length = 32;
+    const info = ''; // Optional context info
+    const salt = new Uint8Array(); // Optional salt (empty for deterministic output)
+
+    const esk = await hkdf.compute(seed, hash, length, info, salt);
+    const key = Array.from(new Uint8Array(esk.key))
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('');
+    return key;
   }
 
   async getRandomness(blockNumber: number, size: number = 10): Promise<Randomness[]> {
@@ -117,11 +135,20 @@ export class ExplorerService implements IExplorerService {
       // Serialize the inner call
       const callData = innerCall.toU8a();
 
-      // Generate a random key for encryption (32 bytes)
-      const key = crypto.getRandomValues(new Uint8Array(32));
-      const keyHex = Array.from(key)
-        .map(byte => byte.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate deterministic key using HKDF for recoverability
+      // Create a seed from signer address + round + call data hash
+      const seedComponents = [
+        signer.address,
+        transactionDetails.round.toString(),
+        // Add first 16 bytes of call data as part of seed for uniqueness
+        Array.from(callData.slice(0, 16))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join(''),
+      ];
+      const seed = new TextEncoder().encode(seedComponents.join('-'));
+
+      // Derive key using HKDF
+      const keyHex = await this.computeSecretKey(seed);
 
       // Encrypt the transaction for the future drand round
       const ciphertext = await this.tLockApi.encrypt(

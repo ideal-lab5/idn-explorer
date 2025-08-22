@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export interface DrandBeacon {
+export interface DrandPulse {
   round: number;
   randomness: string;
   signature: string;
@@ -34,7 +34,7 @@ export interface DrandChainInfo {
 }
 
 export interface IDrandService {
-  getLatestBeacon(): Promise<DrandBeacon>;
+  getLatestPulse(): Promise<DrandPulse>;
   getCurrentRound(): Promise<number>;
   getChainInfo(): Promise<DrandChainInfo>;
   getRoundAtTime(timestamp: number): number;
