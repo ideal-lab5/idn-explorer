@@ -26,6 +26,8 @@ import {
   getMinimumScheduleDate,
   getRelativeTimeDescription,
   getTimeUntilRound,
+  MIN_SCHEDULE_MINUTES,
+  MIN_SCHEDULE_ROUND,
   roundToDate,
   validateScheduleDate,
 } from '@/utils/drandTimeUtils';
@@ -121,11 +123,11 @@ export function ScheduleTimeInput({
       const validation = validateScheduleDate(selectedDate);
       setValidationError(validation.error || '');
     } else if (mode === 'round') {
-      const minRound = currentRound + 40; // ~2 minutes minimum (40 rounds * 3 seconds)
+      const minRound = currentRound + MIN_SCHEDULE_ROUND; 
       if (manualRound <= currentRound) {
         setValidationError('Round must be in the future');
       } else if (manualRound < minRound) {
-        setValidationError('Round must be at least 2 minutes in the future');
+        setValidationError(`Round must be at least ${MIN_SCHEDULE_MINUTES} minutes in the future`);
       } else {
         setValidationError('');
       }

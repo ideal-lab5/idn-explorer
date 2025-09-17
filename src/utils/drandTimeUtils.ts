@@ -16,6 +16,9 @@
 
 import type { IDrandService } from '@/services/IDrandService';
 
+export const MIN_SCHEDULE_MINUTES = 2;
+export const MIN_SCHEDULE_ROUND = 40; // ~2 minutes minimum (40 rounds * 3 seconds)
+
 /**
  * Convert a Date to the corresponding drand round number
  */
@@ -40,7 +43,7 @@ export const roundToDate = async (round: number, drandService: IDrandService): P
  */
 export const getMinimumScheduleDate = (): Date => {
   const now = new Date();
-  return new Date(now.getTime() + 2 * 60 * 1000); // 2 minutes from now
+  return new Date(now.getTime() + MIN_SCHEDULE_MINUTES * 60 * 1000); // 2 minutes from now
 };
 
 /**

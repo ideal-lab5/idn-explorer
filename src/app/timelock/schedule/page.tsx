@@ -32,6 +32,7 @@ import { DrandService } from '@/services/DrandService';
 import { ArrowLeftIcon, ArrowPathIcon, XCircleIcon } from '@heroicons/react/20/solid';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { MIN_SCHEDULE_MINUTES, MIN_SCHEDULE_ROUND } from '@/utils/drandTimeUtils';
 
 export default function ScheduleTransaction() {
   const router = useRouter();
@@ -50,7 +51,7 @@ export default function ScheduleTransaction() {
         setCurrentRound(current);
         // Set initial round if not set
         if (round === 0) {
-          setRound(current + 40); // Default to 2 minutes from now
+          setRound(current + MIN_SCHEDULE_ROUND);
         }
       } catch (error) {
         console.error('Failed to fetch current drand round:', error);
@@ -73,8 +74,8 @@ export default function ScheduleTransaction() {
       return;
     }
 
-    if (round < currentRound + 40) {
-      setLastError('Schedule time must be at least 2 minutes in the future.');
+    if (round < currentRound + MIN_SCHEDULE_ROUND) {
+      setLastError(`Schedule time must be at least ${MIN_SCHEDULE_MINUTES} minutes in the future.`);
       return;
     }
 
