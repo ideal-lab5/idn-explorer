@@ -50,7 +50,7 @@ export default function ScheduleTransaction() {
         setCurrentRound(current);
         // Set initial round if not set
         if (round === 0) {
-          setRound(current + 100); // Default to 5 minutes from now
+          setRound(current + 40); // Default to 2 minutes from now
         }
       } catch (error) {
         console.error('Failed to fetch current drand round:', error);
@@ -73,8 +73,8 @@ export default function ScheduleTransaction() {
       return;
     }
 
-    if (round < currentRound + 100) {
-      setLastError('Schedule time must be at least 5 minutes in the future.');
+    if (round < currentRound + 40) {
+      setLastError('Schedule time must be at least 2 minutes in the future.');
       return;
     }
 

@@ -121,11 +121,11 @@ export function ScheduleTimeInput({
       const validation = validateScheduleDate(selectedDate);
       setValidationError(validation.error || '');
     } else if (mode === 'round') {
-      const minRound = currentRound + 100; // ~5 minutes minimum
+      const minRound = currentRound + 40; // ~2 minutes minimum (40 rounds * 3 seconds)
       if (manualRound <= currentRound) {
         setValidationError('Round must be in the future');
       } else if (manualRound < minRound) {
-        setValidationError('Round must be at least 5 minutes in the future');
+        setValidationError('Round must be at least 2 minutes in the future');
       } else {
         setValidationError('');
       }
@@ -202,7 +202,7 @@ export function ScheduleTimeInput({
               timeIntervals={1}
               dateFormat="MMMM d, yyyy h:mm aa"
               minDate={getMinimumScheduleDate()}
-              maxDate={getMaximumScheduleDate()}
+              maxDate={getMaximumScheduleDate() || undefined}
               className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-400"
               placeholderText="Select date and time"
               autoComplete="off"

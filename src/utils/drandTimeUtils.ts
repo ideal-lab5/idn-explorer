@@ -36,19 +36,19 @@ export const roundToDate = async (round: number, drandService: IDrandService): P
 };
 
 /**
- * Get the minimum date that can be scheduled (5 minutes from now)
+ * Get the minimum date that can be scheduled (2 minutes from now)
  */
 export const getMinimumScheduleDate = (): Date => {
   const now = new Date();
-  return new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
+  return new Date(now.getTime() + 2 * 60 * 1000); // 2 minutes from now
 };
 
 /**
- * Get the maximum date that can be scheduled (30 days from now)
+ * Get the maximum date that can be scheduled (no limit)
  */
-export const getMaximumScheduleDate = (): Date => {
-  const now = new Date();
-  return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+export const getMaximumScheduleDate = (): Date | null => {
+  // No maximum limit
+  return null;
 };
 
 /**
@@ -99,21 +99,15 @@ export const formatDateWithTimezone = (date: Date): string => {
  */
 export const validateScheduleDate = (date: Date): { isValid: boolean; error?: string } => {
   const minDate = getMinimumScheduleDate();
-  const maxDate = getMaximumScheduleDate();
 
   if (date < minDate) {
     return {
       isValid: false,
-      error: 'Schedule time must be at least 5 minutes in the future',
+      error: 'Schedule time must be at least 2 minutes in the future',
     };
   }
 
-  if (date > maxDate) {
-    return {
-      isValid: false,
-      error: 'Schedule time cannot be more than 30 days in the future',
-    };
-  }
+  // No maximum date validation since there's no limit
 
   return { isValid: true };
 };
