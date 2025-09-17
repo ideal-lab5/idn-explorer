@@ -284,7 +284,7 @@ export function ScheduleTimeInput({
 
       {/* Help Text */}
       <div className="text-xs text-zinc-500">
-        <p>• Minimum: 5 minutes in the future • Maximum: 30 days in the future</p>
+        <p>• Minimum: {MIN_SCHEDULE_MINUTES} minutes in the future • No maximum limit</p>
         <p>• Drand Quicknet generates a new round every 3 seconds</p>
       </div>
     </div>
