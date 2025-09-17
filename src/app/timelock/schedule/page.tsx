@@ -29,10 +29,10 @@ import { ScheduleTimeInput } from '@/components/timelock/ScheduleTimeInput';
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails';
 import { explorerClient } from '@/lib/explorer-client';
 import { DrandService } from '@/services/DrandService';
+import { MIN_SCHEDULE_MINUTES, MIN_SCHEDULE_ROUND } from '@/utils/drandTimeUtils';
 import { ArrowLeftIcon, ArrowPathIcon, XCircleIcon } from '@heroicons/react/20/solid';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { MIN_SCHEDULE_MINUTES, MIN_SCHEDULE_ROUND } from '@/utils/drandTimeUtils';
 
 export default function ScheduleTransaction() {
   const router = useRouter();

@@ -123,7 +123,7 @@ export function ScheduleTimeInput({
       const validation = validateScheduleDate(selectedDate);
       setValidationError(validation.error || '');
     } else if (mode === 'round') {
-      const minRound = currentRound + MIN_SCHEDULE_ROUND; 
+      const minRound = currentRound + MIN_SCHEDULE_ROUND;
       if (manualRound <= currentRound) {
         setValidationError('Round must be in the future');
       } else if (manualRound < minRound) {
