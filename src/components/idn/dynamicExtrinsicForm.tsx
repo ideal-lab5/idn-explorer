@@ -35,9 +35,9 @@ interface MethodArgument {
 }
 
 export const DynamicExtrinsicForm: React.FC<{
-  block: number;
+  round: number;
   setExtrinsicData: React.Dispatch<React.SetStateAction<DelayedTransactionDetails | null>>;
-}> = ({ block, setExtrinsicData }) => {
+}> = ({ round, setExtrinsicData }) => {
   const chainStateService = container.resolve(ChainStateService);
   const [pallets, setPallets] = useState<PalletOption[]>([]);
   const [extrinsics, setExtrinsics] = useState<string[]>([]);
@@ -90,7 +90,7 @@ export const DynamicExtrinsicForm: React.FC<{
       ) {
         setExtrinsicData(
           new DelayedTransactionDetails(
-            block,
+            round,
             selectedPallet,
             selectedExtrinsic,
             parameters.map(param => ({
@@ -106,7 +106,7 @@ export const DynamicExtrinsicForm: React.FC<{
     }
 
     isReady();
-  }, [selectedPallet, selectedExtrinsic, parameters, block]);
+  }, [selectedPallet, selectedExtrinsic, parameters, round]);
 
   return (
     <div className="grid grid-cols-2 gap-6">

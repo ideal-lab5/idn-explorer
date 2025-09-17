@@ -8,15 +8,11 @@ import { ConnectedWalletProvider } from '@/components/contexts/connectedWalletCo
 import { PolkadotProvider } from '@/components/contexts/polkadotContext';
 import { SubscriptionProvider } from '@/components/contexts/subscriptionContext';
 import { DIProvider } from '@/components/providers/di-provider';
-import '@/styles/tailwind.css';
-import { Inter } from 'next/font/google';
 import { ApplicationLayout } from './application-layout';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={inter.className}>
+    <div>
       <DIProvider>
         <PolkadotProvider>
           <ConnectedWalletProvider>

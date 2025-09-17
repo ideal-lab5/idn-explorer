@@ -18,28 +18,54 @@ import { DelayedTransaction } from '@/domain/DelayedTransaction';
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
-import { SupportedCurve, Timelock } from '@ideallabs/timelock.js';
+import { DrandIdentityBuilder, SupportedCurve, Timelock, u8a } from '@ideallabs/timelock.js';
 import { EventRecord } from '@polkadot/types/interfaces';
+import * as hkdf from 'js-crypto-hkdf';
 import { inject, injectable } from 'tsyringe';
+import type { IDrandService } from './IDrandService';
 import type { IExplorerService } from './IExplorerService';
 import type { IPolkadotApiService } from './IPolkadotApiService';
 
 @injectable()
 export class ExplorerService implements IExplorerService {
   private tLockApi: Timelock | null = null;
-  private featureScheduleTransaction: boolean = false;
+  private drandService: IDrandService | null = null;
 
   constructor(@inject('IPolkadotApiService') private polkadotApiService: IPolkadotApiService) {
-    if (process.env.FEATURE_SCHEDULE_TRANSACTION) {
-      this.featureScheduleTransaction = process.env.FEATURE_SCHEDULE_TRANSACTION == 'enabled';
-    }
     this.initializeTlock();
+    this.initializeDrand();
   }
 
   async initializeTlock() {
     if (!this.tLockApi) {
       this.tLockApi = await Timelock.build(SupportedCurve.BLS12_381);
     }
+  }
+
+  async initializeDrand() {
+    try {
+      const { DrandService } = await import('./DrandService');
+      this.drandService = new DrandService();
+    } catch (error) {
+      console.error('Failed to initialize Drand service:', error);
+    }
+  }
+
+  /**
+   * Compute a deterministic secret key using HKDF
+   * This allows recovery of the key if the same seed is provided
+   */
+  private async computeSecretKey(seed: Uint8Array): Promise<string> {
+    const hash = 'SHA-256';
+    const length = 32;
+    const info = ''; // Optional context info
+    const salt = new Uint8Array(); // Optional salt (empty for deterministic output)
+
+    const esk = await hkdf.compute(seed, hash, length, info, salt);
+    const key = Array.from(new Uint8Array(esk.key))
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('');
+    return key;
   }
 
   async getRandomness(blockNumber: number, size: number = 10): Promise<Randomness[]> {
@@ -76,39 +102,116 @@ export class ExplorerService implements IExplorerService {
     signer: any,
     transactionDetails: DelayedTransactionDetails
   ): Promise<void> {
-    if (this.featureScheduleTransaction) {
-      const polkadotApi = await this.polkadotApiService.getApi();
+    if (!this.tLockApi || !this.drandService) {
+      throw new Error('Timelock or Drand service not initialized');
+    }
 
-      // Get the inner call using Polkadot API
-      const tx = polkadotApi.tx[transactionDetails.pallet][transactionDetails.extrinsic];
-      if (!tx) {
-        throw new Error(
-          `Invalid extrinsic: ${transactionDetails.pallet}.${transactionDetails.extrinsic}`
-        );
+    const polkadotApi = await this.polkadotApiService.getApi();
+
+    // Get the inner call using Polkadot API
+    const tx = polkadotApi.tx[transactionDetails.pallet][transactionDetails.extrinsic];
+    if (!tx) {
+      throw new Error(
+        `Invalid extrinsic: ${transactionDetails.pallet}.${transactionDetails.extrinsic}`
+      );
+    }
+
+    // Parse parameters
+    const params = transactionDetails.params.map(param => {
+      if (param.value === 'true') return true;
+      if (param.value === 'false') return false;
+      if (!isNaN(param.value)) return Number(param.value);
+      return param.value;
+    });
+
+    // Create the inner call
+    const innerCall = tx(...params);
+
+    try {
+      // Get drand chain info for the public key
+      const chainInfo = await this.drandService.getChainInfo();
+      const drandPubKey = chainInfo.public_key;
+
+      // Serialize the inner call
+      const callData = innerCall.toU8a();
+
+      // Generate deterministic key using HKDF for recoverability
+      // Create a seed from signer address + round + call data hash
+      const seedComponents = [
+        signer.address,
+        transactionDetails.round.toString(),
+        // Add first 16 bytes of call data as part of seed for uniqueness
+        Array.from(callData.slice(0, 16))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join(''),
+      ];
+      const seed = new TextEncoder().encode(seedComponents.join('-'));
+
+      // Derive key using HKDF
+      const keyHex = await this.computeSecretKey(seed);
+
+      // Encrypt the transaction for the future drand round
+      const ciphertext = await this.tLockApi.encrypt(
+        callData,
+        transactionDetails.round,
+        DrandIdentityBuilder,
+        drandPubKey,
+        keyHex
+      );
+
+      if (ciphertext instanceof Error) {
+        throw ciphertext;
       }
 
-      // Parse parameters
-      const params = transactionDetails.params.map(param => {
-        if (param.value === 'true') return true;
-        if (param.value === 'false') return false;
-        if (!isNaN(param.value)) return Number(param.value);
-        return param.value;
-      });
+      // Convert ciphertext to hex for the transaction
+      const ciphertextHex =
+        '0x' +
+        Array.from(ciphertext as Uint8Array)
+          .map(byte => byte.toString(16).padStart(2, '0'))
+          .join('');
 
-      // Create the inner call
-      const innerCall = tx(...params);
+      // Calculate when this round will occur to determine block scheduling
+      const currentRound = await this.drandService.getCurrentRound();
+      const roundsUntilExecution = transactionDetails.round - currentRound;
+      const secondsUntilExecution = roundsUntilExecution * 3; // Quicknet has 3 second rounds
+      const blocksUntilExecution = Math.ceil(secondsUntilExecution / 6); // Assuming 6 second blocks
 
-      // This outer call should be done with the IDN in the future.
-      const outerCall = tx(...params);
+      // Check if timelockEncryption pallet exists
+      if (!polkadotApi.tx.timelockEncryption) {
+        console.error(
+          'timelockEncryption pallet not found. Available pallets:',
+          Object.keys(polkadotApi.tx)
+        );
+        throw new Error('timelockEncryption pallet not available on this chain');
+      }
 
-      // Sign and send using Polkadot API
-      await outerCall.signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
+      // Check if submitTimelock method exists
+      if (!polkadotApi.tx.timelockEncryption.submitTimelock) {
+        console.error(
+          'submitTimelock method not found. Available methods:',
+          Object.keys(polkadotApi.tx.timelockEncryption)
+        );
+        throw new Error('submitTimelock method not available in timelockEncryption pallet');
+      }
+
+      // Schedule the timelock transaction
+      const timelockCall = polkadotApi.tx.timelockEncryption.submitTimelock(
+        ciphertextHex,
+        transactionDetails.round
+      );
+
+      // Sign and send the scheduled transaction
+      await timelockCall.signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
         if (result.status.isInBlock) {
-          // Transaction confirmed in block
+          console.log('Transaction scheduled for drand round:', transactionDetails.round);
+        }
+        if (result.dispatchError) {
+          throw new Error('Failed to schedule transaction');
         }
       });
-    } else {
-      console.error('The Schedule Transaction Feature is not currently implemented');
+    } catch (error) {
+      console.error('Failed to schedule transaction with drand timelock:', error);
+      throw error;
     }
   }
 
