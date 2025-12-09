@@ -2,7 +2,8 @@ import type { UiSubscription } from '@/app/subscriptions/types/UiSubscription';
 import { Subscription, SubscriptionState } from '@/domain/Subscription';
 
 /**
- * Converts a domain subscription model to the UI subscription model
+ * Converts a domain subscription model to the UI subscription model.
+ * Maps fields from the pallet-aligned domain model to the UI display format.
  */
 export function domainToUiSubscription(sub: Subscription): UiSubscription {
   // Parse parachain ID from target (handles both string and object formats)
@@ -19,12 +20,12 @@ export function domainToUiSubscription(sub: Subscription): UiSubscription {
 
   return {
     id: sub.id,
-    name: decodeMetadata(sub.details.metadata) || `Randomness Subscription`,
+    name: decodeMetadata(sub.metadata) || `Randomness Subscription`,
     parachainId,
-    totalCredits: sub.details.amount, // Total credits purchased
+    totalCredits: sub.credits, // Total credits subscribed
     creditsRemaining: sub.creditsLeft, // Credits remaining
-    creditsConsumed: sub.creditsConsumed, // Credits already consumed
-    frequency: sub.details.frequency,
+    creditsConsumed: sub.creditsConsumed, // Computed from credits - creditsLeft
+    frequency: sub.frequency,
     xcmLocation: formattedXcmLocation, // Formatted for display
     rawTarget: sub.details.target, // Raw XCM location data for sophisticated viewing
     status: mapStateToStatus(sub.state),
@@ -38,7 +39,7 @@ export function domainToUiSubscription(sub: Subscription): UiSubscription {
  * Decode metadata from subscription
  * Handles both string metadata and potentially hex-encoded bytes
  */
-function decodeMetadata(metadata: string | undefined): string {
+function decodeMetadata(metadata: string | null | undefined): string {
   if (!metadata) return '';
 
   // If it's already a readable string, return it
@@ -86,6 +87,10 @@ function extractParachainId(target: string | any): number {
       if (parachain) {
         return parachain.parachain;
       }
+    }
+    // Also check for X1 format with Parachain directly
+    if (target.interior?.X1?.Parachain) {
+      return target.interior.X1.Parachain;
     }
     return 0;
   }

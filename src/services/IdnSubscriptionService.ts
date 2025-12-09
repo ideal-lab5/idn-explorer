@@ -963,7 +963,8 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
-   * Converts a pallet subscription to our domain Subscription model
+   * Converts a pallet subscription to our domain Subscription model.
+   * Matches the pallet's Subscription struct (lib.rs:146-167).
    */
   private palletSubscriptionToSubscription(palletSub: any): Subscription {
     try {
@@ -971,133 +972,52 @@ export class IdnSubscriptionService implements ISubscriptionService {
         throw new Error('Pallet subscription data is null or undefined');
       }
 
-      // Log the full structure for debugging
-      console.log('Raw subscription data:', JSON.stringify(palletSub, null, 2));
+      // Use toHuman() if available to get a more readable format
+      const data =
+        palletSub.toHuman && typeof palletSub.toHuman === 'function'
+          ? palletSub.toHuman()
+          : palletSub;
 
-      // Check if we have a format with details as a separate field or flat structure
-      // Handle both formats flexibly
-      let details = palletSub.details;
-      let subscriber, target, call, originKind: 'Native' | 'SovereignAccount' | 'Superuser' | 'Xcm';
-      let createdAt = Date.now();
-      let updatedAt = Date.now();
-      let credits = 0;
-      let frequency = 1;
-      let metadata = '';
-      let creditsLeft = 0;
-      let state = SubscriptionStateEnum.Active;
-      let id = 'unknown';
-      let lastDelivered: number | undefined = undefined;
+      // Helper to parse numbers from human-readable format (removes commas)
+      const parseNum = (val: any): number => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') return Number(val.replace(/,/g, ''));
+        return Number(val);
+      };
 
-      // Handle ID field - could be at root or in toHuman()
-      if (palletSub.id) {
-        id = palletSub.id.toString();
-      } else if (palletSub.toHuman && typeof palletSub.toHuman === 'function') {
-        // Try using toHuman() for Substrate codec objects
-        const human = palletSub.toHuman();
-        console.log('Human readable form:', human);
+      // Extract ID
+      const id = data.id?.toString() || 'unknown';
 
-        if (human.id) {
-          id = human.id.toString();
-        }
+      // Extract state
+      const state = this.palletStateToSubscriptionState(data.state);
 
-        // Extract other fields from human readable form
-        if (human.state) {
-          state = this.palletStateToSubscriptionState(human.state);
-        }
+      // Extract root-level fields (matching pallet Subscription struct)
+      const creditsLeft = parseNum(data.creditsLeft || data.credits_left);
+      const createdAt = parseNum(data.createdAt || data.created_at);
+      const updatedAt = parseNum(data.updatedAt || data.updated_at);
+      const credits = parseNum(data.credits);
+      const frequency = parseNum(data.frequency);
+      const lastDeliveredRaw = data.lastDelivered || data.last_delivered;
+      const lastDelivered = lastDeliveredRaw ? parseNum(lastDeliveredRaw) : null;
 
-        // Extract credits and creditsLeft
-        if (human.credits) {
-          credits = Number(human.credits.replace(/,/g, ''));
-        }
-        if (human.creditsLeft || human.credits_left) {
-          creditsLeft = Number((human.creditsLeft || human.credits_left).replace(/,/g, ''));
-        }
+      // Extract metadata (Option<Metadata>)
+      const metadata = data.metadata ? this.extractMetadataString(data.metadata) : null;
 
-        // Extract frequency
-        if (human.frequency) {
-          frequency = Number(human.frequency.replace(/,/g, ''));
-        }
+      // Extract details (SubscriptionDetails struct)
+      const detailsData = data.details || {};
+      const subscriber = detailsData.subscriber?.toString() || 'unknown';
+      const target = detailsData.target ? JSON.stringify(detailsData.target) : '';
+      const call = detailsData.call ? this.bytesToHex(detailsData.call) : '';
+      const originKindRaw = detailsData.originKind || detailsData.origin_kind;
+      const originKind = this.extractOriginKind(originKindRaw);
 
-        // Extract lastDelivered
-        if (human.lastDelivered || human.last_delivered) {
-          const lastDel = human.lastDelivered || human.last_delivered;
-          if (lastDel) {
-            lastDelivered = Number(lastDel.replace(/,/g, ''));
-          }
-        }
-
-        // Extract details from human form
-        if (human.details) {
-          details = human.details;
-        }
-      }
-
-      // Process details field if it exists
-      if (details) {
-        // Could be directly accessible or might need toHuman()
-        let detailsObj = details;
-        if (details.toHuman && typeof details.toHuman === 'function') {
-          detailsObj = details.toHuman();
-        }
-
-        subscriber = detailsObj.subscriber ? detailsObj.subscriber.toString() : 'unknown';
-        target = detailsObj.target ? JSON.stringify(detailsObj.target) : '';
-        // Handle new 'call' field (pre-encoded call data)
-        call = detailsObj.call ? this.bytesToHex(detailsObj.call) : '';
-        // Handle origin_kind field
-        originKind = this.extractOriginKind(detailsObj.originKind || detailsObj.origin_kind);
-      } else {
-        // Handle flat structure - fields at root level
-        subscriber = palletSub.subscriber ? palletSub.subscriber.toString() : 'unknown';
-        target = palletSub.target ? JSON.stringify(palletSub.target) : '';
-        call = palletSub.call ? this.bytesToHex(palletSub.call) : '';
-        originKind = this.extractOriginKind(palletSub.originKind || palletSub.origin_kind);
-      }
-
-      // Extract date fields if they exist
-      if (palletSub.createdAt || palletSub.created_at) {
-        createdAt = Number(palletSub.createdAt || palletSub.created_at);
-      }
-      if (palletSub.updatedAt || palletSub.updated_at) {
-        updatedAt = Number(palletSub.updatedAt || palletSub.updated_at);
-      }
-
-      // Extract credits fields if at root level
-      if (palletSub.credits) {
-        credits = Number(palletSub.credits);
-      }
-      if (palletSub.creditsLeft || palletSub.credits_left) {
-        creditsLeft = Number(palletSub.creditsLeft || palletSub.credits_left);
-      }
-      if (palletSub.frequency) {
-        frequency = Number(palletSub.frequency);
-      }
-
-      // Extract lastDelivered at root level
-      if (palletSub.lastDelivered || palletSub.last_delivered) {
-        const lastDel = palletSub.lastDelivered || palletSub.last_delivered;
-        if (lastDel) {
-          lastDelivered = Number(lastDel);
-        }
-      }
-
-      // Handle metadata
-      if (palletSub.metadata) {
-        metadata = this.extractMetadataString(palletSub.metadata);
-      }
-
-      // Create subscription details object
+      // Create subscription details object (subscriber, target, call, originKind)
       const subscriptionDetails = new SubscriptionDetailsClass(
         subscriber,
-        createdAt,
-        updatedAt,
-        credits,
-        frequency,
         target,
-        metadata,
         call,
-        originKind,
-        0 // deposit - not present in this structure
+        originKind
       );
 
       // Create and return the subscription object
@@ -1105,28 +1025,19 @@ export class IdnSubscriptionService implements ISubscriptionService {
         id,
         subscriptionDetails,
         creditsLeft,
-        palletSub.state ? this.palletStateToSubscriptionState(palletSub.state) : state,
-        // Calculate creditsConsumed from credits - creditsLeft
-        credits && creditsLeft ? credits - creditsLeft : 0,
-        0, // feesPaid - not present in this structure
+        state,
+        createdAt,
+        updatedAt,
+        credits,
+        frequency,
+        metadata,
         lastDelivered
       );
     } catch (error) {
-      console.error('Error converting pallet subscription:', error);
+      console.error('Error converting pallet subscription:', error, palletSub);
 
       // Create a minimal valid subscription to prevent breaking UI
-      const fallbackDetails = new SubscriptionDetailsClass(
-        'unknown',
-        Date.now(),
-        Date.now(),
-        0,
-        1,
-        '',
-        '',
-        '',
-        'Native',
-        0
-      );
+      const fallbackDetails = new SubscriptionDetailsClass('unknown', '', '', 'Native');
 
       return new SubscriptionClass(
         palletSub?.id?.toString() || 'unknown',
@@ -1134,7 +1045,11 @@ export class IdnSubscriptionService implements ISubscriptionService {
         0,
         SubscriptionStateEnum.Active,
         0,
-        0
+        0,
+        0,
+        1,
+        null,
+        null
       );
     }
   }
