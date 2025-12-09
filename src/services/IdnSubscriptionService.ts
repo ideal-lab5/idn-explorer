@@ -197,22 +197,22 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
       const formattedTarget = this.formatXcmLocation(target);
 
-      // Convert hex call data to bytes array
+      // The pallet expects call data as a BoundedVec<u8>.
+      // Convert hex to raw bytes array - Polkadot.js handles the SCALE encoding.
       const callBytes = this.hexToBytes(call);
 
       // Call the create_subscription extrinsic with CreateSubParams struct parameter
-      // The pallet expects a single struct with exact field names from primitives.rs
+      // NOTE: The pallet's Rust struct uses 'call' but the metadata exposes it as 'callIndex'
       const createParams = {
         credits,
         target: formattedTarget,
-        call: callBytes, // Pre-encoded call data as bytes
-        origin_kind: originKind, // Origin kind as string - Polkadot.js will convert to enum
+        callIndex: callBytes, // Field is named 'callIndex' in the metadata, not 'call'
+        origin_kind: originKind,
         frequency,
         metadata: metadata || null,
-        sub_id: subscriptionId || null, // Use provided or auto-generated subscription ID
+        sub_id: subscriptionId || null,
       };
 
-      // The pallet expects a single CreateSubParams struct
       const extrinsic = api.tx.idnManager.createSubscription(createParams);
 
       // Sign and send the transaction with optimized handling for client-side navigation
@@ -725,7 +725,8 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
         try {
           if (value && !value.isEmpty) {
-            const rawData = value.toJSON();
+            // Use toHuman() for proper field names
+            const rawData = value.toHuman();
 
             // Quick check: look for account ID in raw data before expensive conversion
             const rawString = JSON.stringify(rawData);
@@ -771,7 +772,12 @@ export class IdnSubscriptionService implements ISubscriptionService {
         const subscriptionData = await api.query.idnManager.subscriptions(subscriptionId);
 
         if (subscriptionData && !subscriptionData.isEmpty) {
-          const rawData = subscriptionData.toJSON();
+          // Log both formats to understand the data structure
+          console.log('Storage toJSON:', JSON.stringify(subscriptionData.toJSON(), null, 2));
+          console.log('Storage toHuman:', JSON.stringify(subscriptionData.toHuman(), null, 2));
+
+          // Use toHuman() which gives more readable format with proper field names
+          const rawData = subscriptionData.toHuman();
           return this.palletSubscriptionToSubscription(rawData);
         }
       } catch (directQueryError) {
@@ -797,7 +803,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
         try {
           if (value && !value.isEmpty) {
-            const rawData = value.toJSON();
+            const rawData = value.toHuman();
             const subscription = this.palletSubscriptionToSubscription(rawData);
 
             // Check if this is the subscription we're looking for
@@ -963,6 +969,74 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
+   * Extracts call data from various formats returned by the pallet.
+   * The call field is stored as BoundedVec<u8> and returned via toHuman() as a hex string.
+   *
+   * When Polkadot.js returns the data via toHuman(), it may:
+   * 1. Return the raw hex string: "0x2a03"
+   * 2. Return with SCALE length prefix: "0x082a03" (08 = compact length 2)
+   *
+   * We try to detect and handle both cases.
+   */
+  private extractCallData(callData: any): string {
+    if (!callData) return '';
+
+    // If it's already a proper hex string (from toHuman or toJSON)
+    if (typeof callData === 'string') {
+      if (callData.startsWith('0x')) {
+        const hex = callData.slice(2); // Remove '0x'
+
+        // Check if this looks like SCALE-encoded with length prefix
+        // For call data of 2 bytes, SCALE prefix would be 0x08 (length 2 in compact)
+        if (hex.length >= 2) {
+          const firstByte = parseInt(hex.slice(0, 2), 16);
+
+          // Compact encoding: if lowest 2 bits are 00, it's single-byte mode
+          // and the length = value >> 2
+          if ((firstByte & 0x03) === 0x00 && firstByte > 0) {
+            const actualLength = firstByte >> 2;
+            const expectedHexLength = 2 + actualLength * 2; // prefix + data
+
+            // If the total length matches what we'd expect with a length prefix
+            if (hex.length === expectedHexLength && actualLength > 0) {
+              const actualData = hex.slice(2, 2 + actualLength * 2);
+              return '0x' + actualData;
+            }
+          }
+        }
+
+        // Return hex as-is (either no prefix or we couldn't detect one)
+        return callData;
+      }
+
+      // Might be a comma-separated string from toHuman() like "42,4"
+      if (callData.includes(',')) {
+        const parts = callData.split(',').map((p: string) => p.trim());
+        const bytes = parts.map((p: string) => {
+          const num = p.startsWith('0x') ? parseInt(p, 16) : parseInt(p, 10);
+          return num.toString(16).padStart(2, '0');
+        });
+        return '0x' + bytes.join('');
+      }
+
+      // Plain hex without prefix
+      return '0x' + callData;
+    }
+
+    // If it's an array (could be from codec or toHuman)
+    if (Array.isArray(callData)) {
+      const bytes = callData.map((b: any) => {
+        const num = typeof b === 'string' ? parseInt(b, 10) : b;
+        return num.toString(16).padStart(2, '0');
+      });
+      return '0x' + bytes.join('');
+    }
+
+    // Fallback to bytesToHex for other cases
+    return this.bytesToHex(callData);
+  }
+
+  /**
    * Converts a pallet subscription to our domain Subscription model.
    * Matches the pallet's Subscription struct (lib.rs:146-167).
    */
@@ -1006,9 +1080,15 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
       // Extract details (SubscriptionDetails struct)
       const detailsData = data.details || {};
+
       const subscriber = detailsData.subscriber?.toString() || 'unknown';
       const target = detailsData.target ? JSON.stringify(detailsData.target) : '';
-      const call = detailsData.call ? this.bytesToHex(detailsData.call) : '';
+
+      // The pallet stores 'call' field but Polkadot.js returns it as 'callIndex'
+      // due to type registry naming. Check all possible field names.
+      const callDataRaw = detailsData.callIndex || detailsData.call || detailsData.call_index;
+      const call = this.extractCallData(callDataRaw);
+
       const originKindRaw = detailsData.originKind || detailsData.origin_kind;
       const originKind = this.extractOriginKind(originKindRaw);
 

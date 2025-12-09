@@ -216,8 +216,18 @@ export default function XcmLocationViewer({
 }
 
 /**
+ * Helper to parse a number from various formats (handles comma-separated strings like "2,000")
+ */
+function parseNumber(value: any): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseInt(value.replace(/,/g, ''), 10);
+  return 0;
+}
+
+/**
  * Normalize raw blockchain XCM location data to expected junction format
- * Raw data has junctions like { parachain: 2000 } instead of { type: 'parachain', value: { parachain: 2000 } }
+ * Raw data from toHuman() has junctions like { Parachain: "2,000" } (capital P, comma-formatted)
+ * instead of { type: 'parachain', value: { parachain: 2000 } }
  */
 function normalizeXcmLocation(rawLocation: any): XcmLocation | null {
   try {
@@ -225,8 +235,11 @@ function normalizeXcmLocation(rawLocation: any): XcmLocation | null {
       return null;
     }
 
+    // Parse parents (could be string like "1" from toHuman())
+    const parents = parseNumber(rawLocation.parents);
+
     const normalized: XcmLocation = {
-      parents: rawLocation.parents || 0,
+      parents,
       interior: rawLocation.interior,
     };
 
@@ -243,28 +256,62 @@ function normalizeXcmLocation(rawLocation: any): XcmLocation | null {
         const normalizedJunctions: XcmJunction[] = rawJunctions.map(
           (rawJunction: any): XcmJunction => {
             // Convert raw junction format to expected format
-            if (rawJunction.parachain !== undefined) {
-              return { type: 'parachain', value: { parachain: rawJunction.parachain } };
-            } else if (rawJunction.accountId32 !== undefined) {
-              return { type: 'accountId32', value: rawJunction.accountId32 };
-            } else if (rawJunction.accountKey20 !== undefined) {
-              return { type: 'accountKey20', value: rawJunction.accountKey20 };
-            } else if (rawJunction.palletInstance !== undefined) {
+            // Handle both lowercase (API format) and PascalCase (toHuman format)
+            if (rawJunction.parachain !== undefined || rawJunction.Parachain !== undefined) {
+              const parachainId = parseNumber(rawJunction.parachain ?? rawJunction.Parachain);
+              return { type: 'parachain', value: { parachain: parachainId } };
+            } else if (
+              rawJunction.accountId32 !== undefined ||
+              rawJunction.AccountId32 !== undefined
+            ) {
               return {
-                type: 'palletInstance',
-                value: { palletInstance: rawJunction.palletInstance },
+                type: 'accountId32',
+                value: rawJunction.accountId32 ?? rawJunction.AccountId32,
               };
-            } else if (rawJunction.generalIndex !== undefined) {
-              return { type: 'generalIndex', value: { generalIndex: rawJunction.generalIndex } };
-            } else if (rawJunction.generalKey !== undefined) {
-              return { type: 'generalKey', value: rawJunction.generalKey };
-            } else if (rawJunction.onlyChild !== undefined) {
+            } else if (
+              rawJunction.accountKey20 !== undefined ||
+              rawJunction.AccountKey20 !== undefined
+            ) {
+              return {
+                type: 'accountKey20',
+                value: rawJunction.accountKey20 ?? rawJunction.AccountKey20,
+              };
+            } else if (
+              rawJunction.palletInstance !== undefined ||
+              rawJunction.PalletInstance !== undefined
+            ) {
+              const instance = parseNumber(
+                rawJunction.palletInstance ?? rawJunction.PalletInstance
+              );
+              return { type: 'palletInstance', value: { palletInstance: instance } };
+            } else if (
+              rawJunction.generalIndex !== undefined ||
+              rawJunction.GeneralIndex !== undefined
+            ) {
+              const index = parseNumber(rawJunction.generalIndex ?? rawJunction.GeneralIndex);
+              return { type: 'generalIndex', value: { generalIndex: index } };
+            } else if (
+              rawJunction.generalKey !== undefined ||
+              rawJunction.GeneralKey !== undefined
+            ) {
+              return {
+                type: 'generalKey',
+                value: rawJunction.generalKey ?? rawJunction.GeneralKey,
+              };
+            } else if (rawJunction.onlyChild !== undefined || rawJunction.OnlyChild !== undefined) {
               return { type: 'onlyChild', value: {} };
-            } else if (rawJunction.plurality !== undefined) {
-              return { type: 'plurality', value: rawJunction.plurality };
+            } else if (rawJunction.plurality !== undefined || rawJunction.Plurality !== undefined) {
+              return { type: 'plurality', value: rawJunction.plurality ?? rawJunction.Plurality };
             } else {
-              // Fallback for unknown junction types - default to parachain
+              // Fallback for unknown junction types - try to extract from the object
               console.warn('Unknown junction type:', rawJunction);
+              const key = Object.keys(rawJunction)[0];
+              if (key) {
+                const lowerKey = key.toLowerCase();
+                if (lowerKey === 'parachain') {
+                  return { type: 'parachain', value: { parachain: parseNumber(rawJunction[key]) } };
+                }
+              }
               return { type: 'parachain', value: rawJunction };
             }
           }
