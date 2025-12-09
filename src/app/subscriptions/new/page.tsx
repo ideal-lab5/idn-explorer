@@ -40,15 +40,21 @@ export default function NewSubscriptionPage() {
       const palletIndex = parseInt(formData.get('palletIndex') as string);
       const callIndexValue = parseInt(formData.get('callIndex') as string);
 
-      // Build call index array
-      const callIndex: [number, number] = [palletIndex, callIndexValue];
+      // Build pre-encoded call data as hex string
+      // Format: [pallet_index, call_index] encoded as hex
+      const call =
+        '0x' +
+        palletIndex.toString(16).padStart(2, '0') +
+        callIndexValue.toString(16).padStart(2, '0');
 
       // Create the subscription using the service
+      // Using 'Native' origin kind as requested
       await createSubscription(
         signer,
         parseInt(credits),
         xcmLocation,
-        callIndex,
+        call,
+        'Native', // Origin kind set to Native
         parseInt(frequency),
         name // Using name as metadata
       );

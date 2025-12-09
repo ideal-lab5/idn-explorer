@@ -2,7 +2,7 @@
 
 import { Subscription, SubscriptionState } from '@/domain/Subscription';
 import { container } from '@/lib/di-container';
-import { ISubscriptionService, XcmLocation } from '@/services/ISubscriptionService';
+import { ISubscriptionService, OriginKind, XcmLocation } from '@/services/ISubscriptionService';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useConnectedWallet } from './connectedWalletContext';
 
@@ -14,7 +14,8 @@ interface SubscriptionContextType {
     signer: any,
     credits: number,
     target: XcmLocation,
-    callIndex: [number, number],
+    call: string,
+    originKind: OriginKind,
     frequency: number,
     metadata?: string,
     subscriptionId?: string
@@ -65,7 +66,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       signer: any,
       credits: number,
       target: XcmLocation,
-      callIndex: [number, number],
+      call: string,
+      originKind: OriginKind,
       frequency: number,
       metadata?: string,
       subscriptionId?: string
@@ -75,7 +77,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           signer,
           credits,
           target,
-          callIndex,
+          call,
+          originKind,
           frequency,
           metadata,
           subscriptionId

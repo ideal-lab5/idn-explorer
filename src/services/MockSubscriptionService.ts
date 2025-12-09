@@ -23,6 +23,7 @@ import {
 } from '../domain/Subscription';
 import type {
   ISubscriptionService,
+  OriginKind,
   UpdateSubscriptionParams,
   XcmLocation,
 } from './ISubscriptionService';
@@ -63,7 +64,8 @@ export class MockSubscriptionService implements ISubscriptionService {
       120,
       'para(2004)/pallet-randomness/0x1234567890abcdef',
       'Parachain Randomness',
-      '0x2a05' // Call index as hex string
+      '0x2a05', // Pre-encoded call data as hex string
+      'Native' // Origin kind
     );
     const sub1 = new SubscriptionClass(
       'sub-1-parachain-randomness',
@@ -82,7 +84,8 @@ export class MockSubscriptionService implements ISubscriptionService {
       60,
       'para(2012)/pallet-vrf/0xabcdef1234567890',
       'VRF Service',
-      '0x1b02' // Call index as hex string
+      '0x1b02', // Pre-encoded call data as hex string
+      'Native' // Origin kind
     );
     const sub2 = new SubscriptionClass(
       'sub-2-vrf-service',
@@ -100,7 +103,8 @@ export class MockSubscriptionService implements ISubscriptionService {
       90,
       'para(2008)/pallet-contracts/0x9876543210fedcba',
       'Smart Contract RNG',
-      '0x3c07' // Call index as hex string
+      '0x3c07', // Pre-encoded call data as hex string
+      'Native' // Origin kind
     );
     const sub3 = new SubscriptionClass(
       'sub-3-smart-contract-rng',
@@ -122,7 +126,8 @@ export class MockSubscriptionService implements ISubscriptionService {
    * @param signer Account that will own the subscription
    * @param credits Total number of random values to receive (was amount)
    * @param target XCM location where random values will be delivered
-   * @param callIndex Two-byte array [pallet_index, call_index] for XCM dispatch
+   * @param call Pre-encoded SCALE call data as hex string
+   * @param originKind Origin kind for XCM dispatch
    * @param frequency Number of blocks between each delivery
    * @param metadata Optional additional data for the subscription
    * @param subscriptionId Optional subscription ID, auto-generated if not provided
@@ -131,7 +136,8 @@ export class MockSubscriptionService implements ISubscriptionService {
     signer: any,
     credits: number,
     target: XcmLocation,
-    callIndex: [number, number],
+    call: string,
+    originKind: OriginKind,
     frequency: number,
     metadata?: string,
     subscriptionId?: string
@@ -149,7 +155,8 @@ export class MockSubscriptionService implements ISubscriptionService {
       frequency,
       targetString,
       metadata || '',
-      '0x0000' // Default call index as hex string
+      call, // Pre-encoded call data as hex string
+      originKind // Origin kind for XCM dispatch
     );
     const subscription = new SubscriptionClass(
       newId,

@@ -8,8 +8,8 @@ export function domainToUiSubscription(sub: Subscription): UiSubscription {
   // Parse parachain ID from target (handles both string and object formats)
   const parachainId = extractParachainId(sub.details.target);
 
-  // Parse call index to get pallet and call indices
-  const callIndex = parseCallIndex(sub.details.callIndex || '');
+  // Parse call data to get pallet and call indices
+  const callIndex = parseCallIndex(sub.details.call || '');
 
   // Format XCM location for display
   const formattedXcmLocation = formatXcmLocation(sub.details.target);
@@ -28,7 +28,7 @@ export function domainToUiSubscription(sub: Subscription): UiSubscription {
     xcmLocation: formattedXcmLocation, // Formatted for display
     rawTarget: sub.details.target, // Raw XCM location data for sophisticated viewing
     status: mapStateToStatus(sub.state),
-    // Add call index information for display
+    // Add call index information for display (parsed from call data)
     callIndex: callIndex,
     usageHistory,
   };
@@ -106,19 +106,22 @@ function extractParachainId(target: string | any): number {
 }
 
 /**
- * Parse call index from hex string (e.g., "0x2a03" -> { pallet: 42, call: 3 })
+ * Parse call data from hex string to extract pallet and call indices
+ * For simple runtime calls, the format is "0x{pallet_index}{call_index}" (e.g., "0x2a03" -> { pallet: 42, call: 3 })
+ * For more complex call data (contracts), we extract the first two bytes
  */
-function parseCallIndex(callIndex: string): { pallet: number; call: number } {
-  if (!callIndex || !callIndex.startsWith('0x')) {
+function parseCallIndex(callData: string): { pallet: number; call: number } {
+  if (!callData || !callData.startsWith('0x')) {
     return { pallet: 0, call: 0 };
   }
 
-  const hex = callIndex.slice(2); // Remove '0x'
-  if (hex.length !== 4) {
-    // Should be 4 hex chars for 2 bytes
+  const hex = callData.slice(2); // Remove '0x'
+  if (hex.length < 4) {
+    // Need at least 4 hex chars for 2 bytes (pallet + call)
     return { pallet: 0, call: 0 };
   }
 
+  // Extract first two bytes (pallet index and call index)
   const pallet = parseInt(hex.slice(0, 2), 16); // First byte
   const call = parseInt(hex.slice(2, 4), 16); // Second byte
 
@@ -158,6 +161,8 @@ function mapStateToStatus(state: SubscriptionState): string {
       return 'active';
     case SubscriptionState.Paused:
       return 'paused';
+    case SubscriptionState.Finalized:
+      return 'finalized';
     default:
       return 'unknown';
   }

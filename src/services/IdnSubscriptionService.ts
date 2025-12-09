@@ -22,7 +22,11 @@ import {
   SubscriptionState as SubscriptionStateEnum,
 } from '../domain/Subscription';
 import type { IPolkadotApiService } from './IPolkadotApiService';
-import type { ISubscriptionService, UpdateSubscriptionParams } from './ISubscriptionService';
+import type {
+  ISubscriptionService,
+  OriginKind,
+  UpdateSubscriptionParams,
+} from './ISubscriptionService';
 
 /**
  * XCM Location structure matching the pallet's Location type
@@ -152,44 +156,60 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
+   * Converts a hex string to a Uint8Array for call data.
+   * @param hex The hex string (with or without 0x prefix)
+   * @returns Uint8Array of the call data bytes
+   */
+  private hexToBytes(hex: string): number[] {
+    const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+    const bytes: number[] = [];
+    for (let i = 0; i < cleanHex.length; i += 2) {
+      bytes.push(parseInt(cleanHex.substr(i, 2), 16));
+    }
+    return bytes;
+  }
+
+  /**
    * Creates a new subscription for randomness delivery.
    * Maps to the pallet's create_subscription extrinsic.
    *
    * @param signer - The wallet/signer for the transaction
    * @param credits - Number of random values to receive (was 'amount')
    * @param target - XCM Location structure for pulse delivery
-   * @param callIndex - Two-byte array [pallet_index, call_index] for XCM dispatch
+   * @param call - Pre-encoded SCALE call data as hex string
+   * @param originKind - Origin kind for XCM dispatch
    * @param frequency - Distribution interval for pulses
    * @param metadata - Optional metadata for the subscription
+   * @param subscriptionId - Optional subscription ID, auto-generated if not provided
    */
   async createSubscription(
     signer: any,
     credits: number,
     target: XcmLocation,
-    callIndex: [number, number],
+    call: string,
+    originKind: OriginKind,
     frequency: number,
-    metadata?: string
+    metadata?: string,
+    subscriptionId?: string
   ): Promise<void> {
     try {
       const api = await this.polkadotApiService.getApi();
 
       const formattedTarget = this.formatXcmLocation(target);
 
-      // Ensure call_index is properly formatted as [u8; 2] array
-      const formattedCallIndex =
-        Array.isArray(callIndex) && callIndex.length === 2
-          ? callIndex
-          : [callIndex[0] || 0, callIndex[1] || 0];
+      // Convert hex call data to bytes array
+      const callBytes = this.hexToBytes(call);
 
       // Call the create_subscription extrinsic with CreateSubParams struct parameter
       // The pallet expects a single struct with exact field names from primitives.rs
       const createParams = {
         credits,
         target: formattedTarget,
-        call_index: formattedCallIndex, // Ensure it's a proper [u8; 2] array
+        call: callBytes, // Pre-encoded call data as bytes
+        origin_kind: originKind, // Origin kind for XCM dispatch
         frequency,
         metadata: metadata || null,
-        sub_id: null, // Use auto-generated subscription ID
+        sub_id: subscriptionId || null, // Use provided or auto-generated subscription ID
       };
 
       let extrinsic;
@@ -201,10 +221,11 @@ export class IdnSubscriptionService implements ISubscriptionService {
         extrinsic = api.tx.idnManager.createSubscription(
           createParams.credits,
           createParams.target,
-          createParams.call_index,
+          createParams.call,
+          createParams.origin_kind,
           createParams.frequency,
           createParams.metadata,
-          null // Use auto-generated subscription ID
+          createParams.sub_id
         );
       }
 
@@ -949,6 +970,18 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
+   * Converts call data bytes to hex string
+   */
+  private bytesToHex(bytes: number[] | Uint8Array | any): string {
+    if (!bytes) return '';
+    if (typeof bytes === 'string') return bytes.startsWith('0x') ? bytes : `0x${bytes}`;
+
+    // Handle array-like structures
+    const arr = Array.isArray(bytes) ? bytes : Array.from(bytes);
+    return '0x' + arr.map((b: number) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
    * Converts a pallet subscription to our domain Subscription model
    */
   private palletSubscriptionToSubscription(palletSub: any): Subscription {
@@ -963,7 +996,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
       // Check if we have a format with details as a separate field or flat structure
       // Handle both formats flexibly
       let details = palletSub.details;
-      let subscriber, target, callIndex;
+      let subscriber, target, call, originKind: 'Native' | 'SovereignAccount' | 'Superuser' | 'Xcm';
       let createdAt = Date.now();
       let updatedAt = Date.now();
       let credits = 0;
@@ -972,6 +1005,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
       let creditsLeft = 0;
       let state = SubscriptionStateEnum.Active;
       let id = 'unknown';
+      let lastDelivered: number | undefined = undefined;
 
       // Handle ID field - could be at root or in toHuman()
       if (palletSub.id) {
@@ -994,13 +1028,21 @@ export class IdnSubscriptionService implements ISubscriptionService {
         if (human.credits) {
           credits = Number(human.credits.replace(/,/g, ''));
         }
-        if (human.creditsLeft) {
-          creditsLeft = Number(human.creditsLeft.replace(/,/g, ''));
+        if (human.creditsLeft || human.credits_left) {
+          creditsLeft = Number((human.creditsLeft || human.credits_left).replace(/,/g, ''));
         }
 
         // Extract frequency
         if (human.frequency) {
           frequency = Number(human.frequency.replace(/,/g, ''));
+        }
+
+        // Extract lastDelivered
+        if (human.lastDelivered || human.last_delivered) {
+          const lastDel = human.lastDelivered || human.last_delivered;
+          if (lastDel) {
+            lastDelivered = Number(lastDel.replace(/,/g, ''));
+          }
         }
 
         // Extract details from human form
@@ -1019,31 +1061,43 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
         subscriber = detailsObj.subscriber ? detailsObj.subscriber.toString() : 'unknown';
         target = detailsObj.target ? JSON.stringify(detailsObj.target) : '';
-        callIndex = detailsObj.callIndex ? detailsObj.callIndex.toString() : '';
+        // Handle new 'call' field (pre-encoded call data)
+        call = detailsObj.call ? this.bytesToHex(detailsObj.call) : '';
+        // Handle origin_kind field
+        originKind = this.extractOriginKind(detailsObj.originKind || detailsObj.origin_kind);
       } else {
         // Handle flat structure - fields at root level
         subscriber = palletSub.subscriber ? palletSub.subscriber.toString() : 'unknown';
         target = palletSub.target ? JSON.stringify(palletSub.target) : '';
-        callIndex = palletSub.callIndex ? palletSub.callIndex.toString() : '';
+        call = palletSub.call ? this.bytesToHex(palletSub.call) : '';
+        originKind = this.extractOriginKind(palletSub.originKind || palletSub.origin_kind);
       }
 
       // Extract date fields if they exist
-      if (palletSub.createdAt) {
-        createdAt = Number(palletSub.createdAt);
+      if (palletSub.createdAt || palletSub.created_at) {
+        createdAt = Number(palletSub.createdAt || palletSub.created_at);
       }
-      if (palletSub.updatedAt) {
-        updatedAt = Number(palletSub.updatedAt);
+      if (palletSub.updatedAt || palletSub.updated_at) {
+        updatedAt = Number(palletSub.updatedAt || palletSub.updated_at);
       }
 
       // Extract credits fields if at root level
       if (palletSub.credits) {
         credits = Number(palletSub.credits);
       }
-      if (palletSub.creditsLeft) {
-        creditsLeft = Number(palletSub.creditsLeft);
+      if (palletSub.creditsLeft || palletSub.credits_left) {
+        creditsLeft = Number(palletSub.creditsLeft || palletSub.credits_left);
       }
       if (palletSub.frequency) {
         frequency = Number(palletSub.frequency);
+      }
+
+      // Extract lastDelivered at root level
+      if (palletSub.lastDelivered || palletSub.last_delivered) {
+        const lastDel = palletSub.lastDelivered || palletSub.last_delivered;
+        if (lastDel) {
+          lastDelivered = Number(lastDel);
+        }
       }
 
       // Handle metadata
@@ -1060,7 +1114,8 @@ export class IdnSubscriptionService implements ISubscriptionService {
         frequency,
         target,
         metadata,
-        callIndex,
+        call,
+        originKind,
         0 // deposit - not present in this structure
       );
 
@@ -1072,7 +1127,8 @@ export class IdnSubscriptionService implements ISubscriptionService {
         palletSub.state ? this.palletStateToSubscriptionState(palletSub.state) : state,
         // Calculate creditsConsumed from credits - creditsLeft
         credits && creditsLeft ? credits - creditsLeft : 0,
-        0 // feesPaid - not present in this structure
+        0, // feesPaid - not present in this structure
+        lastDelivered
       );
     } catch (error) {
       console.error('Error converting pallet subscription:', error);
@@ -1087,6 +1143,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
         '',
         '',
         '',
+        'Native',
         0
       );
 
@@ -1102,6 +1159,23 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
+   * Extracts OriginKind from pallet data
+   */
+  private extractOriginKind(value: any): 'Native' | 'SovereignAccount' | 'Superuser' | 'Xcm' {
+    if (!value) return 'Native';
+
+    const strValue = typeof value === 'string' ? value : value.toString();
+
+    if (strValue === 'Native' || strValue === 'native') return 'Native';
+    if (strValue === 'SovereignAccount' || strValue === 'sovereignAccount')
+      return 'SovereignAccount';
+    if (strValue === 'Superuser' || strValue === 'superuser') return 'Superuser';
+    if (strValue === 'Xcm' || strValue === 'xcm') return 'Xcm';
+
+    return 'Native'; // Default
+  }
+
+  /**
    * Converts pallet subscription state to our domain SubscriptionState
    */
   private palletStateToSubscriptionState(palletState: any): SubscriptionState {
@@ -1110,6 +1184,8 @@ export class IdnSubscriptionService implements ISubscriptionService {
       return SubscriptionStateEnum.Active;
     } else if (palletState.isPaused || palletState === 'Paused') {
       return SubscriptionStateEnum.Paused;
+    } else if (palletState.isFinalized || palletState === 'Finalized') {
+      return SubscriptionStateEnum.Finalized;
     } else {
       return SubscriptionStateEnum.Active; // Default fallback
     }

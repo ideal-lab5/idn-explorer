@@ -21,13 +21,21 @@
  */
 
 /**
+ * Origin kind for XCM dispatch.
+ * Matches the OriginKind enum from the idn-manager pallet (primitives.rs).
+ */
+export type OriginKind = 'Native' | 'SovereignAccount' | 'Superuser' | 'Xcm';
+
+/**
  * Represents the possible states of a subscription.
  * - Active: Subscription is currently receiving random values
  * - Paused: Subscription is temporarily suspended but can be reactivated
+ * - Finalized: Subscription is finalized and cannot be resumed
  */
 export enum SubscriptionState {
   Active = 'Active',
   Paused = 'Paused',
+  Finalized = 'Finalized',
 }
 
 // PulseFilter implementation removed
@@ -53,8 +61,10 @@ export class SubscriptionDetails {
     public target: string,
     /** Additional data associated with the subscription */
     public metadata: string,
-    /** Call index in hex format (e.g., '0x2a03') */
-    public callIndex: string,
+    /** Pre-encoded call data as hex string (e.g., '0x2a03') */
+    public call: string,
+    /** Origin kind for XCM dispatch */
+    public originKind: OriginKind = 'Native',
     /** The storage deposit locked for this subscription */
     public deposit: number = 0
   ) {}
@@ -81,7 +91,9 @@ export class Subscription {
     /** Number of credits already consumed */
     public creditsConsumed: number = 0,
     /** Total fees paid for consumed credits */
-    public feesPaid: number = 0
+    public feesPaid: number = 0,
+    /** Last block in which a pulse was delivered (optional) */
+    public lastDelivered?: number
   ) {}
 
   /**
@@ -94,6 +106,9 @@ export class Subscription {
    * @param target - XCM location for delivery
    * @param frequency - Blocks between deliveries
    * @param metadata - Optional additional data
+   * @param call - Pre-encoded call data as hex string
+   * @param originKind - Origin kind for XCM dispatch
+   * @param deposit - Storage deposit amount
    * @returns A new Subscription instance
    */
   static create(
@@ -102,7 +117,8 @@ export class Subscription {
     target: string,
     frequency: number,
     metadata: string = '',
-    callIndex: string = '',
+    call: string = '',
+    originKind: OriginKind = 'Native',
     deposit: number = 0
   ): Subscription {
     const now = Date.now();
@@ -114,7 +130,8 @@ export class Subscription {
       frequency,
       target,
       metadata,
-      callIndex,
+      call,
+      originKind,
       deposit
     );
 
