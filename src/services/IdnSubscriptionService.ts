@@ -206,28 +206,14 @@ export class IdnSubscriptionService implements ISubscriptionService {
         credits,
         target: formattedTarget,
         call: callBytes, // Pre-encoded call data as bytes
-        origin_kind: originKind, // Origin kind for XCM dispatch
+        origin_kind: originKind, // Origin kind as string - Polkadot.js will convert to enum
         frequency,
         metadata: metadata || null,
         sub_id: subscriptionId || null, // Use provided or auto-generated subscription ID
       };
 
-      let extrinsic;
-      try {
-        extrinsic = api.tx.idnManager.createSubscription(createParams);
-      } catch (createError) {
-        console.error('Error creating extrinsic:', createError);
-        // Fallback: try calling with individual parameters
-        extrinsic = api.tx.idnManager.createSubscription(
-          createParams.credits,
-          createParams.target,
-          createParams.call,
-          createParams.origin_kind,
-          createParams.frequency,
-          createParams.metadata,
-          createParams.sub_id
-        );
-      }
+      // The pallet expects a single CreateSubParams struct
+      const extrinsic = api.tx.idnManager.createSubscription(createParams);
 
       // Sign and send the transaction with optimized handling for client-side navigation
       return new Promise((resolve, reject) => {
@@ -245,11 +231,6 @@ export class IdnSubscriptionService implements ISubscriptionService {
           .signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
             try {
               const { status, events, dispatchError } = result;
-
-              // Log when transaction is accepted by the network
-              if (status.isReady) {
-                console.log('Transaction submitted to the network');
-              }
 
               // Resolve when transaction is included in a block
               if (status.isInBlock || status.isFinalized) {
