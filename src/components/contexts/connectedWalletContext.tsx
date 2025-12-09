@@ -1,13 +1,16 @@
 'use client';
 
+// Ensure reflect-metadata is loaded before tsyringe
+import 'reflect-metadata';
+
 import { usePolkadot } from '@/components/contexts/polkadotContext';
 import { DelayedTransaction } from '@/domain/DelayedTransaction';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
+import { container } from '@/lib/di-container';
 import { explorerClient } from '@/lib/explorer-client';
 import { IChainStateService } from '@/services/IChainStateService';
 import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
-import { container } from 'tsyringe';
 
 // Define the shape of the context
 interface ConnectedWalletContextType {

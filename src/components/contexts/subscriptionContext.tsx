@@ -1,5 +1,8 @@
 'use client';
 
+// Ensure reflect-metadata is loaded before tsyringe
+import 'reflect-metadata';
+
 import { Subscription, SubscriptionState } from '@/domain/Subscription';
 import { container } from '@/lib/di-container';
 import { ISubscriptionService, OriginKind, XcmLocation } from '@/services/ISubscriptionService';
