@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
 import { inject, injectable } from 'tsyringe';
 import type { Subscription, SubscriptionDetails, SubscriptionState } from '../domain/Subscription';
 import {
@@ -156,6 +157,21 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
+   * Compares two SS58 addresses by their underlying public key.
+   * This handles cases where the same account is encoded with different SS58 prefixes.
+   */
+  private isSameAddress(address1: string, address2: string): boolean {
+    try {
+      const pubKey1 = decodeAddress(address1);
+      const pubKey2 = decodeAddress(address2);
+      return Buffer.from(pubKey1).equals(Buffer.from(pubKey2));
+    } catch (error) {
+      console.error('Error comparing addresses:', error);
+      return false;
+    }
+  }
+
+  /**
    * Converts a hex string to a Uint8Array for call data.
    * @param hex The hex string (with or without 0x prefix)
    * @returns Uint8Array of the call data bytes
@@ -202,11 +218,10 @@ export class IdnSubscriptionService implements ISubscriptionService {
       const callBytes = this.hexToBytes(call);
 
       // Call the create_subscription extrinsic with CreateSubParams struct parameter
-      // NOTE: The pallet's Rust struct uses 'call' but the metadata exposes it as 'callIndex'
       const createParams = {
         credits,
         target: formattedTarget,
-        callIndex: callBytes, // Field is named 'callIndex' in the metadata, not 'call'
+        call: callBytes,
         origin_kind: originKind,
         frequency,
         metadata: metadata || null,
@@ -728,17 +743,11 @@ export class IdnSubscriptionService implements ISubscriptionService {
             // Use toHuman() for proper field names
             const rawData = value.toHuman();
 
-            // Quick check: look for account ID in raw data before expensive conversion
-            const rawString = JSON.stringify(rawData);
-            if (!rawString.includes(accountId)) {
-              continue; // Skip expensive conversion if account not found in raw data
-            }
-
             // Check if this subscription belongs to the requested account
             const subscription = this.palletSubscriptionToSubscription(rawData);
 
-            // Filter by account if the subscription has subscriber info
-            if (subscription.details.subscriber === accountId) {
+            // Compare addresses by public key to handle different SS58 prefixes
+            if (this.isSameAddress(subscription.details.subscriber, accountId)) {
               subscriptions.push(subscription);
             }
           }
@@ -1084,9 +1093,8 @@ export class IdnSubscriptionService implements ISubscriptionService {
       const subscriber = detailsData.subscriber?.toString() || 'unknown';
       const target = detailsData.target ? JSON.stringify(detailsData.target) : '';
 
-      // The pallet stores 'call' field but Polkadot.js returns it as 'callIndex'
-      // due to type registry naming. Check all possible field names.
-      const callDataRaw = detailsData.callIndex || detailsData.call || detailsData.call_index;
+      // Check all possible field names for call data
+      const callDataRaw = detailsData.call || detailsData.callIndex || detailsData.call_index;
       const call = this.extractCallData(callDataRaw);
 
       const originKindRaw = detailsData.originKind || detailsData.origin_kind;
