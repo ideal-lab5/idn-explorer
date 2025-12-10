@@ -132,7 +132,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return state === 'paused' || state === '"paused"' || state.includes('paused');
         });
 
-        console.log(`Found ${activeSubscriptions.length} active and ${pausedSubscriptions.length} paused subscriptions`);
+        console.log(
+          `Found ${activeSubscriptions.length} active and ${pausedSubscriptions.length} paused subscriptions`
+        );
       } catch (subscriptionsError) {
         console.warn('Non-critical: Failed to fetch subscriptions:', subscriptionsError);
         // Continue with empty arrays
