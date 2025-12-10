@@ -17,6 +17,8 @@ export interface DashboardData {
   latestDistributions: RandomnessDistributionEvent[];
   // Active subscriptions
   activeSubscriptions: Subscription[];
+  // Paused subscriptions
+  pausedSubscriptions: Subscription[];
   // Distribution events for chart visualization
   distributionEvents: RandomnessDistributionEvent[];
   // Loading states
@@ -39,6 +41,7 @@ const initialData: DashboardData = {
   },
   latestDistributions: [],
   activeSubscriptions: [],
+  pausedSubscriptions: [],
   distributionEvents: [],
   isLoading: true,
   isError: false,
@@ -110,39 +113,26 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // 3. Get subscriptions - handle subscription service issues
       let allSubscriptions: Subscription[] = [];
       let activeSubscriptions: Subscription[] = [];
+      let pausedSubscriptions: Subscription[] = [];
       try {
         // getAllSubscriptions may not be implemented, wrap in try/catch
         allSubscriptions = await subscriptionService.getAllSubscriptions();
         console.log(`Successfully fetched ${allSubscriptions.length} subscriptions`);
 
-        // Filter for active subscriptions - empty array is valid (no subscriptions yet)
+        // Filter subscriptions by state - empty array is valid (no subscriptions yet)
         activeSubscriptions = allSubscriptions.filter(sub => {
           if (!sub || !sub.state) return false;
-
-          // Handle potential type mismatch between string and enum
-          try {
-            // Normalize the state string for comparison
-            const state = String(sub.state).toLowerCase().trim();
-
-            // Log subscription state for debugging
-            console.log(`Subscription ${sub.id} state: "${sub.state}" (normalized: "${state}")`);
-
-            // Check for any variant of 'active' state
-            return state === 'active' || state === '"active"' || state.includes('active');
-          } catch (err) {
-            console.error('Error checking subscription state:', err);
-            return false;
-          }
+          const state = String(sub.state).toLowerCase().trim();
+          return state === 'active' || state === '"active"' || state.includes('active');
         });
-        console.log(`Found ${activeSubscriptions.length} active subscriptions`);
 
-        // If we have subscriptions but none are active, log details for debugging
-        if (allSubscriptions.length > 0 && activeSubscriptions.length === 0) {
-          console.log(
-            'Found subscriptions but none are active. States:',
-            allSubscriptions.map(s => ({ id: s.id, state: s.state }))
-          );
-        }
+        pausedSubscriptions = allSubscriptions.filter(sub => {
+          if (!sub || !sub.state) return false;
+          const state = String(sub.state).toLowerCase().trim();
+          return state === 'paused' || state === '"paused"' || state.includes('paused');
+        });
+
+        console.log(`Found ${activeSubscriptions.length} active and ${pausedSubscriptions.length} paused subscriptions`);
       } catch (subscriptionsError) {
         console.warn('Non-critical: Failed to fetch subscriptions:', subscriptionsError);
         // Continue with empty arrays
@@ -193,6 +183,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         randomnessMetrics,
         latestDistributions,
         activeSubscriptions,
+        pausedSubscriptions,
         distributionEvents,
         isLoading: false,
         // Only show error state if critical connection issue AND no data

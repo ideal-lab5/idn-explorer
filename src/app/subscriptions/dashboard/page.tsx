@@ -92,8 +92,8 @@ export default function DashboardPage() {
 
   // Calculate stats from real data
   const activeSubscriptions = dashboardData?.activeSubscriptions?.length || 0;
+  const pausedSubscriptions = dashboardData?.pausedSubscriptions?.length || 0;
   const totalDistributions = dashboardData?.randomnessMetrics?.totalDistributions || 0;
-  const uniqueSubscriptions = dashboardData?.randomnessMetrics?.totalSubscriptionsServed || 0;
 
   return (
     <main className="w-full flex-1">
@@ -119,6 +119,24 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Paused Subscriptions Card */}
+          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="p-6">
+              <div className="flex flex-row items-center justify-between space-y-0">
+                <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Paused Subscriptions
+                </h3>
+                <ClockIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              </div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold">{pausedSubscriptions}</div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Subscriptions currently paused
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Total Distributions Card */}
           <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="p-6">
@@ -132,24 +150,6 @@ export default function DashboardPage() {
                 <div className="text-2xl font-bold">{totalDistributions}</div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Total randomness distributions delivered
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Unique Subscriptions Served Card */}
-          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="p-6">
-              <div className="flex flex-row items-center justify-between space-y-0">
-                <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                  Unique Subscriptions Served
-                </h3>
-                <ClockIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
-              </div>
-              <div className="mt-2">
-                <div className="text-2xl font-bold">{uniqueSubscriptions}</div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Distinct subscriptions receiving randomness
                 </p>
               </div>
             </div>
