@@ -28,12 +28,22 @@ export function Pagination({
 
 export function PaginationPrevious({
   href = null,
+  onClick,
   className,
   children = 'Previous',
-}: React.PropsWithChildren<{ href?: string | null; className?: string }>) {
+}: React.PropsWithChildren<{
+  href?: string | null;
+  onClick?: () => void;
+  className?: string;
+}>) {
+  const isDisabled = href === null && !onClick;
   return (
     <span className={clsx(className, 'grow basis-0')}>
-      <Button {...(href === null ? { disabled: true } : { href })} plain aria-label="Previous page">
+      <Button
+        {...(isDisabled ? { disabled: true } : onClick ? { onClick } : { href: href! })}
+        plain
+        aria-label="Previous page"
+      >
         <svg
           className="stroke-current"
           data-slot="icon"
@@ -56,12 +66,22 @@ export function PaginationPrevious({
 
 export function PaginationNext({
   href = null,
+  onClick,
   className,
   children = 'Next',
-}: React.PropsWithChildren<{ href?: string | null; className?: string }>) {
+}: React.PropsWithChildren<{
+  href?: string | null;
+  onClick?: () => void;
+  className?: string;
+}>) {
+  const isDisabled = href === null && !onClick;
   return (
     <span className={clsx(className, 'flex grow basis-0 justify-end')}>
-      <Button {...(href === null ? { disabled: true } : { href })} plain aria-label="Next page">
+      <Button
+        {...(isDisabled ? { disabled: true } : onClick ? { onClick } : { href: href! })}
+        plain
+        aria-label="Next page"
+      >
         {children}
         <svg
           className="stroke-current"

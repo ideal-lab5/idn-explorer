@@ -365,13 +365,17 @@ export default function NetworkActivityPage() {
                 {generatedRandomness.length > PAGE_SIZE && (
                   <Pagination>
                     <PaginationPrevious
-                      href={
-                        randomnessPage === 0
-                          ? `?randomnessPage=0&tab=0`
-                          : `?randomnessPage=${randomnessPage - 1}&tab=0`
+                      onClick={
+                        randomnessPage > 0 ? () => setRandomnessPage(randomnessPage - 1) : undefined
                       }
                     />
-                    <PaginationNext href={`?randomnessPage=${randomnessPage + 1}&tab=0`} />
+                    <PaginationNext
+                      onClick={
+                        (randomnessPage + 1) * PAGE_SIZE < generatedRandomness.length
+                          ? () => setRandomnessPage(randomnessPage + 1)
+                          : undefined
+                      }
+                    />
                   </Pagination>
                 )}
               </>
@@ -450,13 +454,28 @@ export default function NetworkActivityPage() {
                   ).length > PAGE_SIZE && (
                   <Pagination>
                     <PaginationPrevious
-                      href={
-                        executedTxPage === 0
-                          ? `?executedTxPage=0&tab=1`
-                          : `?executedTxPage=${executedTxPage - 1}&tab=1`
+                      onClick={
+                        executedTxPage > 0 ? () => setExecutedTxPage(executedTxPage - 1) : undefined
                       }
                     />
-                    <PaginationNext href={`?executedTxPage=${executedTxPage + 1}&tab=1`} />
+                    <PaginationNext
+                      onClick={
+                        (executedTxPage + 1) * PAGE_SIZE <
+                        executedTransactions
+                          .filter(element => (delayedOnly && element.delayedTx) || !delayedOnly)
+                          .filter(
+                            element =>
+                              searchTermExecuted == '' ||
+                              element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) ||
+                              element.operation
+                                .toLowerCase()
+                                .includes(searchTermExecuted.toLowerCase()) ||
+                              element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase())
+                          ).length
+                          ? () => setExecutedTxPage(executedTxPage + 1)
+                          : undefined
+                      }
+                    />
                   </Pagination>
                 )}
               </>
@@ -509,16 +528,37 @@ export default function NetworkActivityPage() {
                       ))}
                   </TableBody>
                 </Table>
-                {scheduledTransactions.length > PAGE_SIZE && (
+                {scheduledTransactions.filter(
+                  element =>
+                    searchTermScheduled == '' ||
+                    element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
+                    element.operation.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
+                    element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase())
+                ).length > PAGE_SIZE && (
                   <Pagination>
                     <PaginationPrevious
-                      href={
-                        scheduledTxPage === 0
-                          ? `?scheduledTxPage=0&tab=2`
-                          : `?scheduledTxPage=${scheduledTxPage - 1}&tab=2`
+                      onClick={
+                        scheduledTxPage > 0
+                          ? () => setScheduledTxPage(scheduledTxPage - 1)
+                          : undefined
                       }
                     />
-                    <PaginationNext href={`?scheduledTxPage=${scheduledTxPage + 1}&tab=2`} />
+                    <PaginationNext
+                      onClick={
+                        (scheduledTxPage + 1) * PAGE_SIZE <
+                        scheduledTransactions.filter(
+                          element =>
+                            searchTermScheduled == '' ||
+                            element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
+                            element.operation
+                              .toLowerCase()
+                              .includes(searchTermScheduled.toLowerCase()) ||
+                            element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase())
+                        ).length
+                          ? () => setScheduledTxPage(scheduledTxPage + 1)
+                          : undefined
+                      }
+                    />
                   </Pagination>
                 )}
               </>
