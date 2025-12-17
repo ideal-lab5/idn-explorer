@@ -134,7 +134,7 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
               </SidebarSection>
               <SidebarSpacer />
               <SidebarSection>
-                <SidebarItem href="https://docs.idealabs.network/docs/intro" target="blank">
+                <SidebarItem href="https://docs.idealabs.network/" target="blank">
                   <QuestionMarkCircleIcon />
                   <SidebarLabel>Documentation</SidebarLabel>
                 </SidebarItem>
