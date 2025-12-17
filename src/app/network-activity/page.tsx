@@ -217,20 +217,22 @@ export default function NetworkActivityPage() {
             change="On the network"
             helpText=""
           />
-          <Stat
-            title="Timelocked"
-            value={formatNumber(
-              scheduledTransactions.filter(
-                element =>
-                  searchTermScheduled == '' ||
-                  element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
-                  element.operation.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
-                  element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase())
-              ).length
-            )}
-            change="Upcoming txs"
-            helpText=""
-          />
+          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="p-6">
+              <div className="flex flex-row items-center justify-between space-y-0">
+                <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Timelocked{' '}
+                  <span className="ml-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                    Soon
+                  </span>
+                </h3>
+              </div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold">-</div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Coming soon</p>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="p-6">
@@ -256,7 +258,10 @@ export default function NetworkActivityPage() {
                     onClick={() => setSelectedTab(2)}
                     current={selectedTab === 2}
                   >
-                    Timelocked
+                    Timelocked{' '}
+                    <span className="ml-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                      Soon
+                    </span>
                   </NavbarItem>
                 </NavbarSection>
               </Navbar>
