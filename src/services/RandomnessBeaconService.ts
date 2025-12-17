@@ -36,12 +36,17 @@ export class RandomnessBeaconService implements IRandomnessBeaconService {
     try {
       const api = await this.polkadotApiService.getApi();
 
-      if (!api?.query?.randomnessBeacon?.sparseAccumulation) {
+      // Check both possible pallet names: randBeacon and randomnessBeacon
+      const randBeaconQuery = (api?.query as any)?.randBeacon?.sparseAccumulation;
+      const randomnessBeaconQuery = (api?.query as any)?.randomnessBeacon?.sparseAccumulation;
+      const storageQuery = randBeaconQuery || randomnessBeaconQuery;
+
+      if (!storageQuery) {
         console.warn('SparseAccumulation storage not available');
         return null;
       }
 
-      const accumulation = await api.query.randomnessBeacon.sparseAccumulation();
+      const accumulation = await storageQuery();
 
       if (accumulation.isEmpty) {
         return null;
@@ -53,12 +58,19 @@ export class RandomnessBeaconService implements IRandomnessBeaconService {
         return null;
       }
 
-      // Parse the accumulation data
-      // Structure: { signature: hex, start: number, end: number }
+      // Parse the accumulation data - check various possible field names
+      const signature = data.signature || data.asig || data.Signature || data.Asig || '';
+      const startRound = this.parseNumber(
+        data.start || data.startRound || data.Start || data.StartRound || 0
+      );
+      const endRound = this.parseNumber(
+        data.end || data.endRound || data.End || data.EndRound || 0
+      );
+
       return {
-        signature: data.signature || data.asig || '',
-        startRound: this.parseNumber(data.start),
-        endRound: this.parseNumber(data.end),
+        signature,
+        startRound,
+        endRound,
       };
     } catch (error) {
       console.error('Error fetching SparseAccumulation:', error);
@@ -100,14 +112,14 @@ export class RandomnessBeaconService implements IRandomnessBeaconService {
     const unsubscribe = (await api.query.system.events((events: any) => {
       events.forEach((record: any) => {
         const { event } = record;
+        const section = event.section?.toLowerCase() || '';
+        const method = event.method || '';
 
-        // Check if this is the SignatureVerificationSuccess event from randomnessBeacon
+        // Check if this is the SignatureVerificationSuccess event from randBeacon
         if (
-          event.section === 'randomnessBeacon' &&
-          event.method === 'SignatureVerificationSuccess'
+          (section === 'randbeacon' || section.includes('randomness')) &&
+          method === 'SignatureVerificationSuccess'
         ) {
-          console.log('SignatureVerificationSuccess event detected');
-
           // Fetch the latest accumulation and create a Randomness entry
           this.handleRandomnessEvent(callback);
         }
