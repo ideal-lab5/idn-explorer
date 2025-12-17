@@ -17,10 +17,16 @@
 /**
  * Server-side singleton that subscribes to randomness beacon events
  * and populates the server-side cache.
+ * Uses global variable to survive Next.js hot reloads in development.
  */
 
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { CachedRandomness, serverRandomnessCache } from './randomnessCache';
+
+// Use global to persist across hot reloads in development
+const globalForSubscription = globalThis as unknown as {
+  randomnessSubscriptionManager: RandomnessSubscriptionManager | undefined;
+};
 
 class RandomnessSubscriptionManager {
   private api: ApiPromise | null = null;
@@ -243,5 +249,10 @@ class RandomnessSubscriptionManager {
   }
 }
 
-// Singleton instance
-export const randomnessSubscriptionManager = new RandomnessSubscriptionManager();
+// Singleton instance - survives across API calls and hot reloads
+export const randomnessSubscriptionManager =
+  globalForSubscription.randomnessSubscriptionManager ?? new RandomnessSubscriptionManager();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForSubscription.randomnessSubscriptionManager = randomnessSubscriptionManager;
+}

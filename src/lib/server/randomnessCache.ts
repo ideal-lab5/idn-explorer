@@ -17,6 +17,7 @@
 /**
  * Server-side in-memory cache for randomness values.
  * Maintains a maximum of 100 entries, removing oldest when limit is reached.
+ * Uses global variable to survive Next.js hot reloads in development.
  */
 
 export interface CachedRandomness {
@@ -29,6 +30,11 @@ export interface CachedRandomness {
 }
 
 const MAX_CACHE_SIZE = 100;
+
+// Use global to persist across hot reloads in development
+const globalForCache = globalThis as unknown as {
+  serverRandomnessCache: ServerRandomnessCache | undefined;
+};
 
 class ServerRandomnessCache {
   private cache: CachedRandomness[] = [];
@@ -106,5 +112,10 @@ class ServerRandomnessCache {
   }
 }
 
-// Singleton instance - survives across API calls in the same server process
-export const serverRandomnessCache = new ServerRandomnessCache();
+// Singleton instance - survives across API calls and hot reloads
+export const serverRandomnessCache =
+  globalForCache.serverRandomnessCache ?? new ServerRandomnessCache();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForCache.serverRandomnessCache = serverRandomnessCache;
+}
