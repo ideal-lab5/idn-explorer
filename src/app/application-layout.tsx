@@ -120,7 +120,12 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
                 <SidebarHeading>Timelock</SidebarHeading>
                 <SidebarItem href="/timelock" current={Boolean(pathname.startsWith('/timelock'))}>
                   <ClockIcon />
-                  <SidebarLabel>My Transactions</SidebarLabel>
+                  <SidebarLabel>
+                    My Transactions
+                    <span className="ml-2 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                      Soon
+                    </span>
+                  </SidebarLabel>
                 </SidebarItem>
               </SidebarSection>
 
