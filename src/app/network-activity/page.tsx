@@ -33,7 +33,6 @@ import { Navbar, NavbarItem, NavbarSection } from '@/components/navbar';
 import { Pagination, PaginationNext, PaginationPrevious } from '@/components/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table';
 import { Randomness } from '@/domain/Randomness';
-import { SubscriptionState } from '@/domain/Subscription';
 import { container } from '@/lib/di-container';
 import { DrandService } from '@/services/DrandService';
 import { ISubscriptionService } from '@/services/ISubscriptionService';
@@ -102,7 +101,7 @@ export default function NetworkActivityPage() {
   const [currentRound, setCurrentRound] = useState<number>(0);
   const [drandService] = useState(() => new DrandService());
   const [refreshTrigger, setRefreshTrigger] = useState(false);
-  const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState<number | null>(null);
+  const [subscriptionsCount, setSubscriptionsCount] = useState<number | null>(null);
 
   // Transform randomness data for the chart (reverse to show oldest first, limit to last 50)
   // Shows cumulative count of randomness values generated
@@ -120,24 +119,21 @@ export default function NetworkActivityPage() {
     setTimeout(() => setCopyStatus(false), 2000); // Reset status after 2 seconds
   };
 
-  // Fetch active subscriptions count
+  // Fetch subscriptions count
   useEffect(() => {
-    const fetchActiveSubscriptions = async () => {
+    const fetchSubscriptions = async () => {
       try {
         const subscriptionService = container.resolve<ISubscriptionService>('ISubscriptionService');
         const allSubscriptions = await subscriptionService.getAllSubscriptions();
-        const activeCount = allSubscriptions.filter(
-          sub => sub.state === SubscriptionState.Active
-        ).length;
-        setActiveSubscriptionsCount(activeCount);
+        setSubscriptionsCount(allSubscriptions.length);
       } catch (error) {
-        console.error('Failed to fetch active subscriptions:', error);
+        console.error('Failed to fetch subscriptions:', error);
       }
     };
 
-    fetchActiveSubscriptions();
+    fetchSubscriptions();
     // Refresh every 30 seconds
-    const interval = setInterval(fetchActiveSubscriptions, 30000);
+    const interval = setInterval(fetchSubscriptions, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -210,10 +206,8 @@ export default function NetworkActivityPage() {
             helpText=""
           />
           <Stat
-            title="Active Subscriptions"
-            value={
-              activeSubscriptionsCount !== null ? formatNumber(activeSubscriptionsCount) : '...'
-            }
+            title="Subscriptions"
+            value={subscriptionsCount !== null ? formatNumber(subscriptionsCount) : '...'}
             change="On the network"
             helpText=""
           />
