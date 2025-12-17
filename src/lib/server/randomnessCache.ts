@@ -31,7 +31,8 @@ export interface CachedRandomness {
   timestamp: number;
 }
 
-const CACHE_KEY = 'randomness:cache';
+const CACHE_KEY = 'randomness:cache'; // Sorted set for ordering
+const CACHE_DATA_KEY = 'randomness:data'; // Hash for actual entry data
 const INITIALIZED_KEY = 'randomness:initialized';
 const MAX_CACHE_SIZE = 100;
 
@@ -45,19 +46,29 @@ class ServerRandomnessCache {
    */
   async getAll(): Promise<CachedRandomness[]> {
     try {
-      // Get all entries from sorted set, ordered by score (block) descending
-      const entries = await getRedis().zrange<string[]>(CACHE_KEY, 0, -1, { rev: true });
+      const redis = getRedis();
 
-      if (!entries || entries.length === 0) {
+      // Get all member keys from sorted set, ordered by score (block) descending
+      const memberKeys = await redis.zrange<string[]>(CACHE_KEY, 0, -1, { rev: true });
+
+      if (!memberKeys || memberKeys.length === 0) {
         return [];
       }
 
-      return entries.map(entry => {
-        if (typeof entry === 'string') {
-          return JSON.parse(entry) as CachedRandomness;
+      // Fetch all entry data from hash
+      const entries: CachedRandomness[] = [];
+      for (const key of memberKeys) {
+        const data = await redis.hget(CACHE_DATA_KEY, key);
+        if (data) {
+          if (typeof data === 'string') {
+            entries.push(JSON.parse(data) as CachedRandomness);
+          } else {
+            entries.push(data as unknown as CachedRandomness);
+          }
         }
-        return entry as unknown as CachedRandomness;
-      });
+      }
+
+      return entries;
     } catch (error) {
       console.error('[RandomnessCache] Error getting all entries:', error);
       return [];
@@ -67,27 +78,47 @@ class ServerRandomnessCache {
   /**
    * Add a new randomness entry to the cache.
    * If the cache is full, removes the oldest entry.
-   * Prevents duplicates based on block number.
+   * Prevents duplicates based on block number using a separate hash for member IDs.
    */
   async add(entry: CachedRandomness): Promise<boolean> {
     try {
-      // Check if block already exists
-      const exists = await this.has(entry.block);
-      if (exists) {
+      const redis = getRedis();
+
+      // Use block number as the member key to ensure uniqueness
+      // This way, even if called multiple times for the same block, it overwrites
+      const memberKey = `block:${entry.block}`;
+
+      // Check if this block already exists using the hash
+      const existingEntry = await redis.hget(CACHE_DATA_KEY, memberKey);
+      if (existingEntry) {
         return false;
       }
 
-      // Add to sorted set with block number as score
-      await getRedis().zadd(CACHE_KEY, {
+      // Store the entry data in a hash (keyed by block)
+      await redis.hset(CACHE_DATA_KEY, { [memberKey]: JSON.stringify(entry) });
+
+      // Add to sorted set with block number as score (for ordering)
+      // Use the memberKey as the member to ensure uniqueness
+      await redis.zadd(CACHE_KEY, {
         score: entry.block,
-        member: JSON.stringify(entry),
+        member: memberKey,
       });
 
       // Trim to max size (remove oldest entries - lowest scores)
-      const currentSize = await getRedis().zcard(CACHE_KEY);
+      const currentSize = await redis.zcard(CACHE_KEY);
       if (currentSize > MAX_CACHE_SIZE) {
-        // Remove entries beyond max size (oldest first)
-        await getRedis().zremrangebyrank(CACHE_KEY, 0, currentSize - MAX_CACHE_SIZE - 1);
+        // Get the oldest entries to remove
+        const toRemove = await redis.zrange<string[]>(
+          CACHE_KEY,
+          0,
+          currentSize - MAX_CACHE_SIZE - 1
+        );
+        if (toRemove.length > 0) {
+          // Remove from sorted set
+          await redis.zremrangebyrank(CACHE_KEY, 0, currentSize - MAX_CACHE_SIZE - 1);
+          // Remove from hash
+          await redis.hdel(CACHE_DATA_KEY, ...toRemove);
+        }
       }
 
       return true;
@@ -114,9 +145,9 @@ class ServerRandomnessCache {
    */
   async has(block: number): Promise<boolean> {
     try {
-      // Get entries with this exact score (block number)
-      const entries = await getRedis().zrange(CACHE_KEY, block, block, { byScore: true });
-      return entries.length > 0;
+      const memberKey = `block:${block}`;
+      const exists = await getRedis().hexists(CACHE_DATA_KEY, memberKey);
+      return exists === 1;
     } catch (error) {
       console.error('[RandomnessCache] Error checking block:', error);
       return false;
@@ -128,15 +159,25 @@ class ServerRandomnessCache {
    */
   async getLatest(): Promise<CachedRandomness | null> {
     try {
-      const entries = await getRedis().zrange<string[]>(CACHE_KEY, -1, -1);
-      if (!entries || entries.length === 0) {
+      const redis = getRedis();
+
+      // Get the member key with highest score (most recent block)
+      const memberKeys = await redis.zrange<string[]>(CACHE_KEY, -1, -1);
+      if (!memberKeys || memberKeys.length === 0) {
         return null;
       }
-      const entry = entries[0];
-      if (typeof entry === 'string') {
-        return JSON.parse(entry) as CachedRandomness;
+
+      const memberKey = memberKeys[0];
+      const data = await redis.hget(CACHE_DATA_KEY, memberKey);
+
+      if (!data) {
+        return null;
       }
-      return entry as unknown as CachedRandomness;
+
+      if (typeof data === 'string') {
+        return JSON.parse(data) as CachedRandomness;
+      }
+      return data as unknown as CachedRandomness;
     } catch (error) {
       console.error('[RandomnessCache] Error getting latest:', error);
       return null;
@@ -148,7 +189,9 @@ class ServerRandomnessCache {
    */
   async clear(): Promise<void> {
     try {
-      await getRedis().del(CACHE_KEY);
+      const redis = getRedis();
+      await redis.del(CACHE_KEY);
+      await redis.del(CACHE_DATA_KEY);
     } catch (error) {
       console.error('[RandomnessCache] Error clearing cache:', error);
     }

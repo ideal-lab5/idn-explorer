@@ -16,7 +16,7 @@
 
 import { serverRandomnessCache } from '@/lib/server/randomnessCache';
 import { randomnessSubscriptionManager } from '@/lib/server/randomnessSubscription';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * GET /api/randomness
@@ -50,6 +50,44 @@ export async function GET() {
         data: [],
         count: 0,
         initialized: false,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/randomness
+ * Clears the randomness cache. Useful for resetting corrupted data.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // Simple protection - require a query param to confirm
+    const { searchParams } = new URL(request.url);
+    const confirm = searchParams.get('confirm');
+
+    if (confirm !== 'true') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Add ?confirm=true to clear the cache',
+        },
+        { status: 400 }
+      );
+    }
+
+    await serverRandomnessCache.clear();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Randomness cache cleared successfully',
+    });
+  } catch (error) {
+    console.error('[API /randomness] Error clearing cache:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to clear randomness cache',
       },
       { status: 500 }
     );
