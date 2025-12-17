@@ -219,27 +219,76 @@ export default function NetworkActivityPage() {
                     onClick={() => setSelectedTab(0)}
                     current={selectedTab === 0}
                   >
-                    Latest Activity
+                    Randomness
                   </NavbarItem>
                   <NavbarItem
                     href="#"
                     onClick={() => setSelectedTab(1)}
                     current={selectedTab === 1}
                   >
-                    Scheduled
+                    Latest Events
                   </NavbarItem>
                   <NavbarItem
                     href="#"
                     onClick={() => setSelectedTab(2)}
                     current={selectedTab === 2}
                   >
-                    Randomness
+                    Scheduled
                   </NavbarItem>
                 </NavbarSection>
               </Navbar>
             </div>
 
             {selectedTab === 0 && (
+              <>
+                <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
+                  <TableHead>
+                    <TableRow>
+                      <TableHeader>Block</TableHeader>
+                      <TableHeader>
+                        Randomness{' '}
+                        {copyStatus && (
+                          <Badge color="cyan" className="text-xs text-zinc-500">
+                            copied to clipboard!
+                          </Badge>
+                        )}
+                      </TableHeader>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {generatedRandomness
+                      .slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE)
+                      .map((transaction: Randomness, index: number) => (
+                        <CopyToClipboard
+                          key={'copy_' + index}
+                          text={transaction.randomness}
+                          onCopy={onCopyText}
+                        >
+                          <TableRow key={'row_' + index} href={'#'} title={`Transaction #${index}`}>
+                            <TableCell>{formatNumber(transaction.block)}</TableCell>
+                            <TableCell className="text-wrap">
+                              <p className="text-xs">{transaction.randomness}</p>
+                            </TableCell>
+                          </TableRow>
+                        </CopyToClipboard>
+                      ))}
+                  </TableBody>
+                </Table>
+                {generatedRandomness.length > PAGE_SIZE && (
+                  <Pagination>
+                    <PaginationPrevious
+                      href={
+                        randomnessPage === 0
+                          ? `?randomnessPage=0&tab=0`
+                          : `?randomnessPage=${randomnessPage - 1}&tab=0`
+                      }
+                    />
+                    <PaginationNext href={`?randomnessPage=${randomnessPage + 1}&tab=0`} />
+                  </Pagination>
+                )}
+              </>
+            )}
+            {selectedTab === 1 && (
               <>
                 <div className="mt-4 grid sm:grid-cols-2 xl:grid-cols-3">
                   <InputGroup>
@@ -315,16 +364,16 @@ export default function NetworkActivityPage() {
                     <PaginationPrevious
                       href={
                         executedTxPage === 0
-                          ? `?executedTxPage=0&tab=0`
-                          : `?executedTxPage=${executedTxPage - 1}&tab=0`
+                          ? `?executedTxPage=0&tab=1`
+                          : `?executedTxPage=${executedTxPage - 1}&tab=1`
                       }
                     />
-                    <PaginationNext href={`?executedTxPage=${executedTxPage + 1}&tab=0`} />
+                    <PaginationNext href={`?executedTxPage=${executedTxPage + 1}&tab=1`} />
                   </Pagination>
                 )}
               </>
             )}
-            {selectedTab === 1 && (
+            {selectedTab === 2 && (
               <>
                 <div className="mt-4 grid sm:grid-cols-2 xl:grid-cols-2">
                   <InputGroup>
@@ -377,60 +426,11 @@ export default function NetworkActivityPage() {
                     <PaginationPrevious
                       href={
                         scheduledTxPage === 0
-                          ? `?scheduledTxPage=0&tab=1`
-                          : `?scheduledTxPage=${scheduledTxPage - 1}&tab=1`
+                          ? `?scheduledTxPage=0&tab=2`
+                          : `?scheduledTxPage=${scheduledTxPage - 1}&tab=2`
                       }
                     />
-                    <PaginationNext href={`?scheduledTxPage=${scheduledTxPage + 1}&tab=1`} />
-                  </Pagination>
-                )}
-              </>
-            )}
-            {selectedTab === 2 && (
-              <>
-                <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
-                  <TableHead>
-                    <TableRow>
-                      <TableHeader>Block</TableHeader>
-                      <TableHeader>
-                        Randomness{' '}
-                        {copyStatus && (
-                          <Badge color="cyan" className="text-xs text-zinc-500">
-                            copied to clipboard!
-                          </Badge>
-                        )}
-                      </TableHeader>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {generatedRandomness
-                      .slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE)
-                      .map((transaction: Randomness, index: number) => (
-                        <CopyToClipboard
-                          key={'copy_' + index}
-                          text={transaction.randomness}
-                          onCopy={onCopyText}
-                        >
-                          <TableRow key={'row_' + index} href={'#'} title={`Transaction #${index}`}>
-                            <TableCell>{formatNumber(transaction.block)}</TableCell>
-                            <TableCell className="text-wrap">
-                              <p className="text-xs">{transaction.randomness}</p>
-                            </TableCell>
-                          </TableRow>
-                        </CopyToClipboard>
-                      ))}
-                  </TableBody>
-                </Table>
-                {generatedRandomness.length > PAGE_SIZE && (
-                  <Pagination>
-                    <PaginationPrevious
-                      href={
-                        randomnessPage === 0
-                          ? `?randomnessPage=0&tab=2`
-                          : `?randomnessPage=${randomnessPage - 1}&tab=2`
-                      }
-                    />
-                    <PaginationNext href={`?randomnessPage=${randomnessPage + 1}&tab=2`} />
+                    <PaginationNext href={`?scheduledTxPage=${scheduledTxPage + 1}&tab=2`} />
                   </Pagination>
                 )}
               </>

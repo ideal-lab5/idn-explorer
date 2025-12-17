@@ -20,13 +20,13 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 /**
- * Home page that redirects to the Randomness Delivery Monitor dashboard
+ * Home page that redirects to the Activity Hub
  */
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push('/subscriptions/dashboard');
+    router.push('/network-activity');
   }, [router]);
 
   return null;

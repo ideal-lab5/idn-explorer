@@ -99,8 +99,15 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
               <SidebarSection>
                 <SidebarHeading>Randomness</SidebarHeading>
                 <SidebarItem
+                  href="/network-activity"
+                  current={Boolean(pathname === '/' || pathname === '/network-activity')}
+                >
+                  <SparklesIcon />
+                  <SidebarLabel>Activity Hub</SidebarLabel>
+                </SidebarItem>
+                <SidebarItem
                   href="/subscriptions/dashboard"
-                  current={Boolean(pathname === '/' || pathname === '/subscriptions/dashboard')}
+                  current={Boolean(pathname === '/subscriptions/dashboard')}
                 >
                   <ChartBarIcon />
                   <SidebarLabel>Delivery Monitor</SidebarLabel>
@@ -120,13 +127,6 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
 
               <SidebarSection>
                 <SidebarHeading>Timelock</SidebarHeading>
-                <SidebarItem
-                  href="/network-activity"
-                  current={Boolean(pathname === '/network-activity')}
-                >
-                  <SparklesIcon />
-                  <SidebarLabel>Activity Hub</SidebarLabel>
-                </SidebarItem>
                 <SidebarItem href="/timelock" current={Boolean(pathname.startsWith('/timelock'))}>
                   <ClockIcon />
                   <SidebarLabel>My Transactions</SidebarLabel>
