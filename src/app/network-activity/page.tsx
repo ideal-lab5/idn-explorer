@@ -268,7 +268,7 @@ export default function NetworkActivityPage() {
                 {chartData.length > 0 && (
                   <div className="mb-6 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
                     <h4 className="mb-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Cumulative Randomness Generated
+                      Cumulative Randomness Bridged
                     </h4>
                     <div className="h-48">
                       <ResponsiveContainer width="100%" height="100%">
