@@ -28,8 +28,8 @@ Required environment variables in `.env.local`:
 NEXT_PUBLIC_NODE_WS="ws://127.0.0.1:9944"  # Ideal Network node WebSocket URL
 
 # Upstash Redis (required for randomness caching)
-UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io"  # Upstash Redis REST URL
-UPSTASH_REDIS_REST_TOKEN="your-token"                   # Upstash Redis REST token
+randomness_KV_REST_API_URL="https://your-redis.upstash.io"  # Upstash Redis REST URL
+randomness_KV_REST_API_TOKEN="your-token"                   # Upstash Redis REST token
 
 # Drand Configuration (optional - defaults provided)
 NEXT_PUBLIC_DRAND_API_URL="https://api.drand.sh"  # Drand API endpoint

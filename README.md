@@ -35,8 +35,8 @@ Create a `.env.local` file in the project root with the following variables:
 NEXT_PUBLIC_NODE_WS="ws://127.0.0.1:9944"
 
 # Required: Upstash Redis (for randomness caching)
-UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="your-token"
+randomness_KV_REST_API_URL="https://your-redis.upstash.io"
+randomness_KV_REST_API_TOKEN="your-token"
 
 # Optional: Drand Configuration (defaults provided)
 NEXT_PUBLIC_DRAND_API_URL="https://api.drand.sh"
@@ -87,8 +87,8 @@ The current drand round is displayed in the Activity Hub and updates in real-tim
 docker build -t ideallabs/etf-explorer \
   --build-arg NEXT_PUBLIC_NODE_WS="ws://172.14.1.1:9944" \
   --build-arg NEXT_PUBLIC_DRAND_API_URL="https://api.drand.sh" \
-  --build-arg UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io" \
-  --build-arg UPSTASH_REDIS_REST_TOKEN="your-token" \
+  --build-arg randomness_KV_REST_API_URL="https://your-redis.upstash.io" \
+  --build-arg randomness_KV_REST_API_TOKEN="your-token" \
   .
 ```
 
