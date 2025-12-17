@@ -245,8 +245,9 @@ export default function NetworkActivityPage() {
                   <TableHead>
                     <TableRow>
                       <TableHeader>Block</TableHeader>
+                      <TableHeader>Rounds</TableHeader>
                       <TableHeader>
-                        Randomness{' '}
+                        Signature{' '}
                         {copyStatus && (
                           <Badge color="cyan" className="text-xs text-zinc-500">
                             copied to clipboard!
@@ -258,16 +259,27 @@ export default function NetworkActivityPage() {
                   <TableBody>
                     {generatedRandomness
                       .slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE)
-                      .map((transaction: Randomness, index: number) => (
+                      .map((entry: Randomness, index: number) => (
                         <CopyToClipboard
                           key={'copy_' + index}
-                          text={transaction.randomness}
+                          text={entry.randomness}
                           onCopy={onCopyText}
                         >
-                          <TableRow key={'row_' + index} href={'#'} title={`Transaction #${index}`}>
-                            <TableCell>{formatNumber(transaction.block)}</TableCell>
+                          <TableRow
+                            key={'row_' + index}
+                            href={'#'}
+                            title={`Randomness at block #${entry.block}`}
+                          >
+                            <TableCell>{formatNumber(entry.block)}</TableCell>
+                            <TableCell>
+                              <Badge color="purple">
+                                {entry.startRound > 0 || entry.endRound > 0
+                                  ? `${formatNumber(entry.startRound)} - ${formatNumber(entry.endRound)}`
+                                  : 'N/A'}
+                              </Badge>
+                            </TableCell>
                             <TableCell className="text-wrap">
-                              <p className="text-xs">{transaction.randomness}</p>
+                              <p className="font-mono text-xs">{entry.randomness}</p>
                             </TableCell>
                           </TableRow>
                         </CopyToClipboard>

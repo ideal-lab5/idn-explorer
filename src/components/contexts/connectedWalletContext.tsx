@@ -10,7 +10,8 @@ import { Randomness } from '@/domain/Randomness';
 import { container } from '@/lib/di-container';
 import { explorerClient } from '@/lib/explorer-client';
 import { IChainStateService } from '@/services/IChainStateService';
-import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { IRandomnessBeaconService } from '@/services/IRandomnessBeaconService';
+import React, { ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
 
 // Define the shape of the context
 interface ConnectedWalletContextType {
@@ -61,7 +62,11 @@ export const RAMDOMNESS_SAMPLE = 33;
 export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { polkadotApiService } = usePolkadot();
   const chainStateService = container.resolve<IChainStateService>('IChainStateService');
+  const randomnessBeaconService = container.resolve<IRandomnessBeaconService>(
+    'IRandomnessBeaconService'
+  );
   const [isReady, setIsReady] = useState(false);
+  const randomnessUnsubscribeRef = useRef<(() => void) | null>(null);
   const [signer, setSigner] = useState<any>(undefined); // The state variable
   const [isConnected, setIsConnected] = useState(false);
   const [signerAddress, setSignerAddress] = useState<string>('');
@@ -89,6 +94,47 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     checkApiReady();
   }, [polkadotApiService]);
 
+  // Subscribe to randomness beacon events
+  useEffect(() => {
+    if (!isReady) return;
+
+    const setupRandomnessSubscription = async () => {
+      try {
+        // Load cached randomness first
+        const cached = randomnessBeaconService.getCachedRandomness();
+        if (cached.length > 0) {
+          setGeneratedRandomness(cached);
+        }
+
+        // Subscribe to new randomness events
+        const unsubscribe = await randomnessBeaconService.subscribeToRandomnessEvents(
+          (newRandomness: Randomness) => {
+            setGeneratedRandomness(prev => {
+              // Add new entry at the beginning, avoid duplicates
+              if (prev.some(r => r.block === newRandomness.block)) {
+                return prev;
+              }
+              return [newRandomness, ...prev].slice(0, 100); // Keep last 100
+            });
+          }
+        );
+
+        randomnessUnsubscribeRef.current = unsubscribe;
+      } catch (error) {
+        console.error('Failed to subscribe to randomness events:', error);
+      }
+    };
+
+    setupRandomnessSubscription();
+
+    return () => {
+      if (randomnessUnsubscribeRef.current) {
+        randomnessUnsubscribeRef.current();
+        randomnessUnsubscribeRef.current = null;
+      }
+    };
+  }, [isReady]);
+
   useEffect(() => {
     if (!isReady) return;
 
@@ -106,7 +152,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
               .catch(console.error);
           }
 
-          // Get session and era progress
+          // Get session and era progress (without randomness - now handled by event subscription)
           Promise.all([
             chainStateService.getSessionInfo(),
             chainStateService.getSessionIndex(),
@@ -115,9 +161,8 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
               blockNumber > NUMBER_BLOCKS_EXECUTED ? blockNumber - NUMBER_BLOCKS_EXECUTED : 0,
               blockNumber
             ),
-            explorerClient?.getRandomness(blockNumber, RAMDOMNESS_SAMPLE),
           ])
-            .then(([sessionInfo, sessionIndex, scheduled, executed, randomness]) => {
+            .then(([sessionInfo, sessionIndex, scheduled, executed]) => {
               setSessionProgress(sessionInfo.sessionProgress);
               setSessionLength(sessionInfo.sessionLength);
               setEraProgress(sessionInfo.eraProgress);
@@ -125,7 +170,6 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
               setSessionIndex(sessionIndex);
               setScheduledTransactions(scheduled || []);
               setExecutedTransactions(executed || []);
-              setGeneratedRandomness(randomness || []);
             })
             .catch(console.error);
         });
