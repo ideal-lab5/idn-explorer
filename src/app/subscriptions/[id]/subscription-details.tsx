@@ -8,7 +8,9 @@ import XcmLocationViewer from '@/components/xcm/XcmLocationViewer';
 import { domainToUiSubscription } from '@/utils/subscriptionMapper';
 import {
   ArrowLeftIcon,
+  BoltIcon,
   DocumentDuplicateIcon,
+  DocumentIcon,
   ExclamationTriangleIcon,
   PauseIcon,
   PlayIcon,
@@ -199,7 +201,21 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">{subscription.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">{subscription.name}</h1>
+            {/* Subscription type badge */}
+            {subscription.subscriptionType === 'contract' ? (
+              <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-1 text-sm font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                <DocumentIcon className="mr-1 h-4 w-4" />
+                Contract
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                <BoltIcon className="mr-1 h-4 w-4" />
+                Runtime
+              </span>
+            )}
+          </div>
           <div className="mt-1 flex items-center gap-3">
             <p className="break-all font-mono text-sm text-zinc-400">ID: {id}</p>
             <DocumentDuplicateIcon
@@ -275,15 +291,70 @@ export function SubscriptionDetails({ id, subscription: initialData }: Subscript
                   showRaw={true}
                 />
               </div>
-              {subscription.callIndex && (
+            </div>
+          </div>
+        </div>
+
+        {/* Call Configuration Section */}
+        <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-zinc-800">
+          <div className="border-b border-zinc-100 px-6 py-5 dark:border-zinc-800">
+            <h2 className="text-xl font-semibold">
+              {subscription.subscriptionType === 'contract'
+                ? 'Contract Call Configuration'
+                : 'Runtime Call Configuration'}
+            </h2>
+            <p className="text-sm text-zinc-500">
+              {subscription.subscriptionType === 'contract'
+                ? 'Smart contract details for randomness delivery'
+                : 'Pallet and function called when delivering randomness'}
+            </p>
+          </div>
+          <div className="space-y-4 px-6 py-5">
+            {subscription.subscriptionType === 'contract' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-zinc-500">Contracts Pallet Index</p>
+                  <p className="font-medium">{subscription.callIndex.pallet}</p>
+                </div>
                 <div>
                   <p className="text-sm text-zinc-500">Call Index</p>
-                  <p className="font-medium">
-                    Pallet {subscription.callIndex.pallet}, Call {subscription.callIndex.call}
+                  <p className="font-medium">{subscription.callIndex.call}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-zinc-500">Contract Address</p>
+                  <p className="break-all font-mono text-sm font-medium">
+                    {subscription.contractAddress || 'N/A'}
                   </p>
                 </div>
-              )}
-            </div>
+                <div>
+                  <p className="text-sm text-zinc-500">Function Selector</p>
+                  <p className="font-mono font-medium">{subscription.contractSelector || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">Value</p>
+                  <p className="font-medium">{subscription.contractValue || '0'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">Gas Limit</p>
+                  <p className="font-medium">{subscription.gasLimit || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">Storage Deposit Limit</p>
+                  <p className="font-medium">{subscription.storageDepositLimit || 'None'}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-zinc-500">Pallet Index</p>
+                  <p className="font-medium">{subscription.callIndex.pallet}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-zinc-500">Call Index</p>
+                  <p className="font-medium">{subscription.callIndex.call}</p>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2 border-t border-zinc-100 px-6 py-4 dark:border-zinc-800">
             {subscription.status === 'active' ? (

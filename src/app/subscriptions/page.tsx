@@ -5,7 +5,7 @@ import { useConnectedWallet } from '@/components/contexts/connectedWalletContext
 import { useSubscription } from '@/components/contexts/subscriptionContext';
 import { ConnectWallet } from '@/components/idn/connectWallet';
 import { domainToUiSubscription } from '@/utils/subscriptionMapper';
-import { BoltIcon, PlusIcon } from '@heroicons/react/20/solid';
+import { BoltIcon, DocumentIcon, PlusIcon } from '@heroicons/react/20/solid';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { UiSubscription } from './types/UiSubscription';
@@ -84,9 +84,29 @@ export default function SubscriptionsPage() {
                 <div className="p-6">
                   <div className="mb-2 flex items-start justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold">
-                        {sub.name || `Randomness Subscription`}
-                      </h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-semibold">
+                          {sub.name || `Randomness Subscription`}
+                        </h2>
+                        {/* Subscription type indicator */}
+                        {sub.subscriptionType === 'contract' ? (
+                          <span
+                            className="inline-flex items-center rounded bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                            title="Smart Contract Subscription"
+                          >
+                            <DocumentIcon className="mr-0.5 h-3 w-3" />
+                            Contract
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                            title="Runtime Extrinsic Subscription"
+                          >
+                            <BoltIcon className="mr-0.5 h-3 w-3" />
+                            Runtime
+                          </span>
+                        )}
+                      </div>
                       <p className="font-mono text-xs text-zinc-400">{sub.id.slice(0, 16)}...</p>
                     </div>
                     <span
@@ -140,12 +160,33 @@ export default function SubscriptionsPage() {
                         {sub.xcmLocation}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-zinc-500">Call Index:</span>
-                      <span className="font-mono text-xs">
-                        Pallet {sub.callIndex.pallet}, Call {sub.callIndex.call}
-                      </span>
-                    </div>
+                    {/* Show type-specific info */}
+                    {sub.subscriptionType === 'contract' ? (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-zinc-500">Contract:</span>
+                          <span
+                            className="truncate font-mono text-xs"
+                            title={sub.contractAddress || ''}
+                          >
+                            {sub.contractAddress
+                              ? `${sub.contractAddress.slice(0, 8)}...${sub.contractAddress.slice(-6)}`
+                              : 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-zinc-500">Selector:</span>
+                          <span className="font-mono text-xs">{sub.contractSelector || 'N/A'}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-500">Call Index:</span>
+                        <span className="font-mono text-xs">
+                          Pallet {sub.callIndex.pallet}, Call {sub.callIndex.call}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-4 flex justify-end">

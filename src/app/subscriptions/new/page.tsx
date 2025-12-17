@@ -6,10 +6,18 @@ import { useSubscription } from '@/components/contexts/subscriptionContext';
 import { ConnectWallet } from '@/components/idn/connectWallet';
 import { Input } from '@/components/input';
 import XcmLocationBuilder, { XcmLocation } from '@/components/xcm/XcmLocationBuilder';
-import { ArrowLeftIcon, ArrowPathIcon, ExclamationCircleIcon } from '@heroicons/react/20/solid';
+import { encodeContractCall, encodeRuntimeCall } from '@/utils/callDataEncoder';
+import {
+  ArrowLeftIcon,
+  ArrowPathIcon,
+  BoltIcon,
+  DocumentIcon,
+  ExclamationCircleIcon,
+} from '@heroicons/react/20/solid';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import type { SubscriptionType } from '../types/UiSubscription';
 
 export default function NewSubscriptionPage() {
   // State for form feedback and loading
@@ -25,6 +33,9 @@ export default function NewSubscriptionPage() {
   const { signer, isConnected } = useConnectedWallet();
   const { createSubscription } = useSubscription();
 
+  // Subscription type state
+  const [subscriptionType, setSubscriptionType] = useState<SubscriptionType>('runtime');
+
   const handleCreateSubscription = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -36,16 +47,33 @@ export default function NewSubscriptionPage() {
       const credits = formData.get('credits') as string;
       const frequency = formData.get('frequency') as string;
 
-      // Extract call index parameters
-      const palletIndex = parseInt(formData.get('palletIndex') as string);
-      const callIndexValue = parseInt(formData.get('callIndex') as string);
+      let call: string;
 
-      // Build pre-encoded call data as hex string
-      // Format: [pallet_index, call_index] encoded as hex
-      const call =
-        '0x' +
-        palletIndex.toString(16).padStart(2, '0') +
-        callIndexValue.toString(16).padStart(2, '0');
+      if (subscriptionType === 'runtime') {
+        // Build runtime call data
+        const palletIndex = parseInt(formData.get('palletIndex') as string);
+        const callIndexValue = parseInt(formData.get('callIndex') as string);
+        call = encodeRuntimeCall(palletIndex, callIndexValue);
+      } else {
+        // Build contract call data
+        const palletIndex = parseInt(formData.get('contractPalletIndex') as string);
+        const callIndexValue = parseInt(formData.get('contractCallIndex') as string);
+        const contractAddress = formData.get('contractAddress') as string;
+        const value = formData.get('contractValue') as string;
+        const gasLimit = formData.get('gasLimit') as string;
+        const storageDepositLimit = formData.get('storageDepositLimit') as string;
+        const selector = formData.get('selector') as string;
+
+        call = encodeContractCall(
+          palletIndex,
+          callIndexValue,
+          contractAddress,
+          value || '0',
+          gasLimit,
+          storageDepositLimit || null,
+          selector
+        );
+      }
 
       // Create the subscription using the service
       // Using 'Native' origin kind as requested
@@ -60,7 +88,6 @@ export default function NewSubscriptionPage() {
       );
 
       // Use Next.js router for navigation to maintain client-side state
-      // This preserves the wallet connection state
       router.push('/subscriptions');
     } catch (err) {
       console.error('Failed to create subscription:', err);
@@ -181,63 +208,268 @@ export default function NewSubscriptionPage() {
                   <XcmLocationBuilder value={xcmLocation} onChange={setXcmLocation} />
                 </div>
 
-                {/* Call Index Configuration */}
+                {/* Subscription Type Selector */}
                 <div className="space-y-4 rounded-lg bg-zinc-100 p-4 dark:bg-zinc-800">
                   <h3 className="text-md font-semibold text-zinc-900 dark:text-zinc-100">
-                    XCM Call Index Configuration
+                    Subscription Type
                   </h3>
                   <p className="text-sm text-zinc-500">
-                    Specifies which pallet and function to call on the target parachain
+                    Choose how randomness will be delivered to your target
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="palletIndex"
-                        className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                      >
-                        Pallet Index
-                      </label>
-                      <Input
-                        id="palletIndex"
-                        name="palletIndex"
-                        type="number"
-                        required
-                        min="0"
-                        max="255"
-                        defaultValue="42"
-                        placeholder="Enter pallet index (0-255)"
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setSubscriptionType('runtime')}
+                      className={`flex flex-col items-center rounded-lg border-2 p-4 transition-all ${
+                        subscriptionType === 'runtime'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
+                      }`}
+                    >
+                      <BoltIcon
+                        className={`mb-2 h-8 w-8 ${subscriptionType === 'runtime' ? 'text-blue-500' : 'text-zinc-400'}`}
                       />
-                      <p className="text-sm text-zinc-500">
-                        Index of the target pallet in destination runtime
-                      </p>
-                    </div>
+                      <span
+                        className={`font-medium ${subscriptionType === 'runtime' ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-700 dark:text-zinc-300'}`}
+                      >
+                        Runtime Extrinsic
+                      </span>
+                      <span className="mt-1 text-center text-xs text-zinc-500">
+                        Call a pallet function directly
+                      </span>
+                    </button>
 
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="callIndex"
-                        className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                      >
-                        Call Index
-                      </label>
-                      <Input
-                        id="callIndex"
-                        name="callIndex"
-                        type="number"
-                        required
-                        min="0"
-                        max="255"
-                        defaultValue="3"
-                        placeholder="Enter call index (0-255)"
+                    <button
+                      type="button"
+                      onClick={() => setSubscriptionType('contract')}
+                      className={`flex flex-col items-center rounded-lg border-2 p-4 transition-all ${
+                        subscriptionType === 'contract'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
+                      }`}
+                    >
+                      <DocumentIcon
+                        className={`mb-2 h-8 w-8 ${subscriptionType === 'contract' ? 'text-blue-500' : 'text-zinc-400'}`}
                       />
-                      <p className="text-sm text-zinc-500">
-                        Index of the function within the pallet
-                      </p>
-                    </div>
+                      <span
+                        className={`font-medium ${subscriptionType === 'contract' ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-700 dark:text-zinc-300'}`}
+                      >
+                        Smart Contract
+                      </span>
+                      <span className="mt-1 text-center text-xs text-zinc-500">
+                        Call a contract function
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Using auto-generated subscription IDs */}
+                {/* Runtime Extrinsic Configuration */}
+                {subscriptionType === 'runtime' && (
+                  <div className="space-y-4 rounded-lg bg-zinc-100 p-4 dark:bg-zinc-800">
+                    <h3 className="text-md font-semibold text-zinc-900 dark:text-zinc-100">
+                      Runtime Call Configuration
+                    </h3>
+                    <p className="text-sm text-zinc-500">
+                      Specifies which pallet and function to call on the target parachain
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="palletIndex"
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Pallet Index
+                        </label>
+                        <Input
+                          id="palletIndex"
+                          name="palletIndex"
+                          type="number"
+                          required
+                          min="0"
+                          max="255"
+                          defaultValue="42"
+                          placeholder="Enter pallet index (0-255)"
+                        />
+                        <p className="text-sm text-zinc-500">
+                          Index of the target pallet (e.g., idn-consumer)
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="callIndex"
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Call Index
+                        </label>
+                        <Input
+                          id="callIndex"
+                          name="callIndex"
+                          type="number"
+                          required
+                          min="0"
+                          max="255"
+                          defaultValue="3"
+                          placeholder="Enter call index (0-255)"
+                        />
+                        <p className="text-sm text-zinc-500">
+                          Index of the function (e.g., consume_pulse)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Smart Contract Configuration */}
+                {subscriptionType === 'contract' && (
+                  <div className="space-y-4 rounded-lg bg-zinc-100 p-4 dark:bg-zinc-800">
+                    <h3 className="text-md font-semibold text-zinc-900 dark:text-zinc-100">
+                      Contract Call Configuration
+                    </h3>
+                    <p className="text-sm text-zinc-500">
+                      Configure the contract call parameters for randomness delivery
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="contractPalletIndex"
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Contracts Pallet Index
+                        </label>
+                        <Input
+                          id="contractPalletIndex"
+                          name="contractPalletIndex"
+                          type="number"
+                          required
+                          min="0"
+                          max="255"
+                          defaultValue="50"
+                          placeholder="Enter pallet index (0-255)"
+                        />
+                        <p className="text-sm text-zinc-500">Index of the Contracts pallet</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="contractCallIndex"
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Call Index
+                        </label>
+                        <Input
+                          id="contractCallIndex"
+                          name="contractCallIndex"
+                          type="number"
+                          required
+                          min="0"
+                          max="255"
+                          defaultValue="6"
+                          placeholder="Enter call index (0-255)"
+                        />
+                        <p className="text-sm text-zinc-500">
+                          Index of the &apos;call&apos; dispatchable
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="contractAddress"
+                        className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                      >
+                        Contract Address
+                      </label>
+                      <Input
+                        id="contractAddress"
+                        name="contractAddress"
+                        required
+                        placeholder="Enter the contract's SS58 address"
+                      />
+                      <p className="text-sm text-zinc-500">
+                        The deployed contract&apos;s account address
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="selector"
+                        className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                      >
+                        Function Selector
+                      </label>
+                      <Input
+                        id="selector"
+                        name="selector"
+                        required
+                        placeholder="0x12345678"
+                        pattern="^0x[0-9a-fA-F]{8}$"
+                        title="Must be 4 bytes in hex format (e.g., 0x12345678)"
+                      />
+                      <p className="text-sm text-zinc-500">
+                        4-byte selector for the consume_pulse function (e.g., 0x12345678)
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="contractValue"
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Value (optional)
+                        </label>
+                        <Input
+                          id="contractValue"
+                          name="contractValue"
+                          type="text"
+                          defaultValue="0"
+                          placeholder="0"
+                        />
+                        <p className="text-sm text-zinc-500">Balance to send (usually 0)</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="gasLimit"
+                          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                        >
+                          Gas Limit
+                        </label>
+                        <Input
+                          id="gasLimit"
+                          name="gasLimit"
+                          type="text"
+                          required
+                          defaultValue="100000000000"
+                          placeholder="Enter gas limit"
+                        />
+                        <p className="text-sm text-zinc-500">Gas allocation for execution</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="storageDepositLimit"
+                        className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                      >
+                        Storage Deposit Limit (optional)
+                      </label>
+                      <Input
+                        id="storageDepositLimit"
+                        name="storageDepositLimit"
+                        type="text"
+                        placeholder="Leave empty for no limit"
+                      />
+                      <p className="text-sm text-zinc-500">
+                        Maximum storage deposit allowed (leave empty for None)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Error/Success message moved to bottom */}
