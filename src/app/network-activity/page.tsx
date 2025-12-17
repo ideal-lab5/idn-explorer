@@ -40,8 +40,9 @@ import { ISubscriptionService } from '@/services/ISubscriptionService';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import { formatNumber } from '@polkadot/util';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 function Stat({
   title,
@@ -102,6 +103,19 @@ export default function NetworkActivityPage() {
   const [drandService] = useState(() => new DrandService());
   const [refreshTrigger, setRefreshTrigger] = useState(false);
   const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState<number | null>(null);
+
+  // Transform randomness data for the chart (reverse to show oldest first, limit to last 50)
+  const chartData = useMemo(() => {
+    return [...generatedRandomness]
+      .slice(0, 50)
+      .reverse()
+      .map(entry => ({
+        block: entry.block,
+        roundsAggregated: entry.endRound > 0 ? entry.endRound - entry.startRound + 1 : 1,
+        startRound: entry.startRound,
+        endRound: entry.endRound,
+      }));
+  }, [generatedRandomness]);
 
   const onCopyText = () => {
     setCopyStatus(true);
@@ -258,6 +272,62 @@ export default function NetworkActivityPage() {
 
             {selectedTab === 0 && (
               <>
+                {/* Randomness Generation Chart */}
+                {chartData.length > 0 && (
+                  <div className="mb-6 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
+                    <h4 className="mb-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Rounds Aggregated per Block
+                    </h4>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                          <defs>
+                            <linearGradient id="colorRounds" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis
+                            dataKey="block"
+                            tick={{ fontSize: 11, fill: '#71717a' }}
+                            tickFormatter={value => `#${formatNumber(value)}`}
+                            axisLine={{ stroke: '#3f3f46' }}
+                            tickLine={{ stroke: '#3f3f46' }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 11, fill: '#71717a' }}
+                            axisLine={{ stroke: '#3f3f46' }}
+                            tickLine={{ stroke: '#3f3f46' }}
+                            allowDecimals={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#18181b',
+                              border: '1px solid #3f3f46',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                            }}
+                            labelStyle={{ color: '#a1a1aa' }}
+                            itemStyle={{ color: '#8b5cf6' }}
+                            formatter={(value: number, name: string) => [
+                              `${value} rounds`,
+                              'Aggregated',
+                            ]}
+                            labelFormatter={label => `Block #${formatNumber(label)}`}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="roundsAggregated"
+                            stroke="#8b5cf6"
+                            strokeWidth={2}
+                            fill="url(#colorRounds)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
                 <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
                   <TableHead>
                     <TableRow>
