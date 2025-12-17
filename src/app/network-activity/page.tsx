@@ -343,8 +343,8 @@ export default function NetworkActivityPage() {
                         >
                           <TableRow
                             key={'row_' + index}
-                            href={'#'}
-                            title={`Randomness at block #${entry.block}`}
+                            className="cursor-pointer"
+                            title={`Click to copy randomness from block #${entry.block}`}
                           >
                             <TableCell>{formatNumber(entry.block)}</TableCell>
                             <TableCell>
