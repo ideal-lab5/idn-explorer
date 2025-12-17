@@ -234,13 +234,7 @@ export default function NetworkActivityPage() {
             helpText=""
           />
         </div>
-        <div className="mb-8 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="border-b border-zinc-200 p-6 dark:border-zinc-800">
-            <h3 className="text-lg font-medium">Transaction Data</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              View and search for transaction data
-            </p>
-          </div>
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="p-6">
             <div className="mb-4">
               <Navbar>
