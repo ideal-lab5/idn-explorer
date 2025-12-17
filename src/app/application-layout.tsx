@@ -37,7 +37,6 @@ import {
 import { SidebarLayout } from '@/components/sidebar-layout';
 import {
   BoltIcon,
-  ChartBarIcon,
   ClockIcon,
   CubeIcon,
   QuestionMarkCircleIcon,
@@ -109,19 +108,8 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
               <SidebarSection>
                 <SidebarHeading>Randomness</SidebarHeading>
                 <SidebarItem
-                  href="/subscriptions/dashboard"
-                  current={Boolean(pathname === '/subscriptions/dashboard')}
-                >
-                  <ChartBarIcon />
-                  <SidebarLabel>Delivery Monitor</SidebarLabel>
-                </SidebarItem>
-                <SidebarItem
                   href="/subscriptions"
-                  current={Boolean(
-                    pathname === '/subscriptions' ||
-                      (pathname.startsWith('/subscriptions/') &&
-                        pathname !== '/subscriptions/dashboard')
-                  )}
+                  current={Boolean(pathname.startsWith('/subscriptions'))}
                 >
                   <BoltIcon />
                   <SidebarLabel>My Subscriptions</SidebarLabel>
