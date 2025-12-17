@@ -33,7 +33,10 @@ import { Navbar, NavbarItem, NavbarSection } from '@/components/navbar';
 import { Pagination, PaginationNext, PaginationPrevious } from '@/components/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table';
 import { Randomness } from '@/domain/Randomness';
+import { SubscriptionState } from '@/domain/Subscription';
+import { container } from '@/lib/di-container';
 import { DrandService } from '@/services/DrandService';
+import { ISubscriptionService } from '@/services/ISubscriptionService';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import { formatNumber } from '@polkadot/util';
 import { useSearchParams } from 'next/navigation';
@@ -98,11 +101,33 @@ export default function NetworkActivityPage() {
   const [currentRound, setCurrentRound] = useState<number>(0);
   const [drandService] = useState(() => new DrandService());
   const [refreshTrigger, setRefreshTrigger] = useState(false);
+  const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState<number | null>(null);
 
   const onCopyText = () => {
     setCopyStatus(true);
     setTimeout(() => setCopyStatus(false), 2000); // Reset status after 2 seconds
   };
+
+  // Fetch active subscriptions count
+  useEffect(() => {
+    const fetchActiveSubscriptions = async () => {
+      try {
+        const subscriptionService = container.resolve<ISubscriptionService>('ISubscriptionService');
+        const allSubscriptions = await subscriptionService.getAllSubscriptions();
+        const activeCount = allSubscriptions.filter(
+          sub => sub.state === SubscriptionState.Active
+        ).length;
+        setActiveSubscriptionsCount(activeCount);
+      } catch (error) {
+        console.error('Failed to fetch active subscriptions:', error);
+      }
+    };
+
+    fetchActiveSubscriptions();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchActiveSubscriptions, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchCurrentRound = async () => {
@@ -173,19 +198,11 @@ export default function NetworkActivityPage() {
             helpText=""
           />
           <Stat
-            title="Events"
-            value={formatNumber(
-              executedTransactions
-                .filter(element => (delayedOnly && element.delayedTx) || !delayedOnly)
-                .filter(
-                  element =>
-                    searchTermExecuted == '' ||
-                    element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) ||
-                    element.operation.toLowerCase().includes(searchTermExecuted.toLowerCase()) ||
-                    element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase())
-                ).length
-            )}
-            change={`Last ${NUMBER_BLOCKS_EXECUTED} blocks`}
+            title="Active Subscriptions"
+            value={
+              activeSubscriptionsCount !== null ? formatNumber(activeSubscriptionsCount) : '...'
+            }
+            change="On the network"
             helpText=""
           />
           <Stat
