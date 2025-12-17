@@ -206,7 +206,7 @@ export default function NetworkActivityPage() {
             helpText=""
           />
           <Stat
-            title="Scheduled"
+            title="Timelocked"
             value={formatNumber(
               scheduledTransactions.filter(
                 element =>
@@ -250,7 +250,7 @@ export default function NetworkActivityPage() {
                     onClick={() => setSelectedTab(2)}
                     current={selectedTab === 2}
                   >
-                    Scheduled
+                    Timelocked
                   </NavbarItem>
                 </NavbarSection>
               </Navbar>
@@ -412,7 +412,7 @@ export default function NetworkActivityPage() {
                       id="searchScheduled"
                       value={searchTermScheduled}
                       onChange={e => setSearchTermScheduled(e.target.value)}
-                      placeholder="Search scheduled txs"
+                      placeholder="Search timelocked txs"
                       aria-label="Search"
                     />
                   </InputGroup>
