@@ -118,7 +118,7 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
 
               <SidebarSection>
                 <SidebarHeading>Timelock</SidebarHeading>
-                <SidebarItem href="/timelock" current={Boolean(pathname.startsWith('/timelock'))}>
+                <SidebarItem>
                   <ClockIcon />
                   <SidebarLabel>
                     My Transactions
