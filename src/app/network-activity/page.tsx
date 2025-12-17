@@ -105,16 +105,14 @@ export default function NetworkActivityPage() {
   const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState<number | null>(null);
 
   // Transform randomness data for the chart (reverse to show oldest first, limit to last 50)
+  // Shows cumulative count of randomness values generated
   const chartData = useMemo(() => {
-    return [...generatedRandomness]
-      .slice(0, 50)
-      .reverse()
-      .map(entry => ({
-        block: entry.block,
-        roundsAggregated: entry.endRound > 0 ? entry.endRound - entry.startRound + 1 : 1,
-        startRound: entry.startRound,
-        endRound: entry.endRound,
-      }));
+    const reversed = [...generatedRandomness].slice(0, 50).reverse();
+    return reversed.map((entry, index) => ({
+      block: entry.block,
+      cumulativeCount: index + 1,
+      totalCount: reversed.length,
+    }));
   }, [generatedRandomness]);
 
   const onCopyText = () => {
@@ -266,17 +264,17 @@ export default function NetworkActivityPage() {
 
             {selectedTab === 0 && (
               <>
-                {/* Randomness Generation Chart */}
+                {/* Cumulative Randomness Count Chart */}
                 {chartData.length > 0 && (
                   <div className="mb-6 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
                     <h4 className="mb-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Rounds Aggregated per Block
+                      Cumulative Randomness Generated
                     </h4>
                     <div className="h-48">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
                           <defs>
-                            <linearGradient id="colorRounds" x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
                               <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
                             </linearGradient>
@@ -293,6 +291,7 @@ export default function NetworkActivityPage() {
                             axisLine={{ stroke: '#3f3f46' }}
                             tickLine={{ stroke: '#3f3f46' }}
                             allowDecimals={false}
+                            domain={[0, 'dataMax']}
                           />
                           <Tooltip
                             contentStyle={{
@@ -303,18 +302,15 @@ export default function NetworkActivityPage() {
                             }}
                             labelStyle={{ color: '#a1a1aa' }}
                             itemStyle={{ color: '#8b5cf6' }}
-                            formatter={(value: number, name: string) => [
-                              `${value} rounds`,
-                              'Aggregated',
-                            ]}
+                            formatter={(value: number) => [`${value} values`, 'Total']}
                             labelFormatter={label => `Block #${formatNumber(label)}`}
                           />
                           <Area
                             type="monotone"
-                            dataKey="roundsAggregated"
+                            dataKey="cumulativeCount"
                             stroke="#8b5cf6"
                             strokeWidth={2}
-                            fill="url(#colorRounds)"
+                            fill="url(#colorCumulative)"
                           />
                         </AreaChart>
                       </ResponsiveContainer>
