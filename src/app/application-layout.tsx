@@ -97,7 +97,6 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
             </SidebarHeader>
             <SidebarBody>
               <SidebarSection>
-                <SidebarHeading>Randomness</SidebarHeading>
                 <SidebarItem
                   href="/network-activity"
                   current={Boolean(pathname === '/' || pathname === '/network-activity')}
@@ -105,6 +104,10 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
                   <SparklesIcon />
                   <SidebarLabel>Activity Hub</SidebarLabel>
                 </SidebarItem>
+              </SidebarSection>
+
+              <SidebarSection>
+                <SidebarHeading>Randomness</SidebarHeading>
                 <SidebarItem
                   href="/subscriptions/dashboard"
                   current={Boolean(pathname === '/subscriptions/dashboard')}
