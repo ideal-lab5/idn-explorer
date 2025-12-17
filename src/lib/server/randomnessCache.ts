@@ -15,10 +15,12 @@
  */
 
 /**
- * Server-side in-memory cache for randomness values.
+ * Server-side Redis cache for randomness values.
+ * Uses Upstash Redis for persistence across server restarts and serverless instances.
  * Maintains a maximum of 100 entries, removing oldest when limit is reached.
- * Uses global variable to survive Next.js hot reloads in development.
  */
+
+import { getRedis } from './redis';
 
 export interface CachedRandomness {
   block: number;
@@ -29,22 +31,37 @@ export interface CachedRandomness {
   timestamp: number;
 }
 
+const CACHE_KEY = 'randomness:cache';
+const INITIALIZED_KEY = 'randomness:initialized';
 const MAX_CACHE_SIZE = 100;
 
-// Use global to persist across hot reloads in development
-const globalForCache = globalThis as unknown as {
-  serverRandomnessCache: ServerRandomnessCache | undefined;
-};
-
+/**
+ * Server-side randomness cache using Redis sorted set.
+ * Block number is used as the score for ordering (descending).
+ */
 class ServerRandomnessCache {
-  private cache: CachedRandomness[] = [];
-  private initialized = false;
-
   /**
    * Get all cached randomness entries, sorted by block (newest first)
    */
-  getAll(): CachedRandomness[] {
-    return [...this.cache];
+  async getAll(): Promise<CachedRandomness[]> {
+    try {
+      // Get all entries from sorted set, ordered by score (block) descending
+      const entries = await getRedis().zrange<string[]>(CACHE_KEY, 0, -1, { rev: true });
+
+      if (!entries || entries.length === 0) {
+        return [];
+      }
+
+      return entries.map(entry => {
+        if (typeof entry === 'string') {
+          return JSON.parse(entry) as CachedRandomness;
+        }
+        return entry as unknown as CachedRandomness;
+      });
+    } catch (error) {
+      console.error('[RandomnessCache] Error getting all entries:', error);
+      return [];
+    }
   }
 
   /**
@@ -52,70 +69,132 @@ class ServerRandomnessCache {
    * If the cache is full, removes the oldest entry.
    * Prevents duplicates based on block number.
    */
-  add(entry: CachedRandomness): boolean {
-    // Check for duplicates
-    if (this.cache.some(r => r.block === entry.block)) {
+  async add(entry: CachedRandomness): Promise<boolean> {
+    try {
+      // Check if block already exists
+      const exists = await this.has(entry.block);
+      if (exists) {
+        return false;
+      }
+
+      // Add to sorted set with block number as score
+      await getRedis().zadd(CACHE_KEY, {
+        score: entry.block,
+        member: JSON.stringify(entry),
+      });
+
+      // Trim to max size (remove oldest entries - lowest scores)
+      const currentSize = await getRedis().zcard(CACHE_KEY);
+      if (currentSize > MAX_CACHE_SIZE) {
+        // Remove entries beyond max size (oldest first)
+        await getRedis().zremrangebyrank(CACHE_KEY, 0, currentSize - MAX_CACHE_SIZE - 1);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[RandomnessCache] Error adding entry:', error);
       return false;
     }
-
-    // Add at the beginning (newest first)
-    this.cache.unshift(entry);
-
-    // Trim to max size (remove oldest)
-    if (this.cache.length > MAX_CACHE_SIZE) {
-      this.cache = this.cache.slice(0, MAX_CACHE_SIZE);
-    }
-
-    return true;
   }
 
   /**
    * Get the number of cached entries
    */
-  size(): number {
-    return this.cache.length;
+  async size(): Promise<number> {
+    try {
+      return await getRedis().zcard(CACHE_KEY);
+    } catch (error) {
+      console.error('[RandomnessCache] Error getting size:', error);
+      return 0;
+    }
   }
 
   /**
    * Check if a block is already cached
    */
-  has(block: number): boolean {
-    return this.cache.some(r => r.block === block);
+  async has(block: number): Promise<boolean> {
+    try {
+      // Get entries with this exact score (block number)
+      const entries = await getRedis().zrange(CACHE_KEY, block, block, { byScore: true });
+      return entries.length > 0;
+    } catch (error) {
+      console.error('[RandomnessCache] Error checking block:', error);
+      return false;
+    }
   }
 
   /**
    * Get the latest cached entry
    */
-  getLatest(): CachedRandomness | null {
-    return this.cache.length > 0 ? this.cache[0] : null;
+  async getLatest(): Promise<CachedRandomness | null> {
+    try {
+      const entries = await getRedis().zrange<string[]>(CACHE_KEY, -1, -1);
+      if (!entries || entries.length === 0) {
+        return null;
+      }
+      const entry = entries[0];
+      if (typeof entry === 'string') {
+        return JSON.parse(entry) as CachedRandomness;
+      }
+      return entry as unknown as CachedRandomness;
+    } catch (error) {
+      console.error('[RandomnessCache] Error getting latest:', error);
+      return null;
+    }
   }
 
   /**
    * Clear the cache
    */
-  clear(): void {
-    this.cache = [];
+  async clear(): Promise<void> {
+    try {
+      await getRedis().del(CACHE_KEY);
+    } catch (error) {
+      console.error('[RandomnessCache] Error clearing cache:', error);
+    }
   }
 
   /**
    * Check if the subscription has been initialized
    */
-  isInitialized(): boolean {
-    return this.initialized;
+  async isInitialized(): Promise<boolean> {
+    try {
+      const value = await getRedis().get(INITIALIZED_KEY);
+      return value === 'true';
+    } catch (error) {
+      console.error('[RandomnessCache] Error checking initialized:', error);
+      return false;
+    }
   }
 
   /**
    * Mark the cache as initialized (subscription is running)
+   * Sets a TTL of 60 seconds - if not refreshed, assumes subscription died
    */
-  setInitialized(value: boolean): void {
-    this.initialized = value;
+  async setInitialized(value: boolean): Promise<void> {
+    try {
+      if (value) {
+        // Set with TTL of 60 seconds - subscription should refresh this periodically
+        await getRedis().set(INITIALIZED_KEY, 'true', { ex: 60 });
+      } else {
+        await getRedis().del(INITIALIZED_KEY);
+      }
+    } catch (error) {
+      console.error('[RandomnessCache] Error setting initialized:', error);
+    }
+  }
+
+  /**
+   * Refresh the initialized flag TTL (call this periodically from subscription)
+   */
+  async refreshInitialized(): Promise<void> {
+    try {
+      await getRedis().expire(INITIALIZED_KEY, 60);
+    } catch (error) {
+      console.error('[RandomnessCache] Error refreshing initialized:', error);
+    }
   }
 }
 
-// Singleton instance - survives across API calls and hot reloads
-export const serverRandomnessCache =
-  globalForCache.serverRandomnessCache ?? new ServerRandomnessCache();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForCache.serverRandomnessCache = serverRandomnessCache;
-}
+// Export singleton instance
+export const serverRandomnessCache = new ServerRandomnessCache();

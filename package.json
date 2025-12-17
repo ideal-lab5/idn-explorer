@@ -20,6 +20,7 @@
     "@polkadot/util": "^13.0.2",
     "@polkadot/util-crypto": "^13.0.2",
     "@types/react-datepicker": "^6.2.0",
+    "@upstash/redis": "^1.35.8",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.6",
     "js-crypto-hkdf": "^1.0.7",

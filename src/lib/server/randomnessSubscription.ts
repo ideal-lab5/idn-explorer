@@ -16,7 +16,7 @@
 
 /**
  * Server-side singleton that subscribes to randomness beacon events
- * and populates the server-side cache.
+ * and populates the Redis cache.
  * Uses global variable to survive Next.js hot reloads in development.
  */
 
@@ -33,13 +33,15 @@ class RandomnessSubscriptionManager {
   private unsubscribe: (() => void) | null = null;
   private isConnecting = false;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private refreshInterval: NodeJS.Timeout | null = null;
 
   /**
    * Initialize the subscription to the chain
    */
   async initialize(): Promise<void> {
     // Prevent multiple simultaneous connection attempts
-    if (this.isConnecting || serverRandomnessCache.isInitialized()) {
+    const isAlreadyInitialized = await serverRandomnessCache.isInitialized();
+    if (this.isConnecting || isAlreadyInitialized) {
       return;
     }
 
@@ -58,8 +60,13 @@ class RandomnessSubscriptionManager {
       // Set up event subscription
       await this.subscribeToEvents();
 
-      serverRandomnessCache.setInitialized(true);
+      await serverRandomnessCache.setInitialized(true);
       console.log('[RandomnessSubscription] Subscription initialized');
+
+      // Set up periodic refresh of the initialized flag (every 30 seconds)
+      this.refreshInterval = setInterval(async () => {
+        await serverRandomnessCache.refreshInitialized();
+      }, 30000);
 
       // Handle disconnection
       provider.on('disconnected', () => {
@@ -108,7 +115,8 @@ class RandomnessSubscriptionManager {
       const currentBlock = header.number.toNumber();
 
       // Skip if we already have this block
-      if (serverRandomnessCache.has(currentBlock)) {
+      const hasBlock = await serverRandomnessCache.has(currentBlock);
+      if (hasBlock) {
         return;
       }
 
@@ -127,10 +135,11 @@ class RandomnessSubscriptionManager {
         timestamp: Date.now(),
       };
 
-      const added = serverRandomnessCache.add(entry);
+      const added = await serverRandomnessCache.add(entry);
       if (added) {
+        const cacheSize = await serverRandomnessCache.size();
         console.log(
-          `[RandomnessSubscription] Added randomness for block ${currentBlock}, cache size: ${serverRandomnessCache.size()}`
+          `[RandomnessSubscription] Added randomness for block ${currentBlock}, cache size: ${cacheSize}`
         );
       }
     } catch (error) {
@@ -197,8 +206,13 @@ class RandomnessSubscriptionManager {
   /**
    * Handle disconnection - clean up and schedule reconnect
    */
-  private handleDisconnect(): void {
-    serverRandomnessCache.setInitialized(false);
+  private async handleDisconnect(): Promise<void> {
+    await serverRandomnessCache.setInitialized(false);
+
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
 
     if (this.unsubscribe) {
       try {
@@ -235,6 +249,11 @@ class RandomnessSubscriptionManager {
       this.reconnectTimeout = null;
     }
 
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+
     if (this.unsubscribe) {
       this.unsubscribe();
       this.unsubscribe = null;
@@ -245,7 +264,7 @@ class RandomnessSubscriptionManager {
       this.api = null;
     }
 
-    serverRandomnessCache.setInitialized(false);
+    await serverRandomnessCache.setInitialized(false);
   }
 }
 

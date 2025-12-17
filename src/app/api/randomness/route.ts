@@ -20,25 +20,26 @@ import { NextResponse } from 'next/server';
 
 /**
  * GET /api/randomness
- * Returns the cached randomness values from the server-side cache.
+ * Returns the cached randomness values from the Redis cache.
  * Initializes the subscription if not already running.
  */
 export async function GET() {
   try {
     // Initialize subscription if not already running
     // This is lazy initialization - starts on first request
-    if (!serverRandomnessCache.isInitialized()) {
+    const isInitialized = await serverRandomnessCache.isInitialized();
+    if (!isInitialized) {
       // Don't await - let it initialize in the background
       randomnessSubscriptionManager.initialize().catch(console.error);
     }
 
-    const data = serverRandomnessCache.getAll();
+    const data = await serverRandomnessCache.getAll();
 
     return NextResponse.json({
       success: true,
       data,
       count: data.length,
-      initialized: serverRandomnessCache.isInitialized(),
+      initialized: isInitialized,
     });
   } catch (error) {
     console.error('[API /randomness] Error:', error);
