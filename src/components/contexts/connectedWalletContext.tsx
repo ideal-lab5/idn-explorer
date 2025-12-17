@@ -10,8 +10,10 @@ import { Randomness } from '@/domain/Randomness';
 import { container } from '@/lib/di-container';
 import { explorerClient } from '@/lib/explorer-client';
 import { IChainStateService } from '@/services/IChainStateService';
-import { IRandomnessBeaconService } from '@/services/IRandomnessBeaconService';
 import React, { ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
+
+// Polling interval for fetching randomness from server (in milliseconds)
+const RANDOMNESS_POLL_INTERVAL = 3000;
 
 // Define the shape of the context
 interface ConnectedWalletContextType {
@@ -62,11 +64,8 @@ export const RAMDOMNESS_SAMPLE = 33;
 export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { polkadotApiService } = usePolkadot();
   const chainStateService = container.resolve<IChainStateService>('IChainStateService');
-  const randomnessBeaconService = container.resolve<IRandomnessBeaconService>(
-    'IRandomnessBeaconService'
-  );
   const [isReady, setIsReady] = useState(false);
-  const randomnessUnsubscribeRef = useRef<(() => void) | null>(null);
+  const randomnessPollRef = useRef<NodeJS.Timeout | null>(null);
   const [signer, setSigner] = useState<any>(undefined); // The state variable
   const [isConnected, setIsConnected] = useState(false);
   const [signerAddress, setSignerAddress] = useState<string>('');
@@ -94,46 +93,48 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     checkApiReady();
   }, [polkadotApiService]);
 
-  // Subscribe to randomness beacon events
+  // Poll server-side randomness cache
   useEffect(() => {
-    if (!isReady) return;
-
-    const setupRandomnessSubscription = async () => {
+    const fetchRandomness = async () => {
       try {
-        // Load cached randomness first
-        const cached = randomnessBeaconService.getCachedRandomness();
-        if (cached.length > 0) {
-          setGeneratedRandomness(cached);
+        const response = await fetch('/api/randomness');
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
         }
-
-        // Subscribe to new randomness events
-        const unsubscribe = await randomnessBeaconService.subscribeToRandomnessEvents(
-          (newRandomness: Randomness) => {
-            setGeneratedRandomness(prev => {
-              // Add new entry at the beginning, avoid duplicates
-              if (prev.some(r => r.block === newRandomness.block)) {
-                return prev;
-              }
-              return [newRandomness, ...prev].slice(0, 100); // Keep last 100
-            });
-          }
-        );
-
-        randomnessUnsubscribeRef.current = unsubscribe;
+        const result = await response.json();
+        if (result.success && result.data) {
+          // Convert API data to Randomness instances
+          const randomnessData = result.data.map(
+            (item: any) =>
+              new Randomness(
+                item.block,
+                item.randomness,
+                item.signature,
+                item.startRound,
+                item.endRound,
+                item.timestamp
+              )
+          );
+          setGeneratedRandomness(randomnessData);
+        }
       } catch (error) {
-        console.error('Failed to subscribe to randomness events:', error);
+        console.error('Failed to fetch randomness:', error);
       }
     };
 
-    setupRandomnessSubscription();
+    // Fetch immediately on mount
+    fetchRandomness();
+
+    // Set up polling interval
+    randomnessPollRef.current = setInterval(fetchRandomness, RANDOMNESS_POLL_INTERVAL);
 
     return () => {
-      if (randomnessUnsubscribeRef.current) {
-        randomnessUnsubscribeRef.current();
-        randomnessUnsubscribeRef.current = null;
+      if (randomnessPollRef.current) {
+        clearInterval(randomnessPollRef.current);
+        randomnessPollRef.current = null;
       }
     };
-  }, [isReady]);
+  }, []);
 
   useEffect(() => {
     if (!isReady) return;

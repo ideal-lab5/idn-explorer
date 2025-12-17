@@ -25,12 +25,10 @@ import { IChainStateService } from '../services/IChainStateService';
 import { IDrandService } from '../services/IDrandService';
 import { IExplorerService } from '../services/IExplorerService';
 import { IPolkadotApiService } from '../services/IPolkadotApiService';
-import { IRandomnessBeaconService } from '../services/IRandomnessBeaconService';
 import { IRandomnessService } from '../services/IRandomnessService';
 import { ISubscriptionService } from '../services/ISubscriptionService';
 import { IdnSubscriptionService } from '../services/IdnSubscriptionService';
 import { PolkadotApiService } from '../services/PolkadotApiService';
-import { RandomnessBeaconService } from '../services/RandomnessBeaconService';
 import { RandomnessService } from '../services/RandomnessService';
 
 // Only register services if we're in a browser environment
@@ -47,11 +45,6 @@ if (typeof window !== 'undefined') {
   container.registerSingleton<ISubscriptionService>('ISubscriptionService', IdnSubscriptionService);
 
   container.registerSingleton<IRandomnessService>('IRandomnessService', RandomnessService);
-
-  container.registerSingleton<IRandomnessBeaconService>(
-    'IRandomnessBeaconService',
-    RandomnessBeaconService
-  );
 }
 
 export { container };
