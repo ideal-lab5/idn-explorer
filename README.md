@@ -65,6 +65,9 @@ npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
 npm run format       # Format code with Prettier
+npm test             # Run unit tests
+npm run test:watch   # Run tests in watch mode
+npm run test:coverage # Run tests with coverage report
 ```
 
 ## Timelock Transaction Scheduling _(Coming Soon)_
