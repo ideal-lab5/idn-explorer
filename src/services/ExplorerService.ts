@@ -20,6 +20,7 @@ import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
 import { DrandIdentityBuilder, SupportedCurve, Timelock, u8a } from '@ideallabs/timelock.js';
 import { EventRecord } from '@polkadot/types/interfaces';
+import { formatBalance } from '@polkadot/util';
 import * as hkdf from 'js-crypto-hkdf';
 import { inject, injectable } from 'tsyringe';
 import type { IDrandService } from './IDrandService';
@@ -365,7 +366,21 @@ export class ExplorerService implements IExplorerService {
     const balance = (accountInfo as any).data || accountInfo;
     const freeBalance = (balance as any).free;
 
-    return freeBalance?.toHuman() || '0';
+    // Get token info from chain registry
+    const tokenDecimals = polkadotApi.registry.chainDecimals[0] || 12;
+    const tokenSymbol = polkadotApi.registry.chainTokens[0] || 'Unit';
+
+    // Format with SI notation disabled for cleaner display, limit to 4 decimal places
+    const formatted = formatBalance(freeBalance, {
+      decimals: tokenDecimals,
+      withSi: false,
+      forceUnit: '-', // Use base unit (no SI prefix like k, M, etc.)
+    });
+
+    // Clean up: remove trailing zeros and commas
+    const cleanNumber = parseFloat(formatted.replace(/,/g, '')).toString();
+
+    return `${cleanNumber} ${tokenSymbol}`;
   }
 
   async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {

@@ -155,7 +155,7 @@ export const ConnectWallet: React.FC<{ buttonOnly: boolean }> = ({ buttonOnly = 
                       Connected
                     </span>
                     <span className="block truncate text-xs/5 font-normal text-green-500 dark:text-green-500">
-                      Balance: {signerBalance} IDN
+                      Balance: {signerBalance}
                     </span>
                     <span className="block truncate text-xs/5 font-normal text-zinc-500 dark:text-zinc-400">
                       {`${signerAddress.substring(0, 4)}...${signerAddress.substring(signerAddress.length - 4, signerAddress.length)}`}

@@ -32,7 +32,21 @@ export class ChainStateService implements IChainStateService {
       // Handle both older and newer Polkadot API versions with proper type casting
       const freeBalance = (accountInfo as any).data?.free || (accountInfo as any).free;
 
-      return formatBalance(freeBalance, { withUnit: true });
+      // Get token info from chain registry
+      const tokenDecimals = api.registry.chainDecimals[0] || 12;
+      const tokenSymbol = api.registry.chainTokens[0] || 'Unit';
+
+      // Format with SI notation disabled for cleaner display
+      const formatted = formatBalance(freeBalance, {
+        decimals: tokenDecimals,
+        withSi: false,
+        forceUnit: '-',
+      });
+
+      // Clean up: remove trailing zeros and commas
+      const cleanNumber = parseFloat(formatted.replace(/,/g, '')).toString();
+
+      return `${cleanNumber} ${tokenSymbol}`;
     } catch (error) {
       console.error('Error fetching balance:', error);
       return '0'; // Return a default value on error
