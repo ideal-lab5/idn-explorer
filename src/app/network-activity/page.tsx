@@ -184,7 +184,7 @@ export default function NetworkActivityPage() {
     <main className="w-full flex-1">
       <div className="w-full px-8 py-8">
         <h1 className="mb-6 text-3xl font-bold">
-          IDN Network Activity Hub <Badge>{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</Badge>
+          Ideal Network Activity Hub <Badge>{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</Badge>
         </h1>
         <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <Stat
