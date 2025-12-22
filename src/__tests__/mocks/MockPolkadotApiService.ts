@@ -58,9 +58,7 @@ export function createMockExtrinsic(options: MockTransactionOptions = { status: 
           type: options.status.charAt(0).toUpperCase() + options.status.slice(1),
         };
 
-        const events = options.eventType
-          ? [{ event: { type: options.eventType } }]
-          : [];
+        const events = options.eventType ? [{ event: { type: options.eventType } }] : [];
 
         callback({
           status,
@@ -176,13 +174,10 @@ export function createMockApi(overrides: Partial<MockApiOptions> = {}) {
         }),
       },
       idnManager: {
-        subscriptions: Object.assign(
-          jest.fn().mockResolvedValue(createMockSubscriptionData()),
-          {
-            entries: jest.fn().mockResolvedValue([]),
-            keys: jest.fn().mockResolvedValue([]),
-          }
-        ),
+        subscriptions: Object.assign(jest.fn().mockResolvedValue(createMockSubscriptionData()), {
+          entries: jest.fn().mockResolvedValue([]),
+          keys: jest.fn().mockResolvedValue([]),
+        }),
       },
     },
     rpc: {

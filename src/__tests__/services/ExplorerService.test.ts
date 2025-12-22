@@ -28,8 +28,8 @@ jest.mock('@ideallabs/timelock.js', () => ({
   u8a: {},
 }));
 
-import 'reflect-metadata';
 import { ExplorerService } from '@/services/ExplorerService';
+import 'reflect-metadata';
 import { MockPolkadotApiService } from '../mocks/MockPolkadotApiService';
 
 describe('ExplorerService', () => {

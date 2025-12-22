@@ -23,7 +23,7 @@ jest.mock('@/lib/server/redis', () => ({
 }));
 
 // Import after mocking
-import { serverRandomnessCache, CachedRandomness } from '@/lib/server/randomnessCache';
+import { CachedRandomness, serverRandomnessCache } from '@/lib/server/randomnessCache';
 
 describe('ServerRandomnessCache', () => {
   beforeEach(() => {

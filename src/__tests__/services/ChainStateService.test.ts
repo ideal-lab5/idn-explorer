@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import 'reflect-metadata';
 import { ChainStateService } from '@/services/ChainStateService';
+import 'reflect-metadata';
 import { MockPolkadotApiService } from '../mocks/MockPolkadotApiService';
 
 describe('ChainStateService', () => {
@@ -33,7 +33,9 @@ describe('ChainStateService', () => {
 
   describe('getBalance', () => {
     it('should return formatted balance with token symbol', async () => {
-      const balance = await chainStateService.getBalance('5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty');
+      const balance = await chainStateService.getBalance(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
+      );
 
       expect(balance).toContain('IDN');
     });
@@ -46,7 +48,9 @@ describe('ChainStateService', () => {
       });
       chainStateService = new ChainStateService(mockApiService);
 
-      const balance = await chainStateService.getBalance('5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty');
+      const balance = await chainStateService.getBalance(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
+      );
 
       expect(balance).toContain('DOT');
     });
@@ -54,7 +58,9 @@ describe('ChainStateService', () => {
     it('should return "0" on error', async () => {
       mockApiService.setReady(false);
 
-      const balance = await chainStateService.getBalance('5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty');
+      const balance = await chainStateService.getBalance(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty'
+      );
 
       expect(balance).toBe('0');
     });

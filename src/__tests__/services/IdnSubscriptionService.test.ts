@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import 'reflect-metadata';
-import { IdnSubscriptionService } from '@/services/IdnSubscriptionService';
 import { SubscriptionState } from '@/domain/Subscription';
+import { IdnSubscriptionService } from '@/services/IdnSubscriptionService';
+import 'reflect-metadata';
 import {
   MockPolkadotApiService,
   createMockExtrinsic,
@@ -96,14 +96,7 @@ describe('IdnSubscriptionService', () => {
       );
 
       await expect(
-        subscriptionService.createSubscription(
-          mockSigner,
-          100,
-          mockTarget,
-          '0x2a03',
-          'Native',
-          10
-        )
+        subscriptionService.createSubscription(mockSigner, 100, mockTarget, '0x2a03', 'Native', 10)
       ).rejects.toThrow('Transaction failed with status: Dropped');
     });
 
@@ -120,14 +113,7 @@ describe('IdnSubscriptionService', () => {
       );
 
       await expect(
-        subscriptionService.createSubscription(
-          mockSigner,
-          100,
-          mockTarget,
-          '0x2a03',
-          'Native',
-          10
-        )
+        subscriptionService.createSubscription(mockSigner, 100, mockTarget, '0x2a03', 'Native', 10)
       ).rejects.toThrow('idnManager.MockError');
     });
 
@@ -167,9 +153,9 @@ describe('IdnSubscriptionService', () => {
         createMockExtrinsic({ status: 'invalid' })
       );
 
-      await expect(
-        subscriptionService.pauseSubscription(mockSigner, 'sub-123')
-      ).rejects.toThrow('Transaction failed with status: Invalid');
+      await expect(subscriptionService.pauseSubscription(mockSigner, 'sub-123')).rejects.toThrow(
+        'Transaction failed with status: Invalid'
+      );
     });
   });
 
@@ -215,9 +201,9 @@ describe('IdnSubscriptionService', () => {
         createMockExtrinsic({ status: 'usurped' })
       );
 
-      await expect(
-        subscriptionService.killSubscription(mockSigner, 'sub-123')
-      ).rejects.toThrow('Transaction failed with status: Usurped');
+      await expect(subscriptionService.killSubscription(mockSigner, 'sub-123')).rejects.toThrow(
+        'Transaction failed with status: Usurped'
+      );
     });
   });
 
@@ -321,9 +307,7 @@ describe('IdnSubscriptionService', () => {
         createMockSubscriptionData({ id: 'sub-1' }),
         createMockSubscriptionData({ id: 'sub-2' }),
       ];
-      (mockApi.rpc as any).idnManagerApi.getSubscriptionsForSubscriber.mockResolvedValue(
-        mockSubs
-      );
+      (mockApi.rpc as any).idnManagerApi.getSubscriptionsForSubscriber.mockResolvedValue(mockSubs);
 
       const subscriptions = await subscriptionService.getSubscriptionsForAccount(
         mockSigner.address
@@ -348,9 +332,7 @@ describe('IdnSubscriptionService', () => {
     it('should use cache for subsequent calls', async () => {
       const mockApi = mockApiService.getMockApi();
       const mockSubs = [createMockSubscriptionData({ id: 'cached-sub' })];
-      (mockApi.rpc as any).idnManagerApi.getSubscriptionsForSubscriber.mockResolvedValue(
-        mockSubs
-      );
+      (mockApi.rpc as any).idnManagerApi.getSubscriptionsForSubscriber.mockResolvedValue(mockSubs);
 
       // First call
       await subscriptionService.getSubscriptionsForAccount(mockSigner.address);
