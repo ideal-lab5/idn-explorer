@@ -33,8 +33,8 @@ export class ChainStateService implements IChainStateService {
       const freeBalance = (accountInfo as any).data?.free || (accountInfo as any).free;
 
       // Get token info from chain registry
-      const tokenDecimals = api.registry.chainDecimals[0] || 12;
-      const tokenSymbol = api.registry.chainTokens[0] || 'Unit';
+      const tokenDecimals = api.registry.chainDecimals?.[0] || 12;
+      const tokenSymbol = api.registry.chainTokens?.[0] || 'Unit';
 
       // Format with SI notation disabled for cleaner display
       const formatted = formatBalance(freeBalance, {

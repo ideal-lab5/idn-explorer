@@ -359,28 +359,33 @@ export class ExplorerService implements IExplorerService {
   }
 
   async getFreeBalance(signer: any): Promise<string> {
-    const polkadotApi = await this.polkadotApiService.getApi();
-    // Get account info and properly handle typing
-    const accountInfo: any = await polkadotApi.query.system.account(signer.address);
-    // Access data and free balance with proper type casting
-    const balance = (accountInfo as any).data || accountInfo;
-    const freeBalance = (balance as any).free;
+    try {
+      const polkadotApi = await this.polkadotApiService.getApi();
+      // Get account info and properly handle typing
+      const accountInfo: any = await polkadotApi.query.system.account(signer.address);
+      // Access data and free balance with proper type casting
+      const balance = (accountInfo as any).data || accountInfo;
+      const freeBalance = (balance as any).free;
 
-    // Get token info from chain registry
-    const tokenDecimals = polkadotApi.registry.chainDecimals[0] || 12;
-    const tokenSymbol = polkadotApi.registry.chainTokens[0] || 'Unit';
+      // Get token info from chain registry
+      const tokenDecimals = polkadotApi.registry.chainDecimals?.[0] || 12;
+      const tokenSymbol = polkadotApi.registry.chainTokens?.[0] || 'Unit';
 
-    // Format with SI notation disabled for cleaner display, limit to 4 decimal places
-    const formatted = formatBalance(freeBalance, {
-      decimals: tokenDecimals,
-      withSi: false,
-      forceUnit: '-', // Use base unit (no SI prefix like k, M, etc.)
-    });
+      // Format with SI notation disabled for cleaner display
+      const formatted = formatBalance(freeBalance, {
+        decimals: tokenDecimals,
+        withSi: false,
+        forceUnit: '-',
+      });
 
-    // Clean up: remove trailing zeros and commas
-    const cleanNumber = parseFloat(formatted.replace(/,/g, '')).toString();
+      // Clean up: remove trailing zeros and commas
+      const cleanNumber = parseFloat(formatted.replace(/,/g, '')).toString();
 
-    return `${cleanNumber} ${tokenSymbol}`;
+      return `${cleanNumber} ${tokenSymbol}`;
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      return '0';
+    }
   }
 
   async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {
