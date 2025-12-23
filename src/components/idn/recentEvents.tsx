@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
+// Ensure reflect-metadata is loaded before tsyringe
+import 'reflect-metadata';
+
 import { Badge } from '@/components/badge';
 import { SidebarItem, SidebarLabel } from '@/components/sidebar';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
+import { container } from '@/lib/di-container';
 import { explorerClient } from '@/lib/explorer-client';
 import { IChainStateService } from '@/services/IChainStateService';
 import React, { useEffect, useState } from 'react';
-import { container } from 'tsyringe';
 
 export default function LatestEvents() {
   const [events, setEvents] = useState<ExecutedTransaction[]>([]);

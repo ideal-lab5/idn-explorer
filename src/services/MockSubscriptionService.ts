@@ -23,6 +23,7 @@ import {
 } from '../domain/Subscription';
 import type {
   ISubscriptionService,
+  OriginKind,
   UpdateSubscriptionParams,
   XcmLocation,
 } from './ISubscriptionService';
@@ -49,65 +50,71 @@ export class MockSubscriptionService implements ISubscriptionService {
   }
 
   /**
-   * Initialize sample subscription data for demonstration purposes
+   * Initialize sample subscription data for demonstration purposes.
+   * Creates subscriptions that match the pallet's Subscription struct.
    */
   private initializeSampleSubscriptions() {
     const mockAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY';
+    const now = Date.now();
 
     // Sample subscription 1: Active parachain randomness service
     const details1 = new SubscriptionDetailsClass(
       mockAddress,
-      Date.now(),
-      Date.now(),
-      100000,
-      120,
-      'para(2004)/pallet-randomness/0x1234567890abcdef',
-      'Parachain Randomness',
-      '0x2a05' // Call index as hex string
+      JSON.stringify({ parents: 1, interior: { X1: { Parachain: 2004 } } }),
+      '0x2a05', // Pre-encoded call data
+      'Native'
     );
     const sub1 = new SubscriptionClass(
       'sub-1-parachain-randomness',
       details1,
-      15000, // creditsLeft = amount - consumed
+      15000, // creditsLeft
       SubscriptionState.Active,
-      85000 // creditsConsumed
+      now - 86400000, // createdAt (1 day ago)
+      now, // updatedAt
+      100000, // credits
+      120, // frequency
+      'Parachain Randomness', // metadata
+      null // lastDelivered
     );
 
     // Sample subscription 2: Paused VRF service
     const details2 = new SubscriptionDetailsClass(
       mockAddress,
-      Date.now(),
-      Date.now(),
-      50000,
-      60,
-      'para(2012)/pallet-vrf/0xabcdef1234567890',
-      'VRF Service',
-      '0x1b02' // Call index as hex string
+      JSON.stringify({ parents: 1, interior: { X1: { Parachain: 2012 } } }),
+      '0x1b02',
+      'Native'
     );
     const sub2 = new SubscriptionClass(
       'sub-2-vrf-service',
       details2,
-      8500, // creditsLeft = amount - consumed
+      8500, // creditsLeft
       SubscriptionState.Paused,
-      41500 // creditsConsumed
+      now - 172800000, // createdAt (2 days ago)
+      now - 3600000, // updatedAt (1 hour ago)
+      50000, // credits
+      60, // frequency
+      'VRF Service',
+      now - 7200000 // lastDelivered (2 hours ago)
     );
+
     // Sample subscription 3: Active smart contract randomness
     const details3 = new SubscriptionDetailsClass(
       mockAddress,
-      Date.now(),
-      Date.now(),
-      200000,
-      90,
-      'para(2008)/pallet-contracts/0x9876543210fedcba',
-      'Smart Contract RNG',
-      '0x3c07' // Call index as hex string
+      JSON.stringify({ parents: 1, interior: { X1: { Parachain: 2008 } } }),
+      '0x3c07',
+      'Native'
     );
     const sub3 = new SubscriptionClass(
       'sub-3-smart-contract-rng',
       details3,
-      25000, // creditsLeft = amount - consumed
+      25000, // creditsLeft
       SubscriptionState.Active,
-      175000 // creditsConsumed
+      now - 259200000, // createdAt (3 days ago)
+      now, // updatedAt
+      200000, // credits
+      90, // frequency
+      'Smart Contract RNG',
+      now - 1800000 // lastDelivered (30 mins ago)
     );
 
     // Add the sample subscriptions to our map
@@ -120,9 +127,10 @@ export class MockSubscriptionService implements ISubscriptionService {
    * Creates a new subscription for randomness delivery.
    *
    * @param signer Account that will own the subscription
-   * @param credits Total number of random values to receive (was amount)
+   * @param credits Total number of random values to receive
    * @param target XCM location where random values will be delivered
-   * @param callIndex Two-byte array [pallet_index, call_index] for XCM dispatch
+   * @param call Pre-encoded SCALE call data as hex string
+   * @param originKind Origin kind for XCM dispatch
    * @param frequency Number of blocks between each delivery
    * @param metadata Optional additional data for the subscription
    * @param subscriptionId Optional subscription ID, auto-generated if not provided
@@ -131,33 +139,34 @@ export class MockSubscriptionService implements ISubscriptionService {
     signer: any,
     credits: number,
     target: XcmLocation,
-    callIndex: [number, number],
+    call: string,
+    originKind: OriginKind,
     frequency: number,
     metadata?: string,
     subscriptionId?: string
   ): Promise<void> {
-    // Calculate a mock deposit based on the parameters
-    const targetString = `XCM:${target.parents}:${JSON.stringify(target.interior)}`;
-    const deposit = this.calculateStorageDeposit(credits, targetString, metadata);
+    const targetString = JSON.stringify(target);
+    const now = Date.now();
+    const newId = subscriptionId || `sub-${now}`;
 
-    const newId = subscriptionId || `sub-${Date.now()}`;
     const details = new SubscriptionDetailsClass(
       signer.address || 'unknown',
-      Date.now(),
-      Date.now(),
-      credits,
-      frequency,
       targetString,
-      metadata || '',
-      '0x0000' // Default call index as hex string
+      call,
+      originKind
     );
+
     const subscription = new SubscriptionClass(
       newId,
       details,
       credits, // creditsLeft starts as full amount
       SubscriptionState.Active,
-      0, // creditsConsumed starts at 0
-      0 // feesPaid starts at 0
+      now, // createdAt
+      now, // updatedAt
+      credits,
+      frequency,
+      metadata || null,
+      null // lastDelivered
     );
 
     this.subscriptions.set(subscription.id, subscription);
@@ -175,6 +184,7 @@ export class MockSubscriptionService implements ISubscriptionService {
     if (subscription.details.subscriber !== signer.address) throw new Error('Unauthorized');
 
     subscription.state = SubscriptionState.Paused;
+    subscription.updatedAt = Date.now();
     this.subscriptions.set(subscriptionId, subscription);
   }
 
@@ -205,26 +215,22 @@ export class MockSubscriptionService implements ISubscriptionService {
 
     // Update only the provided parameters
     if (params.amount !== undefined) {
-      subscription.details.amount = params.amount;
-      // Update credits left if amount increased
-      const addedCredits =
-        params.amount - (subscription.creditsLeft + subscription.creditsConsumed);
+      const addedCredits = params.amount - subscription.credits;
+      subscription.credits = params.amount;
       if (addedCredits > 0) {
         subscription.creditsLeft += addedCredits;
       }
     }
 
     if (params.frequency !== undefined) {
-      subscription.details.frequency = params.frequency;
+      subscription.frequency = params.frequency;
     }
 
     if (params.metadata !== undefined) {
-      subscription.details.metadata = params.metadata;
+      subscription.metadata = params.metadata;
     }
 
-    // PulseFilter support removed
-
-    subscription.details.updatedAt = Date.now();
+    subscription.updatedAt = Date.now();
     this.subscriptions.set(params.subscriptionId, subscription);
   }
 
@@ -240,6 +246,7 @@ export class MockSubscriptionService implements ISubscriptionService {
     if (subscription.details.subscriber !== signer.address) throw new Error('Unauthorized');
 
     subscription.state = SubscriptionState.Active;
+    subscription.updatedAt = Date.now();
     this.subscriptions.set(subscriptionId, subscription);
   }
 
@@ -294,12 +301,12 @@ export class MockSubscriptionService implements ISubscriptionService {
    * Calculates a mock storage deposit based on subscription parameters.
    * This would be replaced with actual blockchain-based calculation in a real implementation.
    *
-   * @param amount Number of random values
+   * @param credits Number of random values
    * @param target XCM target location
    * @param metadata Optional metadata string
    * @returns The calculated storage deposit amount
    */
-  private calculateStorageDeposit(amount: number, target: string, metadata?: string): number {
+  private calculateStorageDeposit(credits: number, target: string, metadata?: string): number {
     // Base deposit
     let deposit = 1.0;
 
@@ -310,8 +317,6 @@ export class MockSubscriptionService implements ISubscriptionService {
     if (metadata) {
       deposit += metadata.length * 0.005;
     }
-
-    // No longer using pulse filter
 
     return deposit;
   }

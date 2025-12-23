@@ -1,13 +1,19 @@
 'use client';
 
+// Ensure reflect-metadata is loaded before tsyringe
+import 'reflect-metadata';
+
 import { usePolkadot } from '@/components/contexts/polkadotContext';
 import { DelayedTransaction } from '@/domain/DelayedTransaction';
 import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
+import { container } from '@/lib/di-container';
 import { explorerClient } from '@/lib/explorer-client';
 import { IChainStateService } from '@/services/IChainStateService';
-import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
-import { container } from 'tsyringe';
+import React, { ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
+
+// Polling interval for fetching randomness from server (in milliseconds)
+const RANDOMNESS_POLL_INTERVAL = 3000;
 
 // Define the shape of the context
 interface ConnectedWalletContextType {
@@ -59,6 +65,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
   const { polkadotApiService } = usePolkadot();
   const chainStateService = container.resolve<IChainStateService>('IChainStateService');
   const [isReady, setIsReady] = useState(false);
+  const randomnessPollRef = useRef<NodeJS.Timeout | null>(null);
   const [signer, setSigner] = useState<any>(undefined); // The state variable
   const [isConnected, setIsConnected] = useState(false);
   const [signerAddress, setSignerAddress] = useState<string>('');
@@ -86,6 +93,49 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
     checkApiReady();
   }, [polkadotApiService]);
 
+  // Poll server-side randomness cache
+  useEffect(() => {
+    const fetchRandomness = async () => {
+      try {
+        const response = await fetch('/api/randomness');
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.success && result.data) {
+          // Convert API data to Randomness instances
+          const randomnessData = result.data.map(
+            (item: any) =>
+              new Randomness(
+                item.block,
+                item.randomness,
+                item.signature,
+                item.startRound,
+                item.endRound,
+                item.timestamp
+              )
+          );
+          setGeneratedRandomness(randomnessData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch randomness:', error);
+      }
+    };
+
+    // Fetch immediately on mount
+    fetchRandomness();
+
+    // Set up polling interval
+    randomnessPollRef.current = setInterval(fetchRandomness, RANDOMNESS_POLL_INTERVAL);
+
+    return () => {
+      if (randomnessPollRef.current) {
+        clearInterval(randomnessPollRef.current);
+        randomnessPollRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!isReady) return;
 
@@ -103,7 +153,7 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
               .catch(console.error);
           }
 
-          // Get session and era progress
+          // Get session and era progress (without randomness - now handled by event subscription)
           Promise.all([
             chainStateService.getSessionInfo(),
             chainStateService.getSessionIndex(),
@@ -112,9 +162,8 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
               blockNumber > NUMBER_BLOCKS_EXECUTED ? blockNumber - NUMBER_BLOCKS_EXECUTED : 0,
               blockNumber
             ),
-            explorerClient?.getRandomness(blockNumber, RAMDOMNESS_SAMPLE),
           ])
-            .then(([sessionInfo, sessionIndex, scheduled, executed, randomness]) => {
+            .then(([sessionInfo, sessionIndex, scheduled, executed]) => {
               setSessionProgress(sessionInfo.sessionProgress);
               setSessionLength(sessionInfo.sessionLength);
               setEraProgress(sessionInfo.eraProgress);
@@ -122,7 +171,6 @@ export const ConnectedWalletProvider: React.FC<{ children: ReactNode }> = ({ chi
               setSessionIndex(sessionIndex);
               setScheduledTransactions(scheduled || []);
               setExecutedTransactions(executed || []);
-              setGeneratedRandomness(randomness || []);
             })
             .catch(console.error);
         });

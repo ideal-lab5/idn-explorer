@@ -1,9 +1,12 @@
 'use client';
 
+// Ensure reflect-metadata is loaded before tsyringe
+import 'reflect-metadata';
+
+import { container } from '@/lib/di-container';
 import { IChainStateService } from '@/services/IChainStateService';
 import { IPolkadotApiService } from '@/services/IPolkadotApiService';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { container } from 'tsyringe';
 
 interface PolkadotContextType {
   polkadotApiService: IPolkadotApiService;

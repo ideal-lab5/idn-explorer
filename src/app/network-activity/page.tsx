@@ -33,12 +33,15 @@ import { Navbar, NavbarItem, NavbarSection } from '@/components/navbar';
 import { Pagination, PaginationNext, PaginationPrevious } from '@/components/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table';
 import { Randomness } from '@/domain/Randomness';
+import { container } from '@/lib/di-container';
 import { DrandService } from '@/services/DrandService';
+import { ISubscriptionService } from '@/services/ISubscriptionService';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
 import { formatNumber } from '@polkadot/util';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 function Stat({
   title,
@@ -98,11 +101,41 @@ export default function NetworkActivityPage() {
   const [currentRound, setCurrentRound] = useState<number>(0);
   const [drandService] = useState(() => new DrandService());
   const [refreshTrigger, setRefreshTrigger] = useState(false);
+  const [subscriptionsCount, setSubscriptionsCount] = useState<number | null>(null);
+
+  // Transform randomness data for the chart (reverse to show oldest first, limit to last 50)
+  // Shows cumulative count of randomness values generated
+  const chartData = useMemo(() => {
+    const reversed = [...generatedRandomness].slice(0, 50).reverse();
+    return reversed.map((entry, index) => ({
+      block: entry.block,
+      cumulativeCount: index + 1,
+      totalCount: reversed.length,
+    }));
+  }, [generatedRandomness]);
 
   const onCopyText = () => {
     setCopyStatus(true);
     setTimeout(() => setCopyStatus(false), 2000); // Reset status after 2 seconds
   };
+
+  // Fetch subscriptions count
+  useEffect(() => {
+    const fetchSubscriptions = async () => {
+      try {
+        const subscriptionService = container.resolve<ISubscriptionService>('ISubscriptionService');
+        const allSubscriptions = await subscriptionService.getAllSubscriptions();
+        setSubscriptionsCount(allSubscriptions.length);
+      } catch (error) {
+        console.error('Failed to fetch subscriptions:', error);
+      }
+    };
+
+    fetchSubscriptions();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchSubscriptions, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchCurrentRound = async () => {
@@ -151,7 +184,7 @@ export default function NetworkActivityPage() {
     <main className="w-full flex-1">
       <div className="w-full px-8 py-8">
         <h1 className="mb-6 text-3xl font-bold">
-          IDN Network Activity Hub <Badge>{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</Badge>
+          Ideal Network Activity Hub <Badge>{`Latest ${NUMBER_BLOCKS_EXECUTED} blocks`}</Badge>
         </h1>
         <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <Stat
@@ -173,43 +206,29 @@ export default function NetworkActivityPage() {
             helpText=""
           />
           <Stat
-            title="Events"
-            value={formatNumber(
-              executedTransactions
-                .filter(element => (delayedOnly && element.delayedTx) || !delayedOnly)
-                .filter(
-                  element =>
-                    searchTermExecuted == '' ||
-                    element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) ||
-                    element.operation.toLowerCase().includes(searchTermExecuted.toLowerCase()) ||
-                    element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase())
-                ).length
-            )}
-            change={`Last ${NUMBER_BLOCKS_EXECUTED} blocks`}
+            title="Subscriptions"
+            value={subscriptionsCount !== null ? formatNumber(subscriptionsCount) : '...'}
+            change="On the network"
             helpText=""
           />
-          <Stat
-            title="Scheduled"
-            value={formatNumber(
-              scheduledTransactions.filter(
-                element =>
-                  searchTermScheduled == '' ||
-                  element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
-                  element.operation.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
-                  element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase())
-              ).length
-            )}
-            change="Upcoming txs"
-            helpText=""
-          />
-        </div>
-        <div className="mb-8 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="border-b border-zinc-200 p-6 dark:border-zinc-800">
-            <h3 className="text-lg font-medium">Transaction Data</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              View and search for transaction data
-            </p>
+          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="p-6">
+              <div className="flex flex-row items-center justify-between space-y-0">
+                <h3 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Timelocked{' '}
+                  <span className="ml-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                    Soon
+                  </span>
+                </h3>
+              </div>
+              <div className="mt-2">
+                <div className="text-2xl font-bold">-</div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Coming soon</p>
+              </div>
+            </div>
           </div>
+        </div>
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="p-6">
             <div className="mb-4">
               <Navbar>
@@ -219,27 +238,149 @@ export default function NetworkActivityPage() {
                     onClick={() => setSelectedTab(0)}
                     current={selectedTab === 0}
                   >
-                    Latest Activity
+                    Randomness
                   </NavbarItem>
                   <NavbarItem
                     href="#"
                     onClick={() => setSelectedTab(1)}
                     current={selectedTab === 1}
                   >
-                    Scheduled
+                    Latest Events
                   </NavbarItem>
                   <NavbarItem
                     href="#"
                     onClick={() => setSelectedTab(2)}
                     current={selectedTab === 2}
                   >
-                    Randomness
+                    Timelocked{' '}
+                    <span className="ml-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                      Soon
+                    </span>
                   </NavbarItem>
                 </NavbarSection>
               </Navbar>
             </div>
 
             {selectedTab === 0 && (
+              <>
+                {/* Cumulative Randomness Count Chart */}
+                {chartData.length > 0 && (
+                  <div className="mb-6 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
+                    <h4 className="mb-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Cumulative Randomness Bridged
+                    </h4>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                          <defs>
+                            <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis
+                            dataKey="block"
+                            tick={{ fontSize: 11, fill: '#71717a' }}
+                            tickFormatter={value => `#${formatNumber(value)}`}
+                            axisLine={{ stroke: '#3f3f46' }}
+                            tickLine={{ stroke: '#3f3f46' }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 11, fill: '#71717a' }}
+                            axisLine={{ stroke: '#3f3f46' }}
+                            tickLine={{ stroke: '#3f3f46' }}
+                            allowDecimals={false}
+                            domain={[0, 'dataMax']}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#18181b',
+                              border: '1px solid #3f3f46',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                            }}
+                            labelStyle={{ color: '#a1a1aa' }}
+                            itemStyle={{ color: '#8b5cf6' }}
+                            formatter={(value: number) => [`${value} values`, 'Total']}
+                            labelFormatter={label => `Block #${formatNumber(label)}`}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="cumulativeCount"
+                            stroke="#8b5cf6"
+                            strokeWidth={2}
+                            fill="url(#colorCumulative)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
+                  <TableHead>
+                    <TableRow>
+                      <TableHeader>Block</TableHeader>
+                      <TableHeader>Rounds</TableHeader>
+                      <TableHeader>
+                        Signature{' '}
+                        {copyStatus && (
+                          <Badge color="cyan" className="text-xs text-zinc-500">
+                            copied to clipboard!
+                          </Badge>
+                        )}
+                      </TableHeader>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {generatedRandomness
+                      .slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE)
+                      .map((entry: Randomness, index: number) => (
+                        <CopyToClipboard
+                          key={'copy_' + index}
+                          text={entry.randomness}
+                          onCopy={onCopyText}
+                        >
+                          <TableRow
+                            key={'row_' + index}
+                            className="cursor-pointer"
+                            title={`Click to copy randomness from block #${entry.block}`}
+                          >
+                            <TableCell>{formatNumber(entry.block)}</TableCell>
+                            <TableCell>
+                              <Badge color="purple">
+                                {entry.startRound > 0 || entry.endRound > 0
+                                  ? `${formatNumber(entry.startRound)} - ${formatNumber(entry.endRound)}`
+                                  : 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-wrap">
+                              <p className="font-mono text-xs">{entry.randomness}</p>
+                            </TableCell>
+                          </TableRow>
+                        </CopyToClipboard>
+                      ))}
+                  </TableBody>
+                </Table>
+                {generatedRandomness.length > PAGE_SIZE && (
+                  <Pagination>
+                    <PaginationPrevious
+                      onClick={
+                        randomnessPage > 0 ? () => setRandomnessPage(randomnessPage - 1) : undefined
+                      }
+                    />
+                    <PaginationNext
+                      onClick={
+                        (randomnessPage + 1) * PAGE_SIZE < generatedRandomness.length
+                          ? () => setRandomnessPage(randomnessPage + 1)
+                          : undefined
+                      }
+                    />
+                  </Pagination>
+                )}
+              </>
+            )}
+            {selectedTab === 1 && (
               <>
                 <div className="mt-4 grid sm:grid-cols-2 xl:grid-cols-3">
                   <InputGroup>
@@ -313,18 +454,33 @@ export default function NetworkActivityPage() {
                   ).length > PAGE_SIZE && (
                   <Pagination>
                     <PaginationPrevious
-                      href={
-                        executedTxPage === 0
-                          ? `?executedTxPage=0&tab=0`
-                          : `?executedTxPage=${executedTxPage - 1}&tab=0`
+                      onClick={
+                        executedTxPage > 0 ? () => setExecutedTxPage(executedTxPage - 1) : undefined
                       }
                     />
-                    <PaginationNext href={`?executedTxPage=${executedTxPage + 1}&tab=0`} />
+                    <PaginationNext
+                      onClick={
+                        (executedTxPage + 1) * PAGE_SIZE <
+                        executedTransactions
+                          .filter(element => (delayedOnly && element.delayedTx) || !delayedOnly)
+                          .filter(
+                            element =>
+                              searchTermExecuted == '' ||
+                              element.id.toLowerCase().includes(searchTermExecuted.toLowerCase()) ||
+                              element.operation
+                                .toLowerCase()
+                                .includes(searchTermExecuted.toLowerCase()) ||
+                              element.owner.toLowerCase().includes(searchTermExecuted.toLowerCase())
+                          ).length
+                          ? () => setExecutedTxPage(executedTxPage + 1)
+                          : undefined
+                      }
+                    />
                   </Pagination>
                 )}
               </>
             )}
-            {selectedTab === 1 && (
+            {selectedTab === 2 && (
               <>
                 <div className="mt-4 grid sm:grid-cols-2 xl:grid-cols-2">
                   <InputGroup>
@@ -334,7 +490,7 @@ export default function NetworkActivityPage() {
                       id="searchScheduled"
                       value={searchTermScheduled}
                       onChange={e => setSearchTermScheduled(e.target.value)}
-                      placeholder="Search scheduled txs"
+                      placeholder="Search timelocked txs"
                       aria-label="Search"
                     />
                   </InputGroup>
@@ -372,65 +528,37 @@ export default function NetworkActivityPage() {
                       ))}
                   </TableBody>
                 </Table>
-                {scheduledTransactions.length > PAGE_SIZE && (
+                {scheduledTransactions.filter(
+                  element =>
+                    searchTermScheduled == '' ||
+                    element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
+                    element.operation.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
+                    element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase())
+                ).length > PAGE_SIZE && (
                   <Pagination>
                     <PaginationPrevious
-                      href={
-                        scheduledTxPage === 0
-                          ? `?scheduledTxPage=0&tab=1`
-                          : `?scheduledTxPage=${scheduledTxPage - 1}&tab=1`
+                      onClick={
+                        scheduledTxPage > 0
+                          ? () => setScheduledTxPage(scheduledTxPage - 1)
+                          : undefined
                       }
                     />
-                    <PaginationNext href={`?scheduledTxPage=${scheduledTxPage + 1}&tab=1`} />
-                  </Pagination>
-                )}
-              </>
-            )}
-            {selectedTab === 2 && (
-              <>
-                <Table className="mt-4 [--gutter:theme(spacing.6)] lg:[--gutter:theme(spacing.10)]">
-                  <TableHead>
-                    <TableRow>
-                      <TableHeader>Block</TableHeader>
-                      <TableHeader>
-                        Randomness{' '}
-                        {copyStatus && (
-                          <Badge color="cyan" className="text-xs text-zinc-500">
-                            copied to clipboard!
-                          </Badge>
-                        )}
-                      </TableHeader>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {generatedRandomness
-                      .slice(randomnessPage * PAGE_SIZE, (randomnessPage + 1) * PAGE_SIZE)
-                      .map((transaction: Randomness, index: number) => (
-                        <CopyToClipboard
-                          key={'copy_' + index}
-                          text={transaction.randomness}
-                          onCopy={onCopyText}
-                        >
-                          <TableRow key={'row_' + index} href={'#'} title={`Transaction #${index}`}>
-                            <TableCell>{formatNumber(transaction.block)}</TableCell>
-                            <TableCell className="text-wrap">
-                              <p className="text-xs">{transaction.randomness}</p>
-                            </TableCell>
-                          </TableRow>
-                        </CopyToClipboard>
-                      ))}
-                  </TableBody>
-                </Table>
-                {generatedRandomness.length > PAGE_SIZE && (
-                  <Pagination>
-                    <PaginationPrevious
-                      href={
-                        randomnessPage === 0
-                          ? `?randomnessPage=0&tab=2`
-                          : `?randomnessPage=${randomnessPage - 1}&tab=2`
+                    <PaginationNext
+                      onClick={
+                        (scheduledTxPage + 1) * PAGE_SIZE <
+                        scheduledTransactions.filter(
+                          element =>
+                            searchTermScheduled == '' ||
+                            element.id.toLowerCase().includes(searchTermScheduled.toLowerCase()) ||
+                            element.operation
+                              .toLowerCase()
+                              .includes(searchTermScheduled.toLowerCase()) ||
+                            element.owner.toLowerCase().includes(searchTermScheduled.toLowerCase())
+                        ).length
+                          ? () => setScheduledTxPage(scheduledTxPage + 1)
+                          : undefined
                       }
                     />
-                    <PaginationNext href={`?randomnessPage=${randomnessPage + 1}&tab=2`} />
                   </Pagination>
                 )}
               </>

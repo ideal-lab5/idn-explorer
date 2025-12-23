@@ -25,6 +25,12 @@ export interface XcmLocation {
 }
 
 /**
+ * Origin kind for XCM dispatch.
+ * Matches the OriginKind enum from the idn-manager pallet (primitives.rs).
+ */
+export type OriginKind = 'Native' | 'SovereignAccount' | 'Superuser' | 'Xcm';
+
+/**
  * Parameters for updating a subscription with optional fields.
  * When a field is undefined, it remains unchanged.
  */
@@ -53,7 +59,8 @@ export interface ISubscriptionService {
    * @param signer - The account that will sign and pay for the transaction
    * @param credits - Number of credits (random values) to purchase for the subscription
    * @param target - XCM Location structure for randomness delivery
-   * @param callIndex - Two-byte array [pallet_index, call_index] for XCM dispatch
+   * @param call - Pre-encoded SCALE call data as hex string (e.g., "0x2a03" for [pallet_index, call_index])
+   * @param originKind - Origin kind for XCM dispatch (Native, SovereignAccount, Superuser, Xcm)
    * @param frequency - How often to receive randomness (in blocks)
    * @param metadata - Optional metadata to store with the subscription
    * @param subscriptionId - Optional subscription ID, auto-generated if not provided
@@ -63,7 +70,8 @@ export interface ISubscriptionService {
     signer: any,
     credits: number,
     target: XcmLocation,
-    callIndex: [number, number],
+    call: string,
+    originKind: OriginKind,
     frequency: number,
     metadata?: string,
     subscriptionId?: string

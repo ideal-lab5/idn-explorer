@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
 import { inject, injectable } from 'tsyringe';
 import type { Subscription, SubscriptionDetails, SubscriptionState } from '../domain/Subscription';
 import {
@@ -22,7 +23,11 @@ import {
   SubscriptionState as SubscriptionStateEnum,
 } from '../domain/Subscription';
 import type { IPolkadotApiService } from './IPolkadotApiService';
-import type { ISubscriptionService, UpdateSubscriptionParams } from './ISubscriptionService';
+import type {
+  ISubscriptionService,
+  OriginKind,
+  UpdateSubscriptionParams,
+} from './ISubscriptionService';
 
 /**
  * XCM Location structure matching the pallet's Location type
@@ -152,61 +157,78 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
+   * Compares two SS58 addresses by their underlying public key.
+   * This handles cases where the same account is encoded with different SS58 prefixes.
+   */
+  private isSameAddress(address1: string, address2: string): boolean {
+    try {
+      const pubKey1 = decodeAddress(address1);
+      const pubKey2 = decodeAddress(address2);
+      return Buffer.from(pubKey1).equals(Buffer.from(pubKey2));
+    } catch (error) {
+      console.error('Error comparing addresses:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Converts a hex string to a Uint8Array for call data.
+   * @param hex The hex string (with or without 0x prefix)
+   * @returns Uint8Array of the call data bytes
+   */
+  private hexToBytes(hex: string): number[] {
+    const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+    const bytes: number[] = [];
+    for (let i = 0; i < cleanHex.length; i += 2) {
+      bytes.push(parseInt(cleanHex.substr(i, 2), 16));
+    }
+    return bytes;
+  }
+
+  /**
    * Creates a new subscription for randomness delivery.
    * Maps to the pallet's create_subscription extrinsic.
    *
    * @param signer - The wallet/signer for the transaction
    * @param credits - Number of random values to receive (was 'amount')
    * @param target - XCM Location structure for pulse delivery
-   * @param callIndex - Two-byte array [pallet_index, call_index] for XCM dispatch
+   * @param call - Pre-encoded SCALE call data as hex string
+   * @param originKind - Origin kind for XCM dispatch
    * @param frequency - Distribution interval for pulses
    * @param metadata - Optional metadata for the subscription
+   * @param subscriptionId - Optional subscription ID, auto-generated if not provided
    */
   async createSubscription(
     signer: any,
     credits: number,
     target: XcmLocation,
-    callIndex: [number, number],
+    call: string,
+    originKind: OriginKind,
     frequency: number,
-    metadata?: string
+    metadata?: string,
+    subscriptionId?: string
   ): Promise<void> {
     try {
       const api = await this.polkadotApiService.getApi();
 
       const formattedTarget = this.formatXcmLocation(target);
 
-      // Ensure call_index is properly formatted as [u8; 2] array
-      const formattedCallIndex =
-        Array.isArray(callIndex) && callIndex.length === 2
-          ? callIndex
-          : [callIndex[0] || 0, callIndex[1] || 0];
+      // The pallet expects call data as a BoundedVec<u8>.
+      // Convert hex to raw bytes array - Polkadot.js handles the SCALE encoding.
+      const callBytes = this.hexToBytes(call);
 
       // Call the create_subscription extrinsic with CreateSubParams struct parameter
-      // The pallet expects a single struct with exact field names from primitives.rs
       const createParams = {
         credits,
         target: formattedTarget,
-        call_index: formattedCallIndex, // Ensure it's a proper [u8; 2] array
+        call: callBytes,
+        origin_kind: originKind,
         frequency,
         metadata: metadata || null,
-        sub_id: null, // Use auto-generated subscription ID
+        sub_id: subscriptionId || null,
       };
 
-      let extrinsic;
-      try {
-        extrinsic = api.tx.idnManager.createSubscription(createParams);
-      } catch (createError) {
-        console.error('Error creating extrinsic:', createError);
-        // Fallback: try calling with individual parameters
-        extrinsic = api.tx.idnManager.createSubscription(
-          createParams.credits,
-          createParams.target,
-          createParams.call_index,
-          createParams.frequency,
-          createParams.metadata,
-          null // Use auto-generated subscription ID
-        );
-      }
+      const extrinsic = api.tx.idnManager.createSubscription(createParams);
 
       // Sign and send the transaction with optimized handling for client-side navigation
       return new Promise((resolve, reject) => {
@@ -224,11 +246,6 @@ export class IdnSubscriptionService implements ISubscriptionService {
           .signAndSend(signer.address, { signer: signer.signer }, (result: any) => {
             try {
               const { status, events, dispatchError } = result;
-
-              // Log when transaction is accepted by the network
-              if (status.isReady) {
-                console.log('Transaction submitted to the network');
-              }
 
               // Resolve when transaction is included in a block
               if (status.isInBlock || status.isFinalized) {
@@ -723,19 +740,14 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
         try {
           if (value && !value.isEmpty) {
-            const rawData = value.toJSON();
-
-            // Quick check: look for account ID in raw data before expensive conversion
-            const rawString = JSON.stringify(rawData);
-            if (!rawString.includes(accountId)) {
-              continue; // Skip expensive conversion if account not found in raw data
-            }
+            // Use toHuman() for proper field names
+            const rawData = value.toHuman();
 
             // Check if this subscription belongs to the requested account
             const subscription = this.palletSubscriptionToSubscription(rawData);
 
-            // Filter by account if the subscription has subscriber info
-            if (subscription.details.subscriber === accountId) {
+            // Compare addresses by public key to handle different SS58 prefixes
+            if (this.isSameAddress(subscription.details.subscriber, accountId)) {
               subscriptions.push(subscription);
             }
           }
@@ -769,7 +781,12 @@ export class IdnSubscriptionService implements ISubscriptionService {
         const subscriptionData = await api.query.idnManager.subscriptions(subscriptionId);
 
         if (subscriptionData && !subscriptionData.isEmpty) {
-          const rawData = subscriptionData.toJSON();
+          // Log both formats to understand the data structure
+          console.log('Storage toJSON:', JSON.stringify(subscriptionData.toJSON(), null, 2));
+          console.log('Storage toHuman:', JSON.stringify(subscriptionData.toHuman(), null, 2));
+
+          // Use toHuman() which gives more readable format with proper field names
+          const rawData = subscriptionData.toHuman();
           return this.palletSubscriptionToSubscription(rawData);
         }
       } catch (directQueryError) {
@@ -795,7 +812,7 @@ export class IdnSubscriptionService implements ISubscriptionService {
 
         try {
           if (value && !value.isEmpty) {
-            const rawData = value.toJSON();
+            const rawData = value.toHuman();
             const subscription = this.palletSubscriptionToSubscription(rawData);
 
             // Check if this is the subscription we're looking for
@@ -949,7 +966,88 @@ export class IdnSubscriptionService implements ISubscriptionService {
   }
 
   /**
-   * Converts a pallet subscription to our domain Subscription model
+   * Converts call data bytes to hex string
+   */
+  private bytesToHex(bytes: number[] | Uint8Array | any): string {
+    if (!bytes) return '';
+    if (typeof bytes === 'string') return bytes.startsWith('0x') ? bytes : `0x${bytes}`;
+
+    // Handle array-like structures
+    const arr = Array.isArray(bytes) ? bytes : Array.from(bytes);
+    return '0x' + arr.map((b: number) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * Extracts call data from various formats returned by the pallet.
+   * The call field is stored as BoundedVec<u8> and returned via toHuman() as a hex string.
+   *
+   * When Polkadot.js returns the data via toHuman(), it may:
+   * 1. Return the raw hex string: "0x2a03"
+   * 2. Return with SCALE length prefix: "0x082a03" (08 = compact length 2)
+   *
+   * We try to detect and handle both cases.
+   */
+  private extractCallData(callData: any): string {
+    if (!callData) return '';
+
+    // If it's already a proper hex string (from toHuman or toJSON)
+    if (typeof callData === 'string') {
+      if (callData.startsWith('0x')) {
+        const hex = callData.slice(2); // Remove '0x'
+
+        // Check if this looks like SCALE-encoded with length prefix
+        // For call data of 2 bytes, SCALE prefix would be 0x08 (length 2 in compact)
+        if (hex.length >= 2) {
+          const firstByte = parseInt(hex.slice(0, 2), 16);
+
+          // Compact encoding: if lowest 2 bits are 00, it's single-byte mode
+          // and the length = value >> 2
+          if ((firstByte & 0x03) === 0x00 && firstByte > 0) {
+            const actualLength = firstByte >> 2;
+            const expectedHexLength = 2 + actualLength * 2; // prefix + data
+
+            // If the total length matches what we'd expect with a length prefix
+            if (hex.length === expectedHexLength && actualLength > 0) {
+              const actualData = hex.slice(2, 2 + actualLength * 2);
+              return '0x' + actualData;
+            }
+          }
+        }
+
+        // Return hex as-is (either no prefix or we couldn't detect one)
+        return callData;
+      }
+
+      // Might be a comma-separated string from toHuman() like "42,4"
+      if (callData.includes(',')) {
+        const parts = callData.split(',').map((p: string) => p.trim());
+        const bytes = parts.map((p: string) => {
+          const num = p.startsWith('0x') ? parseInt(p, 16) : parseInt(p, 10);
+          return num.toString(16).padStart(2, '0');
+        });
+        return '0x' + bytes.join('');
+      }
+
+      // Plain hex without prefix
+      return '0x' + callData;
+    }
+
+    // If it's an array (could be from codec or toHuman)
+    if (Array.isArray(callData)) {
+      const bytes = callData.map((b: any) => {
+        const num = typeof b === 'string' ? parseInt(b, 10) : b;
+        return num.toString(16).padStart(2, '0');
+      });
+      return '0x' + bytes.join('');
+    }
+
+    // Fallback to bytesToHex for other cases
+    return this.bytesToHex(callData);
+  }
+
+  /**
+   * Converts a pallet subscription to our domain Subscription model.
+   * Matches the pallet's Subscription struct (lib.rs:146-167).
    */
   private palletSubscriptionToSubscription(palletSub: any): Subscription {
     try {
@@ -957,111 +1055,57 @@ export class IdnSubscriptionService implements ISubscriptionService {
         throw new Error('Pallet subscription data is null or undefined');
       }
 
-      // Log the full structure for debugging
-      console.log('Raw subscription data:', JSON.stringify(palletSub, null, 2));
+      // Use toHuman() if available to get a more readable format
+      const data =
+        palletSub.toHuman && typeof palletSub.toHuman === 'function'
+          ? palletSub.toHuman()
+          : palletSub;
 
-      // Check if we have a format with details as a separate field or flat structure
-      // Handle both formats flexibly
-      let details = palletSub.details;
-      let subscriber, target, callIndex;
-      let createdAt = Date.now();
-      let updatedAt = Date.now();
-      let credits = 0;
-      let frequency = 1;
-      let metadata = '';
-      let creditsLeft = 0;
-      let state = SubscriptionStateEnum.Active;
-      let id = 'unknown';
+      // Helper to parse numbers from human-readable format (removes commas)
+      const parseNum = (val: any): number => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') return Number(val.replace(/,/g, ''));
+        return Number(val);
+      };
 
-      // Handle ID field - could be at root or in toHuman()
-      if (palletSub.id) {
-        id = palletSub.id.toString();
-      } else if (palletSub.toHuman && typeof palletSub.toHuman === 'function') {
-        // Try using toHuman() for Substrate codec objects
-        const human = palletSub.toHuman();
-        console.log('Human readable form:', human);
+      // Extract ID
+      const id = data.id?.toString() || 'unknown';
 
-        if (human.id) {
-          id = human.id.toString();
-        }
+      // Extract state
+      const state = this.palletStateToSubscriptionState(data.state);
 
-        // Extract other fields from human readable form
-        if (human.state) {
-          state = this.palletStateToSubscriptionState(human.state);
-        }
+      // Extract root-level fields (matching pallet Subscription struct)
+      const creditsLeft = parseNum(data.creditsLeft || data.credits_left);
+      const createdAt = parseNum(data.createdAt || data.created_at);
+      const updatedAt = parseNum(data.updatedAt || data.updated_at);
+      const credits = parseNum(data.credits);
+      const frequency = parseNum(data.frequency);
+      const lastDeliveredRaw = data.lastDelivered || data.last_delivered;
+      const lastDelivered = lastDeliveredRaw ? parseNum(lastDeliveredRaw) : null;
 
-        // Extract credits and creditsLeft
-        if (human.credits) {
-          credits = Number(human.credits.replace(/,/g, ''));
-        }
-        if (human.creditsLeft) {
-          creditsLeft = Number(human.creditsLeft.replace(/,/g, ''));
-        }
+      // Extract metadata (Option<Metadata>)
+      const metadata = data.metadata ? this.extractMetadataString(data.metadata) : null;
 
-        // Extract frequency
-        if (human.frequency) {
-          frequency = Number(human.frequency.replace(/,/g, ''));
-        }
+      // Extract details (SubscriptionDetails struct)
+      const detailsData = data.details || {};
 
-        // Extract details from human form
-        if (human.details) {
-          details = human.details;
-        }
-      }
+      const subscriber = detailsData.subscriber?.toString() || 'unknown';
+      const target = detailsData.target ? JSON.stringify(detailsData.target) : '';
 
-      // Process details field if it exists
-      if (details) {
-        // Could be directly accessible or might need toHuman()
-        let detailsObj = details;
-        if (details.toHuman && typeof details.toHuman === 'function') {
-          detailsObj = details.toHuman();
-        }
+      // Check all possible field names for call data
+      const callDataRaw = detailsData.call || detailsData.callIndex || detailsData.call_index;
+      const call = this.extractCallData(callDataRaw);
 
-        subscriber = detailsObj.subscriber ? detailsObj.subscriber.toString() : 'unknown';
-        target = detailsObj.target ? JSON.stringify(detailsObj.target) : '';
-        callIndex = detailsObj.callIndex ? detailsObj.callIndex.toString() : '';
-      } else {
-        // Handle flat structure - fields at root level
-        subscriber = palletSub.subscriber ? palletSub.subscriber.toString() : 'unknown';
-        target = palletSub.target ? JSON.stringify(palletSub.target) : '';
-        callIndex = palletSub.callIndex ? palletSub.callIndex.toString() : '';
-      }
+      const originKindRaw = detailsData.originKind || detailsData.origin_kind;
+      const originKind = this.extractOriginKind(originKindRaw);
 
-      // Extract date fields if they exist
-      if (palletSub.createdAt) {
-        createdAt = Number(palletSub.createdAt);
-      }
-      if (palletSub.updatedAt) {
-        updatedAt = Number(palletSub.updatedAt);
-      }
-
-      // Extract credits fields if at root level
-      if (palletSub.credits) {
-        credits = Number(palletSub.credits);
-      }
-      if (palletSub.creditsLeft) {
-        creditsLeft = Number(palletSub.creditsLeft);
-      }
-      if (palletSub.frequency) {
-        frequency = Number(palletSub.frequency);
-      }
-
-      // Handle metadata
-      if (palletSub.metadata) {
-        metadata = this.extractMetadataString(palletSub.metadata);
-      }
-
-      // Create subscription details object
+      // Create subscription details object (subscriber, target, call, originKind)
       const subscriptionDetails = new SubscriptionDetailsClass(
         subscriber,
-        createdAt,
-        updatedAt,
-        credits,
-        frequency,
         target,
-        metadata,
-        callIndex,
-        0 // deposit - not present in this structure
+        call,
+        originKind
       );
 
       // Create and return the subscription object
@@ -1069,26 +1113,19 @@ export class IdnSubscriptionService implements ISubscriptionService {
         id,
         subscriptionDetails,
         creditsLeft,
-        palletSub.state ? this.palletStateToSubscriptionState(palletSub.state) : state,
-        // Calculate creditsConsumed from credits - creditsLeft
-        credits && creditsLeft ? credits - creditsLeft : 0,
-        0 // feesPaid - not present in this structure
+        state,
+        createdAt,
+        updatedAt,
+        credits,
+        frequency,
+        metadata,
+        lastDelivered
       );
     } catch (error) {
-      console.error('Error converting pallet subscription:', error);
+      console.error('Error converting pallet subscription:', error, palletSub);
 
       // Create a minimal valid subscription to prevent breaking UI
-      const fallbackDetails = new SubscriptionDetailsClass(
-        'unknown',
-        Date.now(),
-        Date.now(),
-        0,
-        1,
-        '',
-        '',
-        '',
-        0
-      );
+      const fallbackDetails = new SubscriptionDetailsClass('unknown', '', '', 'Native');
 
       return new SubscriptionClass(
         palletSub?.id?.toString() || 'unknown',
@@ -1096,9 +1133,30 @@ export class IdnSubscriptionService implements ISubscriptionService {
         0,
         SubscriptionStateEnum.Active,
         0,
-        0
+        0,
+        0,
+        1,
+        null,
+        null
       );
     }
+  }
+
+  /**
+   * Extracts OriginKind from pallet data
+   */
+  private extractOriginKind(value: any): 'Native' | 'SovereignAccount' | 'Superuser' | 'Xcm' {
+    if (!value) return 'Native';
+
+    const strValue = typeof value === 'string' ? value : value.toString();
+
+    if (strValue === 'Native' || strValue === 'native') return 'Native';
+    if (strValue === 'SovereignAccount' || strValue === 'sovereignAccount')
+      return 'SovereignAccount';
+    if (strValue === 'Superuser' || strValue === 'superuser') return 'Superuser';
+    if (strValue === 'Xcm' || strValue === 'xcm') return 'Xcm';
+
+    return 'Native'; // Default
   }
 
   /**
@@ -1110,6 +1168,8 @@ export class IdnSubscriptionService implements ISubscriptionService {
       return SubscriptionStateEnum.Active;
     } else if (palletState.isPaused || palletState === 'Paused') {
       return SubscriptionStateEnum.Paused;
+    } else if (palletState.isFinalized || palletState === 'Finalized') {
+      return SubscriptionStateEnum.Finalized;
     } else {
       return SubscriptionStateEnum.Active; // Default fallback
     }

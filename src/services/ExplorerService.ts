@@ -20,6 +20,7 @@ import { ExecutedTransaction } from '@/domain/ExecutedTransaction';
 import { Randomness } from '@/domain/Randomness';
 import { DrandIdentityBuilder, SupportedCurve, Timelock, u8a } from '@ideallabs/timelock.js';
 import { EventRecord } from '@polkadot/types/interfaces';
+import { formatBalance } from '@polkadot/util';
 import * as hkdf from 'js-crypto-hkdf';
 import { inject, injectable } from 'tsyringe';
 import type { IDrandService } from './IDrandService';
@@ -358,14 +359,33 @@ export class ExplorerService implements IExplorerService {
   }
 
   async getFreeBalance(signer: any): Promise<string> {
-    const polkadotApi = await this.polkadotApiService.getApi();
-    // Get account info and properly handle typing
-    const accountInfo: any = await polkadotApi.query.system.account(signer.address);
-    // Access data and free balance with proper type casting
-    const balance = (accountInfo as any).data || accountInfo;
-    const freeBalance = (balance as any).free;
+    try {
+      const polkadotApi = await this.polkadotApiService.getApi();
+      // Get account info and properly handle typing
+      const accountInfo: any = await polkadotApi.query.system.account(signer.address);
+      // Access data and free balance with proper type casting
+      const balance = (accountInfo as any).data || accountInfo;
+      const freeBalance = (balance as any).free;
 
-    return freeBalance?.toHuman() || '0';
+      // Get token info from chain registry
+      const tokenDecimals = polkadotApi.registry.chainDecimals?.[0] || 12;
+      const tokenSymbol = polkadotApi.registry.chainTokens?.[0] || 'Unit';
+
+      // Format with SI notation disabled for cleaner display
+      const formatted = formatBalance(freeBalance, {
+        decimals: tokenDecimals,
+        withSi: false,
+        forceUnit: '-',
+      });
+
+      // Clean up: remove trailing zeros and commas
+      const cleanNumber = parseFloat(formatted.replace(/,/g, '')).toString();
+
+      return `${cleanNumber} ${tokenSymbol}`;
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      return '0';
+    }
   }
 
   async cancelTransaction(signer: any, blockNumber: number, index: number): Promise<void> {

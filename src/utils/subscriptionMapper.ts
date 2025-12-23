@@ -1,15 +1,35 @@
-import type { UiSubscription } from '@/app/subscriptions/types/UiSubscription';
+/*
+ * Copyright 2025 by Ideal Labs, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import type { SubscriptionType, UiSubscription } from '@/app/subscriptions/types/UiSubscription';
 import { Subscription, SubscriptionState } from '@/domain/Subscription';
+import { decodeCallData, isContractCall } from './callDataEncoder';
 
 /**
- * Converts a domain subscription model to the UI subscription model
+ * Converts a domain subscription model to the UI subscription model.
+ * Maps fields from the pallet-aligned domain model to the UI display format.
  */
 export function domainToUiSubscription(sub: Subscription): UiSubscription {
   // Parse parachain ID from target (handles both string and object formats)
   const parachainId = extractParachainId(sub.details.target);
 
-  // Parse call index to get pallet and call indices
-  const callIndex = parseCallIndex(sub.details.callIndex || '');
+  // Decode call data to determine subscription type and extract details
+  const callData = sub.details.call || '';
+  const decodedCall = decodeCallData(callData);
+  const subscriptionType: SubscriptionType = decodedCall.type;
 
   // Format XCM location for display
   const formattedXcmLocation = formatXcmLocation(sub.details.target);
@@ -17,28 +37,43 @@ export function domainToUiSubscription(sub: Subscription): UiSubscription {
   // Calculate usage history (this would ideally come from transaction history)
   const usageHistory = generateMockUsageHistory(sub.creditsConsumed);
 
-  return {
+  // Build the UI subscription object
+  const uiSubscription: UiSubscription = {
     id: sub.id,
-    name: decodeMetadata(sub.details.metadata) || `Randomness Subscription`,
+    name: decodeMetadata(sub.metadata) || `Randomness Subscription`,
     parachainId,
-    totalCredits: sub.details.amount, // Total credits purchased
-    creditsRemaining: sub.creditsLeft, // Credits remaining
-    creditsConsumed: sub.creditsConsumed, // Credits already consumed
-    frequency: sub.details.frequency,
-    xcmLocation: formattedXcmLocation, // Formatted for display
-    rawTarget: sub.details.target, // Raw XCM location data for sophisticated viewing
+    totalCredits: sub.credits,
+    creditsRemaining: sub.creditsLeft,
+    creditsConsumed: sub.creditsConsumed,
+    frequency: sub.frequency,
+    xcmLocation: formattedXcmLocation,
+    rawTarget: sub.details.target,
     status: mapStateToStatus(sub.state),
-    // Add call index information for display
-    callIndex: callIndex,
+    subscriptionType,
+    callIndex: {
+      pallet: decodedCall.palletIndex,
+      call: decodedCall.callIndex,
+    },
     usageHistory,
   };
+
+  // Add contract-specific fields if this is a contract subscription
+  if (decodedCall.type === 'contract') {
+    uiSubscription.contractAddress = decodedCall.contractAddress;
+    uiSubscription.contractSelector = decodedCall.selector;
+    uiSubscription.gasLimit = decodedCall.gasLimit;
+    uiSubscription.storageDepositLimit = decodedCall.storageDepositLimit;
+    uiSubscription.contractValue = decodedCall.value;
+  }
+
+  return uiSubscription;
 }
 
 /**
  * Decode metadata from subscription
  * Handles both string metadata and potentially hex-encoded bytes
  */
-function decodeMetadata(metadata: string | undefined): string {
+function decodeMetadata(metadata: string | null | undefined): string {
   if (!metadata) return '';
 
   // If it's already a readable string, return it
@@ -87,6 +122,19 @@ function extractParachainId(target: string | any): number {
         return parachain.parachain;
       }
     }
+    // Also check for X1 format with Parachain directly
+    if (target.interior?.X1?.Parachain) {
+      return target.interior.X1.Parachain;
+    }
+    // Check for array format: X1: [{ Parachain: 2000 }]
+    if (target.interior?.X1 && Array.isArray(target.interior.X1)) {
+      const parachain = target.interior.X1.find((j: any) => j.Parachain !== undefined);
+      if (parachain) {
+        // Handle formatted numbers like "2,000"
+        const val = parachain.Parachain;
+        return typeof val === 'string' ? parseInt(val.replace(/,/g, ''), 10) : val;
+      }
+    }
     return 0;
   }
 
@@ -103,26 +151,6 @@ function extractParachainId(target: string | any): number {
   }
 
   return 0;
-}
-
-/**
- * Parse call index from hex string (e.g., "0x2a03" -> { pallet: 42, call: 3 })
- */
-function parseCallIndex(callIndex: string): { pallet: number; call: number } {
-  if (!callIndex || !callIndex.startsWith('0x')) {
-    return { pallet: 0, call: 0 };
-  }
-
-  const hex = callIndex.slice(2); // Remove '0x'
-  if (hex.length !== 4) {
-    // Should be 4 hex chars for 2 bytes
-    return { pallet: 0, call: 0 };
-  }
-
-  const pallet = parseInt(hex.slice(0, 2), 16); // First byte
-  const call = parseInt(hex.slice(2, 4), 16); // Second byte
-
-  return { pallet, call };
 }
 
 /**
@@ -158,6 +186,8 @@ function mapStateToStatus(state: SubscriptionState): string {
       return 'active';
     case SubscriptionState.Paused:
       return 'paused';
+    case SubscriptionState.Finalized:
+      return 'finalized';
     default:
       return 'unknown';
   }

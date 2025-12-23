@@ -21,68 +21,80 @@
  */
 
 /**
+ * Origin kind for XCM dispatch.
+ * Matches the OriginKind enum from the idn-manager pallet (primitives.rs).
+ */
+export type OriginKind = 'Native' | 'SovereignAccount' | 'Superuser' | 'Xcm';
+
+/**
  * Represents the possible states of a subscription.
  * - Active: Subscription is currently receiving random values
  * - Paused: Subscription is temporarily suspended but can be reactivated
+ * - Finalized: Subscription is finalized and cannot be resumed
  */
 export enum SubscriptionState {
   Active = 'Active',
   Paused = 'Paused',
+  Finalized = 'Finalized',
 }
-
-// PulseFilter implementation removed
 
 /**
  * Contains the immutable details of a subscription.
- * These details are set when the subscription is created and
- * represent the core parameters of the randomness delivery service.
+ * Matches the pallet's SubscriptionDetails struct (lib.rs:176-185).
+ *
+ * These are the core parameters that identify where and how
+ * randomness should be delivered.
  */
 export class SubscriptionDetails {
   constructor(
     /** The account that created and owns the subscription */
     public subscriber: string,
-    /** Timestamp when the subscription was created */
-    public createdAt: number,
-    /** Timestamp of the last update to the subscription */
-    public updatedAt: number,
-    /** Total number of random values requested */
-    public amount: number,
-    /** Number of blocks between each random value delivery */
-    public frequency: number,
     /** XCM location where random values should be delivered */
     public target: string,
-    /** Additional data associated with the subscription */
-    public metadata: string,
-    /** Call index in hex format (e.g., '0x2a03') */
-    public callIndex: string,
-    /** The storage deposit locked for this subscription */
-    public deposit: number = 0
+    /** Pre-encoded call data as hex string (e.g., '0x2a03') */
+    public call: string,
+    /** Origin kind for XCM dispatch */
+    public originKind: OriginKind = 'Native'
   ) {}
 }
 
 /**
  * Represents a subscription for randomness delivery.
+ * Matches the pallet's Subscription struct (lib.rs:146-167).
+ *
  * This class encapsulates both the immutable details of a subscription
  * and its current state (credits remaining, active/paused status).
- *
- * The structure mirrors the on-chain subscription data structure from
- * the idn-manager pallet, ensuring type-safe interaction with the blockchain.
  */
 export class Subscription {
   constructor(
     /** Unique identifier for the subscription */
     public id: string,
-    /** Core subscription parameters */
+    /** Core subscription parameters (subscriber, target, call, originKind) */
     public details: SubscriptionDetails,
     /** Number of random values yet to be delivered */
     public creditsLeft: number,
     /** Current state of the subscription */
     public state: SubscriptionState = SubscriptionState.Active,
-    /** Number of credits already consumed */
-    public creditsConsumed: number = 0,
-    /** Total fees paid for consumed credits */
-    public feesPaid: number = 0
+    /** Block number when the subscription was created */
+    public createdAt: number,
+    /** Block number when the subscription was last updated */
+    public updatedAt: number,
+    /** Total credits subscribed for */
+    public credits: number,
+    /** How often to receive pulses (in blocks) */
+    public frequency: number,
+    /** Optional metadata for the subscription */
+    public metadata: string | null = null,
+    /** Last block in which a pulse was delivered (optional) */
+    public lastDelivered: number | null = null
   ) {}
+
+  /**
+   * Calculates the number of credits already consumed.
+   */
+  get creditsConsumed(): number {
+    return this.credits - this.creditsLeft;
+  }
 
   /**
    * Creates a new subscription with the specified parameters.
@@ -90,41 +102,37 @@ export class Subscription {
    * subscription fields, including timestamps and initial state.
    *
    * @param subscriber - Address of the account creating the subscription
-   * @param amount - Total number of random values requested
    * @param target - XCM location for delivery
+   * @param call - Pre-encoded call data as hex string
+   * @param originKind - Origin kind for XCM dispatch
+   * @param credits - Total number of random values requested
    * @param frequency - Blocks between deliveries
    * @param metadata - Optional additional data
    * @returns A new Subscription instance
    */
   static create(
     subscriber: string,
-    amount: number,
     target: string,
+    call: string,
+    originKind: OriginKind,
+    credits: number,
     frequency: number,
-    metadata: string = '',
-    callIndex: string = '',
-    deposit: number = 0
+    metadata: string | null = null
   ): Subscription {
     const now = Date.now();
-    const details = new SubscriptionDetails(
-      subscriber,
-      now,
-      now,
-      amount,
-      frequency,
-      target,
-      metadata,
-      callIndex,
-      deposit
-    );
+    const details = new SubscriptionDetails(subscriber, target, call, originKind);
 
     return new Subscription(
       `${subscriber}-${now}`, // Simple ID generation for mock
       details,
-      amount,
+      credits, // creditsLeft starts as full amount
       SubscriptionState.Active,
-      0, // creditsConsumed
-      0 // feesPaid
+      now, // createdAt
+      now, // updatedAt
+      credits,
+      frequency,
+      metadata,
+      null // lastDelivered
     );
   }
 }

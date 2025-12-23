@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-'use client';
+import 'reflect-metadata';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+// Global test setup
+beforeAll(() => {
+  // Any global setup
+});
 
-/**
- * Home page that redirects to the Activity Hub
- */
-export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.push('/network-activity');
-  }, [router]);
-
-  return null;
-}
+afterAll(() => {
+  // Any global cleanup
+});

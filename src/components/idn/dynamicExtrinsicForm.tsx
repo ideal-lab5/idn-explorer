@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
+// Ensure reflect-metadata is loaded before tsyringe
+import 'reflect-metadata';
+
 import { Field, Label } from '@/components/fieldset';
 import { Input } from '@/components/input';
 import { Select } from '@/components/select';
 import { DelayedTransactionDetails } from '@/domain/DelayedTransactionDetails';
+import { container } from '@/lib/di-container';
 import { ChainStateService } from '@/services/ChainStateService';
 import React, { useEffect, useState } from 'react';
-import { container } from 'tsyringe';
 
 interface PalletOption {
   text: string;

@@ -37,7 +37,6 @@ import {
 import { SidebarLayout } from '@/components/sidebar-layout';
 import {
   BoltIcon,
-  ChartBarIcon,
   ClockIcon,
   CubeIcon,
   QuestionMarkCircleIcon,
@@ -97,21 +96,20 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
             </SidebarHeader>
             <SidebarBody>
               <SidebarSection>
+                <SidebarItem
+                  href="/network-activity"
+                  current={Boolean(pathname === '/' || pathname === '/network-activity')}
+                >
+                  <SparklesIcon />
+                  <SidebarLabel>Activity Hub</SidebarLabel>
+                </SidebarItem>
+              </SidebarSection>
+
+              <SidebarSection>
                 <SidebarHeading>Randomness</SidebarHeading>
                 <SidebarItem
-                  href="/subscriptions/dashboard"
-                  current={Boolean(pathname === '/' || pathname === '/subscriptions/dashboard')}
-                >
-                  <ChartBarIcon />
-                  <SidebarLabel>Delivery Monitor</SidebarLabel>
-                </SidebarItem>
-                <SidebarItem
                   href="/subscriptions"
-                  current={Boolean(
-                    pathname === '/subscriptions' ||
-                      (pathname.startsWith('/subscriptions/') &&
-                        pathname !== '/subscriptions/dashboard')
-                  )}
+                  current={Boolean(pathname.startsWith('/subscriptions'))}
                 >
                   <BoltIcon />
                   <SidebarLabel>My Subscriptions</SidebarLabel>
@@ -120,16 +118,14 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
 
               <SidebarSection>
                 <SidebarHeading>Timelock</SidebarHeading>
-                <SidebarItem
-                  href="/network-activity"
-                  current={Boolean(pathname === '/network-activity')}
-                >
-                  <SparklesIcon />
-                  <SidebarLabel>Activity Hub</SidebarLabel>
-                </SidebarItem>
-                <SidebarItem href="/timelock" current={Boolean(pathname.startsWith('/timelock'))}>
+                <SidebarItem>
                   <ClockIcon />
-                  <SidebarLabel>My Transactions</SidebarLabel>
+                  <SidebarLabel>
+                    My Transactions
+                    <span className="ml-2 rounded-full bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                      Soon
+                    </span>
+                  </SidebarLabel>
                 </SidebarItem>
               </SidebarSection>
 
@@ -143,7 +139,7 @@ export function ApplicationLayout({ children }: { children: React.ReactNode }) {
               </SidebarSection>
               <SidebarSpacer />
               <SidebarSection>
-                <SidebarItem href="https://docs.idealabs.network/docs/intro" target="blank">
+                <SidebarItem href="https://docs.idealabs.network/" target="blank">
                   <QuestionMarkCircleIcon />
                   <SidebarLabel>Documentation</SidebarLabel>
                 </SidebarItem>

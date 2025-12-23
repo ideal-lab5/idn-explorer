@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
+// Ensure reflect-metadata is loaded before tsyringe
+import 'reflect-metadata';
+
 import { Badge } from '@/components/badge';
 import { SidebarItem, SidebarLabel } from '@/components/sidebar';
+import { container } from '@/lib/di-container';
 import { ChainStateService } from '@/services/ChainStateService';
 import type { BlockHeader } from '@/services/IChainStateService';
 import { formatNumber } from '@polkadot/util';
 import React, { useEffect, useState } from 'react';
-import { container } from 'tsyringe';
 
 export const BlockHeaders: React.FC = () => {
   const [headers, setHeaders] = useState<BlockHeader[]>([]);
